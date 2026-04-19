@@ -1,0 +1,651 @@
+/**
+ * ManageProfilesModal — Edit and delete profiles
+ *
+ * Lists all profiles with edit (name, color, PIN) and delete capabilities.
+ * Delete requires typing the profile name for confirmation.
+ */
+
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { avatarGradient } from '../../../utils/avatarGradient';
+import { useTranslation } from 'react-i18next';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '../../../store';
+import {
+  deleteProfile,
+  updateProfile,
+  fetchManifest,
+  resetPin,
+  verifyPin,
+} from '../../../store/slices/profilesSlice';
+import type { ProfileMetadata, UpdateProfileParams } from '../../../types/profiles';
+import Modal, { ModalHeader, ModalBody, ModalFooter } from '../ui/Modal/Modal';
+
+const AVATAR_COLORS = [
+  '#4682B4',
+  '#E74C3C',
+  '#2ECC71',
+  '#F39C12',
+  '#9B59B6',
+  '#1ABC9C',
+  '#E67E22',
+  '#3498DB',
+  '#E91E63',
+  '#00BCD4',
+  '#8BC34A',
+  '#FF5722',
+];
+
+interface ManageProfilesModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
+  const dispatch = useDispatch<AppDispatch>();
+  const profiles = useSelector((state: RootState) => state.profiles.manifest?.profiles ?? []);
+  const activeProfileId = useSelector((state: RootState) => state.profiles.activeProfileId);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [resetPinId, setResetPinId] = useState<string | null>(null);
+  const [resetPinInput, setResetPinInput] = useState('');
+  const [resetPinError, setResetPinError] = useState<string | null>(null);
+  const deleteInputRef = useRef<HTMLInputElement>(null);
+
+  // Full reset state (for last profile — wipe everything + re-onboard)
+  const [resetProfileId, setResetProfileId] = useState<string | null>(null);
+  const [resetStep, setResetStep] = useState<'pin' | 'confirm'>('pin');
+  const [resetPinCode, setResetPinCode] = useState('');
+  const [resetConfirmName, setResetConfirmName] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetInProgress, setResetInProgress] = useState(false);
+  const resetInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus the delete confirmation input when it appears
+  useEffect(() => {
+    if (deletingId && deleteInputRef.current) {
+      setTimeout(() => deleteInputRef.current?.focus(), 50);
+    }
+  }, [deletingId]);
+
+  // Focus the reset input when it appears
+  useEffect(() => {
+    if (resetProfileId && resetInputRef.current) {
+      setTimeout(() => resetInputRef.current?.focus(), 50);
+    }
+  }, [resetProfileId, resetStep]);
+
+  const startFullReset = useCallback((profile: ProfileMetadata) => {
+    setResetProfileId(profile.id);
+    setResetStep(profile.pinHash ? 'pin' : 'confirm');
+    setResetPinCode('');
+    setResetConfirmName('');
+    setResetError(null);
+    setEditingId(null);
+    setDeletingId(null);
+  }, []);
+
+  const verifyResetPin = useCallback(async () => {
+    if (!resetProfileId || !resetPinCode) return;
+    try {
+      await dispatch(verifyPin({ profileId: resetProfileId, pin: resetPinCode })).unwrap();
+      setResetStep('confirm');
+      setResetError(null);
+      setResetPinCode('');
+    } catch {
+      setResetError(t('profiles.incorrectPin'));
+      setResetPinCode('');
+    }
+  }, [resetProfileId, resetPinCode, dispatch, t]);
+
+  const confirmFullReset = useCallback(async () => {
+    if (!resetProfileId) return;
+    const profile = profiles.find((p) => p.id === resetProfileId);
+    if (!profile) return;
+
+    // Verify name matches
+    if (resetConfirmName.trim() !== profile.name) {
+      setResetError(t('profiles.errorDeleteNameMismatch'));
+      return;
+    }
+
+    setResetInProgress(true);
+    setResetError(null);
+
+    try {
+      // Clear onboarding flag from disk (survives localStorage resets)
+      await window.electron?.ipcRenderer?.invoke('flag:set', 'onboarding-complete', '');
+
+      // Delete the profile via IPC (this also deletes the profile directory)
+      await window.electron?.ipcRenderer?.invoke('profile:fullReset');
+
+      // Wipe ALL localStorage — profile data, persist:root, prefixed keys, everything
+      localStorage.clear();
+
+      // Force reload the app to restart from scratch
+      window.location.reload();
+    } catch (err: any) {
+      console.error('[ManageProfiles] Full reset failed:', err);
+      setResetError(err?.message || t('profiles.errorDeleting'));
+      setResetInProgress(false);
+    }
+  }, [resetProfileId, resetConfirmName, profiles, t]);
+
+  const startEdit = useCallback((profile: ProfileMetadata) => {
+    setEditingId(profile.id);
+    setEditName(profile.name);
+    setEditColor(profile.avatarColor);
+    setDeletingId(null);
+    setError(null);
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setError(null);
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (!editingId) return;
+    const trimmed = editName.trim();
+    if (!trimmed || trimmed.length > 50) {
+      setError(t('profiles.errorNameRequired'));
+      return;
+    }
+
+    try {
+      const updates: UpdateProfileParams = { name: trimmed, avatarColor: editColor };
+      await dispatch(updateProfile({ profileId: editingId, updates })).unwrap();
+      await dispatch(fetchManifest());
+      setEditingId(null);
+      setError(null);
+    } catch (err: any) {
+      setError(err?.message || t('profiles.errorUpdating'));
+    }
+  }, [editingId, editName, editColor, dispatch, t]);
+
+  const startDelete = useCallback((profile: ProfileMetadata) => {
+    setDeletingId(profile.id);
+    setDeleteConfirmName('');
+    setEditingId(null);
+    setError(null);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deletingId) return;
+    const profile = profiles.find((p) => p.id === deletingId);
+    if (!profile) return;
+
+    if (deleteConfirmName.trim() !== profile.name) {
+      setError(t('profiles.errorDeleteNameMismatch'));
+      return;
+    }
+
+    try {
+      const wasActive = deletingId === activeProfileId;
+      await dispatch(deleteProfile(deletingId)).unwrap();
+      await dispatch(fetchManifest());
+      setDeletingId(null);
+      setError(null);
+      // If we deleted the active profile, close modal — ProfilePicker will show
+      // because activeProfileId is now null in Redux
+      if (wasActive) {
+        onClose();
+      }
+    } catch (err: any) {
+      setError(err?.message || t('profiles.errorDeleting'));
+    }
+  }, [deletingId, deleteConfirmName, profiles, activeProfileId, dispatch, t, onClose]);
+
+  const startResetPin = useCallback((profileId: string) => {
+    setResetPinId(profileId);
+    setResetPinInput('');
+    setResetPinError(null);
+    setEditingId(null);
+    setDeletingId(null);
+  }, []);
+
+  const cancelResetPin = useCallback(() => {
+    setResetPinId(null);
+    setResetPinInput('');
+    setResetPinError(null);
+  }, []);
+
+  const confirmResetPin = useCallback(async () => {
+    if (!resetPinId || !resetPinInput) return;
+    try {
+      await dispatch(verifyPin({ profileId: resetPinId, pin: resetPinInput })).unwrap();
+      const resetProfile = profiles.find((p) => p.id === resetPinId);
+      await dispatch(
+        resetPin({ profileId: resetPinId, confirmName: resetProfile?.name || '' })
+      ).unwrap();
+      await dispatch(fetchManifest());
+      setResetPinId(null);
+      setResetPinInput('');
+      setResetPinError(null);
+    } catch (err: any) {
+      setResetPinError(err?.error || t('profiles.incorrectPin', 'PIN incorrect'));
+      setResetPinInput('');
+    }
+  }, [resetPinId, resetPinInput, dispatch, t]);
+
+  const deletingProfile = profiles.find((p) => p.id === deletingId);
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
+      <ModalHeader onClose={onClose}>{t('profiles.manageTitle')}</ModalHeader>
+
+      <ModalBody>
+        <div className="flex flex-col gap-3">
+          {profiles.map((profile) => (
+            <div
+              key={profile.id}
+              className="flex items-center gap-3 p-3 rounded-xl
+                border border-[var(--color-border-light)]
+                bg-[var(--color-surface)]"
+            >
+              {editingId === profile.id ? (
+                /* Edit mode */
+                <div className="flex-1 flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: editColor }}
+                    >
+                      <span className="text-white text-sm font-bold">
+                        {editName.trim() ? editName.trim().charAt(0).toUpperCase() : '?'}
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      maxLength={50}
+                      autoFocus
+                      className="flex-1 px-3 py-1.5 rounded-lg text-sm
+                        bg-[var(--color-background)]
+                        border border-[var(--color-border)]
+                        text-[var(--color-text-primary)]
+                        focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AVATAR_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setEditColor(color)}
+                        className="w-7 h-7 rounded-full border-2 transition-all duration-150
+                          hover:scale-110"
+                        style={{
+                          backgroundColor: color,
+                          borderColor:
+                            editColor === color ? 'var(--color-text-primary)' : 'transparent',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={cancelEdit}
+                      className="px-3 py-1 rounded-lg text-xs font-medium
+                        text-[var(--color-text-secondary)]
+                        hover:bg-[var(--color-surface-hover)]"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      onClick={saveEdit}
+                      className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                        bg-[var(--color-primary-600)] hover:bg-[var(--color-primary-700)]"
+                    >
+                      {t('common.save')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* View mode */
+                <>
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: avatarGradient(profile.avatarColor) }}
+                  >
+                    <span className="text-white text-sm font-bold">
+                      {profile.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {profile.name}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-tertiary)]">
+                      {profile.isDefault && t('profiles.default')}
+                      {profile.pinHash &&
+                        (profile.isDefault ? ' · ' : '') + t('profiles.pinEnabled')}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    {profile.pinHash && profile.allowPinReset && (
+                      <button
+                        onClick={() => startResetPin(profile.id)}
+                        title={t('profiles.removePin')}
+                        className="p-1.5 rounded-lg text-[var(--color-text-tertiary)]
+                          hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)]
+                          transition-colors"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                        </svg>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => startEdit(profile)}
+                      title={t('common.edit')}
+                      className="p-1.5 rounded-lg text-[var(--color-text-tertiary)]
+                        hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)]
+                        transition-colors"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                    {profiles.length > 1 ? (
+                      <button
+                        onClick={() => startDelete(profile)}
+                        title={t('common.delete')}
+                        className="p-1.5 rounded-lg text-[var(--color-text-tertiary)]
+                          hover:bg-[var(--color-error-50)] hover:text-[var(--color-error-500)]
+                          transition-colors"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => startFullReset(profile)}
+                        title={t('profiles.resetTitle', 'Reinitialiser')}
+                        className="p-1.5 rounded-lg text-[var(--color-text-tertiary)]
+                          hover:bg-[var(--color-error-50)] hover:text-[var(--color-error-500)]
+                          transition-colors"
+                      >
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="1 4 1 10 7 10" />
+                          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+
+          {/* Delete confirmation */}
+          {deletingId && deletingProfile && (
+            <div
+              className="p-4 rounded-xl border border-[var(--color-error-200)]
+              bg-[var(--color-error-50)]"
+            >
+              <p className="text-sm text-[var(--color-error-700)] mb-2">
+                {t('profiles.deleteConfirmText', { name: deletingProfile.name })}
+              </p>
+              <input
+                ref={deleteInputRef}
+                type="text"
+                value={deleteConfirmName}
+                onChange={(e) => setDeleteConfirmName(e.target.value)}
+                placeholder={deletingProfile.name}
+                className="w-full px-3 py-1.5 rounded-lg text-sm mb-2
+                  bg-white border border-[var(--color-error-300)]
+                  text-[var(--color-text-primary)]
+                  focus:outline-none focus:ring-2 focus:ring-[var(--color-error-300)]"
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setDeletingId(null);
+                    setError(null);
+                  }}
+                  className="px-3 py-1 rounded-lg text-xs font-medium
+                    text-[var(--color-text-secondary)]
+                    hover:bg-white/50"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteConfirmName.trim() !== deletingProfile.name}
+                  className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                    bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t('profiles.deleteConfirmButton')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Full reset (last profile only) */}
+          {resetProfileId &&
+            (() => {
+              const profile = profiles.find((p) => p.id === resetProfileId);
+              if (!profile) return null;
+              return (
+                <div className="p-4 rounded-xl border border-[var(--color-error-200)] bg-[var(--color-error-50)]">
+                  <p className="text-sm font-semibold text-[var(--color-error-700)] mb-1">
+                    {t('profiles.resetTitle', 'Reinitialiser le profil')}
+                  </p>
+                  <p className="text-xs text-[var(--color-error-600)] mb-3">
+                    {t(
+                      'profiles.resetWarning',
+                      "Cette action supprimera definitivement toutes vos donnees (fichiers, notes, dossiers, parametres). L'application redemarrera comme au premier lancement."
+                    )}
+                  </p>
+
+                  {resetStep === 'pin' && (
+                    <div>
+                      <p className="text-xs text-[var(--color-text-secondary)] mb-1.5">
+                        {t('profiles.resetPinPrompt', 'Entrez le PIN du profil pour continuer :')}
+                      </p>
+                      <input
+                        ref={resetInputRef}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={resetPinCode}
+                        onChange={(e) => {
+                          setResetPinCode(e.target.value.replace(/\D/g, ''));
+                          setResetError(null);
+                        }}
+                        placeholder="PIN"
+                        className="w-full px-3 py-1.5 rounded-lg text-sm mb-2
+                        bg-white border border-[var(--color-error-300)]
+                        text-[var(--color-text-primary)]
+                        focus:outline-none focus:ring-2 focus:ring-[var(--color-error-300)]"
+                      />
+                    </div>
+                  )}
+
+                  {resetStep === 'confirm' && (
+                    <div>
+                      <p className="text-xs text-[var(--color-text-secondary)] mb-1.5">
+                        {t('profiles.deleteConfirmText', { name: profile.name })}
+                      </p>
+                      <input
+                        ref={resetInputRef}
+                        type="text"
+                        value={resetConfirmName}
+                        onChange={(e) => {
+                          setResetConfirmName(e.target.value);
+                          setResetError(null);
+                        }}
+                        placeholder={profile.name}
+                        className="w-full px-3 py-1.5 rounded-lg text-sm mb-2
+                        bg-white border border-[var(--color-error-300)]
+                        text-[var(--color-text-primary)]
+                        focus:outline-none focus:ring-2 focus:ring-[var(--color-error-300)]"
+                      />
+                    </div>
+                  )}
+
+                  {resetError && (
+                    <p className="text-xs text-[var(--color-error-500)] mb-2">{resetError}</p>
+                  )}
+
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => {
+                        setResetProfileId(null);
+                        setResetError(null);
+                      }}
+                      className="px-3 py-1 rounded-lg text-xs font-medium
+                      text-[var(--color-text-secondary)] hover:bg-white/50"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    {resetStep === 'pin' ? (
+                      <button
+                        onClick={verifyResetPin}
+                        disabled={resetPinCode.length < 4}
+                        className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                        bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {t('common.next', 'Suivant')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={confirmFullReset}
+                        disabled={resetInProgress || resetConfirmName.trim() !== profile.name}
+                        className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                        bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {resetInProgress
+                          ? t('profiles.resetting', 'Reinitialisation...')
+                          : t('profiles.resetConfirmButton', 'Reinitialiser definitivement')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+          {/* PIN verification for reset */}
+          {resetPinId && (
+            <div
+              className="p-4 rounded-xl border border-[var(--color-warning-200)]
+              bg-[var(--color-warning-50)]"
+            >
+              <p className="text-sm text-[var(--color-warning-700)] mb-2">
+                {t('profiles.enterPinToRemove', 'Entrez le PIN actuel pour retirer la protection')}
+              </p>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={resetPinInput}
+                onChange={(e) => {
+                  setResetPinInput(e.target.value.replace(/\D/g, ''));
+                  if (resetPinError) setResetPinError(null);
+                }}
+                placeholder="PIN"
+                autoFocus
+                className="w-full px-3 py-1.5 rounded-lg text-sm mb-2 text-center tracking-[0.5em]
+                  bg-white border border-[var(--color-warning-300)]
+                  text-[var(--color-text-primary)]
+                  focus:outline-none focus:ring-2 focus:ring-[var(--color-warning-300)]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && resetPinInput.length >= 4) confirmResetPin();
+                }}
+              />
+              {resetPinError && (
+                <p className="text-xs text-[var(--color-error-500)] mb-2">{resetPinError}</p>
+              )}
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={cancelResetPin}
+                  className="px-3 py-1 rounded-lg text-xs font-medium
+                    text-[var(--color-text-secondary)]
+                    hover:bg-white/50"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={confirmResetPin}
+                  disabled={resetPinInput.length < 4}
+                  className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                    bg-[var(--color-warning-500)] hover:bg-[var(--color-warning-600)]
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t('profiles.removePin')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && <p className="text-sm text-[var(--color-error-500)] text-center">{error}</p>}
+        </div>
+      </ModalBody>
+
+      <ModalFooter>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-lg text-sm font-medium
+            text-[var(--color-text-secondary)]
+            hover:bg-[var(--color-surface-hover)]
+            transition-colors"
+        >
+          {t('common.close')}
+        </button>
+      </ModalFooter>
+    </Modal>
+  );
+};
+
+export default ManageProfilesModal;

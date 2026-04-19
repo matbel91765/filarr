@@ -1,0 +1,68 @@
+/**
+ * PremiumSettings Styles
+ * Additional styles that complement the inline styles
+ */
+
+.premium-settings {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section animations */
+.premium-section {
+  transition: all 0.2s ease;
+}
+
+.premium-section:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Focus states for accessibility */
+.switch input:focus + .slider {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.premium-field__select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.language-chip:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Button focus states */
+.btn-cancel:focus,
+.btn-save:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Loading states */
+.premium-section.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Print styles */
+@media print {
+  .premium-settings__actions {
+    display: none;
+  }
+
+  .premium-section {
+    break-inside: avoid;
+  }
+}

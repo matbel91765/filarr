@@ -1,0 +1,45 @@
+appId: com.filarr.app
+productName: Filarr
+directories:
+  output: dist
+  buildResources: build
+files:
+  - "**/*"
+  - "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}"
+  - "!.editorconfig"
+  - "!**/._*"
+  - "!{.eslintrc.json,.eslintignore,.flowconfig,.documentup.json,.yarn-metadata.json,.*.yml}"
+  - "!{*.md,AUTHORS,LICENSE}"
+asar: true
+asarUnpack:
+  - "node_modules/argon2/**"
+extraResources:
+  - from: "src"
+    to: "src"
+    filter:
+      - "**/*"
+icon: build/icon.png
+win:
+  icon: build/icon.ico
+  signingHashAlgorithms:
+    - sha256
+  target:
+    - nsis
+mac:
+  icon: build/icon.png
+  target:
+    - dmg
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+mas:
+  entitlements: build/entitlements.mas.plist
+  entitlementsInherit: build/entitlements.mas.inherit.plist
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  icon: build/icon.png

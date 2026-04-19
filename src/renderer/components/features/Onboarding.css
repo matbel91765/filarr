@@ -1,0 +1,157 @@
+/* ==================== Onboarding Use Case Cards ==================== */
+
+.onboarding-usecase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.onboarding-usecase-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 18px;
+  border: 2px solid var(--color-border-light, var(--color-border));
+  border-radius: 14px;
+  background: var(--color-background-secondary, var(--color-surface));
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  outline: none;
+}
+
+/* Hover — visible lift + glow */
+.onboarding-usecase-card:hover {
+  border-color: var(--color-primary-300, #7ab8f5);
+  background: var(--color-background, #fff);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 0 0 1px var(--color-primary-200, rgba(70, 130, 180, 0.2));
+  transform: translateY(-2px);
+}
+
+/* Selected */
+.onboarding-usecase-card.is-selected {
+  border-color: var(--color-primary-500, #4682b4);
+  background: var(--color-primary-50, rgba(70, 130, 180, 0.06));
+  box-shadow:
+    0 0 0 2px var(--color-primary-200, rgba(70, 130, 180, 0.3)),
+    0 4px 16px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Check badge (top-right when selected) */
+.onboarding-usecase-card.is-selected::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary-500, #4682b4);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-size: 14px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Icon badge */
+.onboarding-usecase-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  font-size: 1.75rem;
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.04));
+  transition: background-color 0.2s;
+}
+
+.onboarding-usecase-card:hover .onboarding-usecase-card__icon {
+  background: var(--color-primary-50, rgba(70, 130, 180, 0.08));
+}
+
+.onboarding-usecase-card.is-selected .onboarding-usecase-card__icon {
+  background: var(--color-primary-100, rgba(70, 130, 180, 0.15));
+}
+
+.onboarding-usecase-card__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 4px;
+}
+
+.onboarding-usecase-card__desc {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .onboarding-usecase-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .onboarding-usecase-card:hover {
+  background: var(--color-surface, #1e1e2e);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.25),
+    0 0 0 1px var(--color-primary-400, rgba(70, 130, 180, 0.3));
+}
+
+[data-theme='dark'] .onboarding-usecase-card.is-selected {
+  background: var(--color-primary-50, rgba(70, 130, 180, 0.1));
+}
+
+/* ==================== Shake Animation ==================== */
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* ==================== Acknowledge Button ==================== */
+
+@keyframes acknowledge-pulse {
+  0%,
+  100% {
+    border-color: var(--color-text-tertiary, #94a3b8);
+  }
+  50% {
+    border-color: var(--color-primary-400, #7ab8f5);
+  }
+}
+
+.onboarding-acknowledge-btn:hover {
+  border-color: var(--color-primary-400, #7ab8f5) !important;
+  border-style: solid !important;
+  background-color: var(--color-hover-overlay, rgba(0, 0, 0, 0.02)) !important;
+}

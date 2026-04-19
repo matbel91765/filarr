@@ -1,0 +1,136 @@
+/* ==================== Canvas View ==================== */
+
+.canvas-view {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: default;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.canvas-view__world {
+  position: relative;
+  width: 8000px;
+  height: 8000px;
+}
+
+.canvas-view__connections {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* ---- Card ---- */
+
+.canvas-card {
+  position: absolute;
+  padding: 14px 16px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: box-shadow 0.12s, border-color 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.canvas-card:hover {
+  border-color: var(--color-primary-300, #87ceeb);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.canvas-card__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.canvas-card__preview {
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.canvas-card__meta {
+  font-size: 0.625rem;
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+}
+
+/* ---- Toolbar ---- */
+
+.canvas-view__toolbar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+.canvas-view__toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.canvas-view__toolbar-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.canvas-view__zoom-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0 6px;
+  min-width: 36px;
+  text-align: center;
+}
+
+/* ---- Dark Mode ---- */
+
+[data-theme="dark"] .canvas-view {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+[data-theme="dark"] .canvas-card {
+  background: var(--color-surface, #1e1e2e);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .canvas-view__toolbar {
+  background: var(--color-surface, #1e1e2e);
+  border-color: rgba(255, 255, 255, 0.08);
+}

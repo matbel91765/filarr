@@ -1,0 +1,253 @@
+/* ==================== Drawing Overlay ==================== */
+
+.drawing-overlay__canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.drawing-overlay__canvas--active {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.drawing-overlay__canvas--select {
+  cursor: default;
+}
+
+.drawing-overlay__canvas--text {
+  cursor: text;
+}
+
+.drawing-overlay__canvas--resize-tl,
+.drawing-overlay__canvas--resize-br {
+  cursor: nwse-resize;
+}
+
+.drawing-overlay__canvas--resize-tr,
+.drawing-overlay__canvas--resize-bl {
+  cursor: nesw-resize;
+}
+
+.drawing-overlay__canvas--resize-n,
+.drawing-overlay__canvas--resize-s {
+  cursor: ns-resize;
+}
+
+.drawing-overlay__canvas--resize-e,
+.drawing-overlay__canvas--resize-w {
+  cursor: ew-resize;
+}
+
+/* ---- Floating Toolbar ---- */
+
+.drawing-overlay__toolbar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+  max-width: calc(100vw - 40px);
+  overflow-x: auto;
+}
+
+.drawing-overlay__toolbar::-webkit-scrollbar {
+  height: 0;
+}
+
+.drawing-overlay__tool-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.drawing-overlay__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.drawing-overlay__btn:hover {
+  background: var(--color-primary-50, rgba(70, 130, 180, 0.08));
+  color: var(--color-text-primary);
+}
+
+.drawing-overlay__btn.is-active {
+  background: var(--color-primary-100, rgba(70, 130, 180, 0.15));
+  color: var(--color-primary-600, #4682b4);
+}
+
+.drawing-overlay__btn--danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.drawing-overlay__btn--fill svg rect {
+  transition: fill 0.15s;
+}
+
+/* ---- Colors ---- */
+
+.drawing-overlay__color {
+  width: 18px;
+  height: 18px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drawing-overlay__color:hover {
+  transform: scale(1.25);
+}
+
+.drawing-overlay__color.is-active {
+  border-color: var(--color-primary-500, #4682b4);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--color-background, #fff);
+}
+
+.drawing-overlay__color--none {
+  background: #fff !important;
+  border: 2px dashed #ccc;
+}
+
+/* ---- Fill picker popover ---- */
+
+.drawing-overlay__fill-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 1001;
+}
+
+/* ---- Widths ---- */
+
+.drawing-overlay__width {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  transition: all 0.1s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.drawing-overlay__width:hover,
+.drawing-overlay__width.is-active {
+  color: var(--color-text-primary);
+  background: var(--color-primary-50, rgba(70, 130, 180, 0.06));
+}
+
+/* ---- Separators ---- */
+
+.drawing-overlay__sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border, #e2e8f0);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+.drawing-overlay__sep--tall {
+  height: 26px;
+}
+
+/* ---- Text Input (floating over canvas) ---- */
+
+.drawing-overlay__text-input {
+  position: absolute;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--color-primary-400, #4682b4);
+  border-radius: 4px;
+  outline: none;
+  padding: 4px 6px;
+  font-family: Inter, sans-serif;
+  line-height: 1.3;
+  min-width: 120px;
+  min-height: 2em;
+  resize: both;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.drawing-overlay__text-input::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 0.5;
+}
+
+[data-theme="dark"] .drawing-overlay__text-input {
+  background: rgba(30, 30, 46, 0.95);
+}
+
+/* ---- Dark Mode ---- */
+
+[data-theme="dark"] .drawing-overlay__toolbar {
+  background: var(--color-surface, #1e1e2e);
+  border-color: var(--color-border, #3a3a4e);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .drawing-overlay__fill-picker {
+  background: var(--color-surface, #1e1e2e);
+  border-color: var(--color-border, #3a3a4e);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .drawing-overlay__color.is-active {
+  box-shadow: 0 0 0 2px var(--color-surface, #1e1e2e);
+}
+
+[data-theme="dark"] .drawing-overlay__color--none {
+  background: #2a2a3a !important;
+  border-color: #555;
+}
+
+[data-theme="dark"] .drawing-overlay__text-input {
+  color: #e0e0e0;
+  border-color: var(--color-primary-400, #6ea8c9);
+}

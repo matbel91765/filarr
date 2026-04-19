@@ -1,0 +1,96 @@
+/* ==================== Outline Panel ==================== */
+
+.outline-panel {
+  margin-bottom: 8px;
+}
+
+.outline-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+  transition: color 0.15s;
+}
+
+.outline-panel__header:hover {
+  color: var(--color-text-primary);
+}
+
+.outline-panel__count {
+  margin-left: auto;
+  font-weight: 400;
+  opacity: 0.5;
+}
+
+.outline-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0;
+}
+
+.outline-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+  transition: all 0.12s;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.outline-panel__item:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* Indentation by heading level */
+.outline-panel__item--h1 { padding-left: 8px; }
+.outline-panel__item--h2 { padding-left: 20px; }
+.outline-panel__item--h3 { padding-left: 32px; }
+.outline-panel__item--h4 { padding-left: 44px; }
+
+.outline-panel__item-marker {
+  flex-shrink: 0;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: var(--color-primary-500, #4682b4);
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.outline-panel__item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Heading highlight animation (triggered on click) */
+@keyframes outlineHighlight {
+  0% { background: var(--color-primary-100, rgba(135, 206, 235, 0.2)); }
+  100% { background: transparent; }
+}
+
+.outline-highlight {
+  animation: outlineHighlight 1.5s ease-out;
+}

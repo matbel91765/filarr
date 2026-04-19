@@ -1,0 +1,24 @@
+{
+    "reminderNotifications": {
+      "title": [
+        "Ohé, matelot ! Un rappel à l'horizon !",
+        "Ding dong ! C'est l'heure de se rappeler quelque chose !",
+        "Alerte cerveau ! Information importante en approche !"
+      ],
+      "missedReminder": [
+        "Oups ! On dirait qu'on a raté un truc important !",
+        "Petit rappel en retard, mieux vaut tard que jamais !",
+        "Hé ho ! Il y a un rappel qui vous fait coucou du passé !"
+      ],
+      "dailySummary": [
+        "Voici votre menu du jour, version rappels !",
+        "Attachez vos ceintures, voici vos missions du jour !",
+        "Tadaaam ! Voici la liste des trucs à ne pas oublier aujourd'hui !"
+      ]
+    },
+    "actions": {
+      "markAsRead": "C'est noté, chef !",
+      "markAsDone": "Mission accomplie !",
+      "snooze": "Ok, je reviendrais plus tard"
+    }
+  }

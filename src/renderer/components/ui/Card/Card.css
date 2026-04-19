@@ -1,0 +1,204 @@
+/**
+ * Card Styles
+ */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-card);
+  transition: var(--transition-shadow);
+  overflow: hidden;
+}
+
+/* ===== Variants ===== */
+
+.card--default {
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--elevated {
+  background-color: var(--color-background-elevated);
+  box-shadow: var(--shadow-card);
+}
+
+.card--outlined {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+
+.card--filled {
+  background-color: var(--color-background-secondary);
+  box-shadow: none;
+}
+
+/* ===== Padding ===== */
+
+.card--padding-none {
+  padding: 0;
+}
+
+.card--padding-sm > :not(.card-header):not(.card-footer) {
+  padding: var(--spacing-card-padding-sm);
+}
+
+.card--padding-md > :not(.card-header):not(.card-footer) {
+  padding: var(--spacing-card-padding);
+}
+
+.card--padding-lg > :not(.card-header):not(.card-footer) {
+  padding: var(--spacing-card-padding-lg);
+}
+
+/* Direct children padding (when not using CardHeader/CardBody/CardFooter) */
+.card--padding-sm:not(:has(.card-header, .card-body, .card-footer)) {
+  padding: var(--spacing-card-padding-sm);
+}
+
+.card--padding-md:not(:has(.card-header, .card-body, .card-footer)) {
+  padding: var(--spacing-card-padding);
+}
+
+.card--padding-lg:not(:has(.card-header, .card-body, .card-footer)) {
+  padding: var(--spacing-card-padding-lg);
+}
+
+/* ===== Interactive States ===== */
+
+.card--hoverable {
+  cursor: default;
+  transition: var(--transition-shadow), transform var(--duration-normal) var(--ease-out);
+}
+
+.card--hoverable:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.card--clickable {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.card--clickable:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.card--hoverable.card--clickable:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Focus visible for clickable cards */
+.card--clickable:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* ===== Card Header ===== */
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-card-padding);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.card-header__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.card-header__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: var(--line-height-snug);
+}
+
+.card-header__subtitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: var(--line-height-normal);
+}
+
+.card-header__action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* ===== Card Body ===== */
+
+.card-body {
+  flex: 1;
+  padding: var(--spacing-card-padding);
+}
+
+/* Remove padding if Card has padding prop */
+.card--padding-none .card-body,
+.card--padding-sm .card-body,
+.card--padding-md .card-body,
+.card--padding-lg .card-body {
+  padding: 0;
+}
+
+/* ===== Card Footer ===== */
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  padding: var(--spacing-card-padding);
+  border-top: 1px solid var(--color-border);
+}
+
+.card-footer > * {
+  flex-shrink: 0;
+}
+
+/* ===== Dark Mode ===== */
+
+[data-theme="dark"] .card--default,
+[data-theme="dark"] .card--elevated {
+  background-color: var(--color-surface);
+}
+
+[data-theme="dark"] .card--outlined {
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .card--filled {
+  background-color: var(--color-background-tertiary);
+}
+
+[data-theme="dark"] .card-header,
+[data-theme="dark"] .card-footer {
+  border-color: var(--color-border);
+}
+
+/* ===== Accessibility ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card--hoverable {
+    transition: none;
+  }
+
+  .card--hoverable:hover {
+    transform: none;
+  }
+}

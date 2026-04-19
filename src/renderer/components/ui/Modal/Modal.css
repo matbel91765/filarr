@@ -1,0 +1,303 @@
+/**
+ * Modal Component Styles
+ *
+ * Styles pour le composant Modal avec animations et responsive design
+ */
+
+/* ===== Modal Backdrop ===== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-backdrop);
+  z-index: var(--z-index-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4);
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+/* ===== Modal Container ===== */
+.modal {
+  position: relative;
+  background-color: var(--color-background-elevated);
+  border-radius: var(--radius-modal);
+  box-shadow: var(--shadow-modal);
+  z-index: var(--z-index-modal);
+  max-height: calc(100vh - var(--spacing-8));
+  display: flex;
+  flex-direction: column;
+  animation: scaleIn var(--duration-normal) var(--ease-out);
+  border: var(--border-width-1) solid var(--color-border);
+}
+
+/* ===== Modal Sizes ===== */
+.modal--sm {
+  width: 100%;
+  max-width: 400px;
+}
+
+.modal--md {
+  width: 100%;
+  max-width: 600px;
+}
+
+.modal--lg {
+  width: 100%;
+  max-width: 800px;
+}
+
+.modal--xl {
+  width: 100%;
+  max-width: 1000px;
+}
+
+/* ===== Modal Header ===== */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-modal-header-padding);
+  border-bottom: var(--border-width-1) solid var(--color-border);
+  gap: var(--spacing-4);
+  flex-shrink: 0;
+}
+
+.modal-header__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.modal-header__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-color);
+  flex-shrink: 0;
+}
+
+.modal-header__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.modal-header__close:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.modal-header__close:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.modal-header__close:active {
+  background-color: var(--color-surface-active);
+}
+
+/* ===== Modal Body ===== */
+.modal-body {
+  padding: var(--spacing-modal-padding);
+  overflow-y: auto;
+  flex: 1;
+  color: var(--color-text-secondary);
+}
+
+/* Custom scrollbar for modal body */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+/* ===== Modal Footer ===== */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  padding: var(--spacing-modal-footer-padding);
+  border-top: var(--border-width-1) solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ===== Responsive Design ===== */
+
+/* Mobile devices (< 640px) */
+@media (max-width: 639px) {
+  .modal-backdrop {
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .modal-header {
+    padding: var(--spacing-4);
+  }
+
+  .modal-body {
+    padding: var(--spacing-4);
+  }
+
+  .modal-footer {
+    padding: var(--spacing-4);
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer > * {
+    width: 100%;
+  }
+}
+
+/* Tablet devices (640px - 1023px) */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .modal--lg,
+  .modal--xl {
+    max-width: 90vw;
+  }
+}
+
+/* ===== Animation States ===== */
+
+/* Closing animation (handled by removing element from DOM) */
+.modal-backdrop--closing {
+  animation: fadeOut var(--duration-normal) var(--ease-out);
+}
+
+.modal--closing {
+  animation: scaleOut var(--duration-normal) var(--ease-out);
+}
+
+/* ===== Dark Mode Support ===== */
+[data-theme="dark"] .modal {
+  background-color: var(--color-background-elevated);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .modal-header {
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .modal-footer {
+  border-top-color: var(--color-border);
+}
+
+[data-theme="dark"] .modal-body::-webkit-scrollbar-track {
+  background: var(--color-background-secondary);
+}
+
+[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+}
+
+[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-500);
+}
+
+/* ===== Focus Trap Helper ===== */
+.modal:focus {
+  outline: none;
+}
+
+/* ===== Accessibility ===== */
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .modal {
+    border-width: var(--border-width-2);
+  }
+
+  .modal-header__close {
+    border: var(--border-width-1) solid var(--color-border);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop {
+    animation: none;
+  }
+
+  .modal {
+    animation: none;
+  }
+
+  .modal-backdrop--closing {
+    animation: none;
+  }
+
+  .modal--closing {
+    animation: none;
+  }
+}
+
+/* ===== Modal Variants ===== */
+
+/* Confirmation Modal (centered text) */
+.modal--confirmation .modal-body {
+  text-align: center;
+}
+
+.modal--confirmation .modal-footer {
+  justify-content: center;
+}
+
+/* Form Modal (better spacing for forms) */
+.modal--form .modal-body {
+  padding: var(--spacing-6);
+}
+
+/* ===== Utility Classes ===== */
+
+/* Remove header border */
+.modal-header--no-border {
+  border-bottom: none;
+}
+
+/* Remove footer border */
+.modal-footer--no-border {
+  border-top: none;
+}
+
+/* Compact padding */
+.modal-body--compact {
+  padding: var(--spacing-4);
+}
+
+/* No padding */
+.modal-body--no-padding {
+  padding: 0;
+}

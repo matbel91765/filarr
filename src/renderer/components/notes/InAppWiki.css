@@ -1,0 +1,308 @@
+/* ==================== In-App Wiki ==================== */
+
+.wiki-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: wikiFadeIn 0.18s ease;
+  backdrop-filter: blur(2px);
+}
+
+@keyframes wikiFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.wiki {
+  width: min(900px, 92vw);
+  max-height: 82vh;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---- Header ---- */
+
+.wiki__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  background: var(--color-background-secondary, #f8fafc);
+}
+
+.wiki__header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.wiki__topic-count {
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.04));
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wiki__close {
+  border: none;
+  background: transparent;
+  font-size: 1.3rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm, 4px);
+  transition: background 0.12s;
+}
+
+.wiki__close:hover {
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.06));
+  color: var(--color-text-primary);
+}
+
+/* ---- Body ---- */
+
+.wiki__body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ---- Sidebar ---- */
+
+.wiki__sidebar {
+  width: 240px;
+  border-right: 1px solid var(--color-border-light, var(--color-border));
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: var(--color-background-secondary, #f8fafc);
+}
+
+.wiki__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  color: var(--color-text-secondary);
+}
+
+.wiki__search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+.wiki__search-input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+.wiki__search-clear {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.6;
+  transition: opacity 0.12s;
+}
+
+.wiki__search-clear:hover {
+  opacity: 1;
+}
+
+.wiki__topics {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.wiki__no-results {
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  opacity: 0.7;
+}
+
+.wiki__category {
+  margin-bottom: 4px;
+}
+
+.wiki__category-title {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  opacity: 0.5;
+  padding: 10px 10px 4px;
+}
+
+.wiki__topic {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.8125rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+  line-height: 1.4;
+}
+
+.wiki__topic:hover {
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.04));
+}
+
+.wiki__topic.is-active {
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.12));
+  color: var(--color-primary-600, #4682b4);
+  font-weight: 500;
+}
+
+/* ---- Content ---- */
+
+.wiki__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px 40px;
+  min-width: 0;
+}
+
+.wiki__content-header {
+  margin-bottom: 8px;
+}
+
+.wiki__content-category {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary-500, #4682b4);
+  opacity: 0.8;
+}
+
+.wiki__content-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0 0 20px;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.wiki__content-body {
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: var(--color-text-primary);
+}
+
+.wiki__content-body p {
+  margin: 0 0 6px;
+}
+
+.wiki__spacer {
+  height: 10px;
+}
+
+.wiki__list {
+  margin: 4px 0 10px 4px;
+  padding-left: 16px;
+}
+
+.wiki__content-body li {
+  margin: 4px 0;
+  padding-left: 4px;
+  line-height: 1.7;
+}
+
+.wiki__content-body strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.wiki__content-body em {
+  font-style: italic;
+}
+
+.wiki__content-body del {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.wiki__content-body code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.82em;
+  padding: 2px 7px;
+  background: var(--color-background-secondary, rgba(0, 0, 0, 0.04));
+  border-radius: 4px;
+  border: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.06));
+  color: var(--color-primary-700, #2c5f82);
+  white-space: nowrap;
+}
+
+/* ---- Scrollbar ---- */
+
+.wiki__topics::-webkit-scrollbar,
+.wiki__content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.wiki__topics::-webkit-scrollbar-thumb,
+.wiki__content::-webkit-scrollbar-thumb {
+  background: var(--color-border, #ccc);
+  border-radius: 3px;
+}
+
+.wiki__topics::-webkit-scrollbar-track,
+.wiki__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- Dark Mode ---- */
+
+[data-theme="dark"] .wiki {
+  background: var(--color-surface, #1e1e2e);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .wiki__header,
+[data-theme="dark"] .wiki__sidebar {
+  background: var(--color-background-secondary, #161622);
+}
+
+[data-theme="dark"] .wiki__content-body code {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-primary-300, #87ceeb);
+}
+
+[data-theme="dark"] .wiki__topic-count {
+  background: rgba(255, 255, 255, 0.06);
+}

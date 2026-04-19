@@ -1,0 +1,258 @@
+/**
+ * TagEditor Component Styles
+ *
+ * Styles pour le modal d'edition de tags
+ */
+
+/* ==================== CONTAINER ==================== */
+
+.tag-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ==================== FIELD ==================== */
+
+.tag-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag-editor__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #111827);
+}
+
+[data-theme='dark'] .tag-editor__label {
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+.tag-editor__required {
+  color: var(--danger-500, #ef4444);
+  margin-left: 2px;
+}
+
+/* ==================== SELECT ==================== */
+
+.tag-editor__select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary, #111827);
+  background-color: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.tag-editor__select:hover {
+  border-color: var(--border-hover, #9ca3af);
+}
+
+.tag-editor__select:focus {
+  border-color: var(--primary-500, #3b82f6);
+  box-shadow: 0 0 0 3px var(--primary-100, rgba(59, 130, 246, 0.1));
+}
+
+[data-theme='dark'] .tag-editor__select {
+  color: var(--text-primary-dark, #f9fafb);
+  background-color: var(--bg-secondary-dark, #1f2937);
+  border-color: var(--border-color-dark, #374151);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+[data-theme='dark'] .tag-editor__select:hover {
+  border-color: var(--border-hover-dark, #4b5563);
+}
+
+[data-theme='dark'] .tag-editor__select:focus {
+  border-color: var(--primary-500, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ==================== COLORS ==================== */
+
+.tag-editor__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-editor__color {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tag-editor__color:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.tag-editor__color--selected {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.tag-editor__color--selected::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+/* ==================== ALIASES ==================== */
+
+.tag-editor__alias-input {
+  display: flex;
+  gap: 8px;
+}
+
+.tag-editor__alias-input .input-container {
+  flex: 1;
+}
+
+.tag-editor__aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-editor__alias {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 10px;
+  font-size: 13px;
+  color: var(--text-primary, #111827);
+  background-color: var(--bg-secondary, #f3f4f6);
+  border-radius: 16px;
+}
+
+[data-theme='dark'] .tag-editor__alias {
+  color: var(--text-primary-dark, #f9fafb);
+  background-color: var(--bg-secondary-dark, #374151);
+}
+
+.tag-editor__alias-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.tag-editor__alias-remove:hover {
+  background-color: var(--bg-tertiary, #e5e7eb);
+  color: var(--text-primary, #111827);
+}
+
+[data-theme='dark'] .tag-editor__alias-remove:hover {
+  background-color: var(--bg-tertiary-dark, #4b5563);
+  color: var(--text-primary-dark, #f9fafb);
+}
+
+/* ==================== TEXTAREA ==================== */
+
+.tag-editor__textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary, #111827);
+  background-color: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: all 0.15s ease;
+}
+
+.tag-editor__textarea:hover {
+  border-color: var(--border-hover, #9ca3af);
+}
+
+.tag-editor__textarea:focus {
+  border-color: var(--primary-500, #3b82f6);
+  box-shadow: 0 0 0 3px var(--primary-100, rgba(59, 130, 246, 0.1));
+}
+
+.tag-editor__textarea::placeholder {
+  color: var(--text-tertiary, #9ca3af);
+}
+
+[data-theme='dark'] .tag-editor__textarea {
+  color: var(--text-primary-dark, #f9fafb);
+  background-color: var(--bg-secondary-dark, #1f2937);
+  border-color: var(--border-color-dark, #374151);
+}
+
+[data-theme='dark'] .tag-editor__textarea:hover {
+  border-color: var(--border-hover-dark, #4b5563);
+}
+
+[data-theme='dark'] .tag-editor__textarea:focus {
+  border-color: var(--primary-500, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* ==================== PREVIEW ==================== */
+
+.tag-editor__preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--bg-secondary, #f9fafb);
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .tag-editor__preview {
+  background-color: var(--bg-secondary-dark, #1f2937);
+}
+
+.tag-editor__preview-label {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.tag-editor__preview-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

@@ -1,0 +1,182 @@
+/**
+ * ProgressBar Styles
+ * Styles pour le composant de barre de progression linéaire
+ */
+
+/* ===== Container ===== */
+.progress-bar-container {
+  width: 100%;
+}
+
+/* ===== Header ===== */
+.progress-bar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2);
+  gap: var(--spacing-2);
+}
+
+.progress-bar__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.progress-bar__value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Track (Background) ===== */
+.progress-bar {
+  position: relative;
+  width: 100%;
+  background-color: var(--color-neutral-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+/* Dark mode */
+[data-theme="dark"] .progress-bar {
+  background-color: var(--color-neutral-800);
+}
+
+/* ===== Tailles ===== */
+.progress-bar--sm {
+  height: 4px;
+}
+
+.progress-bar--md {
+  height: 8px;
+}
+
+.progress-bar--lg {
+  height: 12px;
+}
+
+/* ===== Fill (Progress) ===== */
+.progress-bar__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--duration-normal) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Variante Default */
+.progress-bar__fill--default {
+  background: linear-gradient(
+    90deg,
+    var(--color-primary-500) 0%,
+    var(--color-primary-600) 100%
+  );
+}
+
+/* Variante Success */
+.progress-bar__fill--success {
+  background: linear-gradient(
+    90deg,
+    var(--color-success-500) 0%,
+    var(--color-success-600) 100%
+  );
+}
+
+/* Variante Warning */
+.progress-bar__fill--warning {
+  background: linear-gradient(
+    90deg,
+    var(--color-warning-500) 0%,
+    var(--color-warning-600) 100%
+  );
+}
+
+/* Variante Error */
+.progress-bar__fill--error {
+  background: linear-gradient(
+    90deg,
+    var(--color-error-500) 0%,
+    var(--color-error-600) 100%
+  );
+}
+
+/* ===== Mode Indéterminé ===== */
+.progress-bar--indeterminate .progress-bar__fill {
+  width: 40%;
+  animation: shimmer-progress 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer-progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+/* ===== Effets de brillance ===== */
+.progress-bar__fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shine 2s ease-in-out infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Désactiver l'effet shine en mode indéterminé pour éviter trop d'animations */
+.progress-bar--indeterminate .progress-bar__fill::after {
+  display: none;
+}
+
+/* ===== Accessibilité ===== */
+.progress-bar:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar__fill {
+    transition: none;
+  }
+
+  .progress-bar--indeterminate .progress-bar__fill {
+    animation: none;
+    width: 100%;
+  }
+
+  .progress-bar__fill::after {
+    animation: none;
+  }
+}
+
+/* ===== High Contrast Mode ===== */
+@media (prefers-contrast: high) {
+  .progress-bar {
+    border: 1px solid var(--color-border-strong);
+  }
+
+  .progress-bar__fill {
+    border: 1px solid currentColor;
+  }
+}

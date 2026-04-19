@@ -1,0 +1,332 @@
+/**
+ * Button Styles
+ */
+
+.button {
+  /* Base styles */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+
+  /* Typography */
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  white-space: nowrap;
+
+  /* Borders & Radius */
+  border: none;
+  border-radius: var(--radius-button);
+
+  /* Transitions */
+  transition: var(--transition-button);
+
+  /* Cursor */
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+
+  /* Remove default button styles */
+  background: none;
+  text-decoration: none;
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ===== Sizes ===== */
+
+.button--sm {
+  padding: var(--spacing-button-padding-y-sm) var(--spacing-button-padding-x-sm);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+  min-height: 32px;
+}
+
+.button--md {
+  padding: var(--spacing-button-padding-y-md) var(--spacing-button-padding-x-md);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  min-height: 40px;
+}
+
+.button--lg {
+  padding: var(--spacing-button-padding-y-lg) var(--spacing-button-padding-x-lg);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
+  min-height: 48px;
+}
+
+/* Icon-only buttons (square) */
+.button--icon-only.button--sm {
+  width: 32px;
+  height: 32px;
+  padding: var(--spacing-2);
+}
+
+.button--icon-only.button--md {
+  width: 40px;
+  height: 40px;
+  padding: var(--spacing-2);
+}
+
+.button--icon-only.button--lg {
+  width: 48px;
+  height: 48px;
+  padding: var(--spacing-3);
+}
+
+/* ===== Variants ===== */
+
+/* Primary */
+.button--primary {
+  background-color: var(--color-primary-600);
+  color: var(--color-neutral-0);
+  box-shadow: var(--shadow-button);
+}
+
+.button--primary:hover:not(:disabled) {
+  background-color: var(--color-primary-700);
+  box-shadow: var(--shadow-button-hover);
+  transform: translateY(-1px);
+}
+
+.button--primary:active:not(:disabled) {
+  background-color: var(--color-primary-800);
+  box-shadow: var(--shadow-button-active);
+  transform: translateY(0);
+}
+
+/* Secondary */
+.button--secondary {
+  background-color: var(--color-neutral-100);
+  color: var(--color-primary-700);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-button);
+}
+
+.button--secondary:hover:not(:disabled) {
+  background-color: var(--color-neutral-200);
+  border-color: var(--color-primary-300);
+  box-shadow: var(--shadow-button-hover);
+}
+
+.button--secondary:active:not(:disabled) {
+  background-color: var(--color-neutral-300);
+  box-shadow: var(--shadow-button-active);
+}
+
+[data-theme="dark"] .button--secondary {
+  background-color: var(--color-neutral-800);
+  color: var(--color-primary-300);
+  border-color: var(--color-neutral-700);
+}
+
+[data-theme="dark"] .button--secondary:hover:not(:disabled) {
+  background-color: var(--color-neutral-700);
+  border-color: var(--color-primary-400);
+}
+
+[data-theme="dark"] .button--secondary:active:not(:disabled) {
+  background-color: var(--color-neutral-600);
+}
+
+/* Tertiary */
+.button--tertiary {
+  background-color: transparent;
+  color: var(--color-primary-600);
+  border: 1px solid var(--color-primary-300);
+}
+
+.button--tertiary:hover:not(:disabled) {
+  background-color: var(--color-primary-50);
+  border-color: var(--color-primary-400);
+}
+
+.button--tertiary:active:not(:disabled) {
+  background-color: var(--color-primary-100);
+  border-color: var(--color-primary-500);
+}
+
+[data-theme="dark"] .button--tertiary {
+  color: var(--color-primary-300);
+  border-color: var(--color-primary-600);
+}
+
+[data-theme="dark"] .button--tertiary:hover:not(:disabled) {
+  background-color: rgba(135, 206, 235, 0.1);
+  border-color: var(--color-primary-500);
+}
+
+[data-theme="dark"] .button--tertiary:active:not(:disabled) {
+  background-color: rgba(135, 206, 235, 0.2);
+}
+
+/* Ghost */
+.button--ghost {
+  background-color: transparent;
+  color: var(--color-text-primary);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background-color: var(--color-hover-overlay);
+}
+
+.button--ghost:active:not(:disabled) {
+  background-color: var(--color-active-overlay);
+}
+
+/* Danger */
+.button--danger {
+  background-color: var(--color-error-500);
+  color: var(--color-neutral-0);
+  box-shadow: var(--shadow-button);
+}
+
+.button--danger:hover:not(:disabled) {
+  background-color: var(--color-error-600);
+  box-shadow: var(--shadow-button-hover);
+  transform: translateY(-1px);
+}
+
+.button--danger:active:not(:disabled) {
+  background-color: var(--color-error-700);
+  box-shadow: var(--shadow-button-active);
+  transform: translateY(0);
+}
+
+.button--danger:focus-visible {
+  box-shadow: var(--shadow-focus-error);
+}
+
+/* ===== Full Width ===== */
+
+.button--full-width {
+  width: 100%;
+}
+
+/* ===== Loading State ===== */
+
+.button--loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.button__spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button__spinner-icon {
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+.button--sm .button__spinner-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.button--lg .button__spinner-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.button__spinner-circle {
+  opacity: 0.25;
+}
+
+.button__spinner-path {
+  opacity: 0.75;
+}
+
+/* Fix spinner color for variants */
+.button--primary .button__spinner-icon,
+.button--danger .button__spinner-icon {
+  color: var(--color-neutral-0);
+}
+
+.button--secondary .button__spinner-icon,
+.button--tertiary .button__spinner-icon {
+  color: var(--color-primary-600);
+}
+
+[data-theme="dark"] .button--secondary .button__spinner-icon,
+[data-theme="dark"] .button--tertiary .button__spinner-icon {
+  color: var(--color-primary-300);
+}
+
+.button--ghost .button__spinner-icon {
+  color: var(--color-text-primary);
+}
+
+/* ===== Icons ===== */
+
+.button__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.button__icon--left {
+  margin-right: calc(var(--spacing-1) * -1);
+}
+
+.button__icon--right {
+  margin-left: calc(var(--spacing-1) * -1);
+}
+
+.button__icon svg,
+.button__icon i {
+  width: 1.25em;
+  height: 1.25em;
+  font-size: inherit;
+}
+
+/* ===== Content ===== */
+
+.button__content {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ===== Animations ===== */
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== Accessibility ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
+
+  .button__spinner-icon {
+    animation: none;
+  }
+}

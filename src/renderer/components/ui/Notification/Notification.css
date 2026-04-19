@@ -1,0 +1,404 @@
+/**
+ * Notification Component Styles
+ *
+ * Styles pour le système de notifications/toasts avec tokens CSS
+ */
+
+/* ===== Container ===== */
+.notification-container {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  z-index: var(--z-index-notification);
+  pointer-events: none;
+  padding: var(--spacing-4);
+  max-width: 100%;
+}
+
+/* Positions */
+.notification-container--top-right {
+  top: 0;
+  right: 0;
+}
+
+.notification-container--top-left {
+  top: 0;
+  left: 0;
+}
+
+.notification-container--top-center {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.notification-container--bottom-right {
+  bottom: 0;
+  right: 0;
+}
+
+.notification-container--bottom-left {
+  bottom: 0;
+  left: 0;
+}
+
+.notification-container--bottom-center {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ===== Notification (Toast) ===== */
+.notification {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  min-width: 320px;
+  max-width: 500px;
+  padding: var(--spacing-4);
+  background-color: var(--color-background-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  overflow: hidden;
+  animation: slideInRight var(--duration-normal) var(--ease-out);
+}
+
+/* Animation d'entrée */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Animation de sortie */
+.notification--exiting {
+  animation: slideOutRight var(--duration-normal) var(--ease-in),
+             fadeOut var(--duration-normal) var(--ease-in);
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(100% + var(--spacing-4)));
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ===== Indicateur de type (border-left) ===== */
+.notification__indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.notification__indicator--success {
+  background-color: var(--color-success-600);
+}
+
+.notification__indicator--error {
+  background-color: var(--color-error-600);
+}
+
+.notification__indicator--warning {
+  background-color: var(--color-warning-600);
+}
+
+.notification__indicator--info {
+  background-color: var(--color-info-600);
+}
+
+/* ===== Icône ===== */
+.notification__icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-left: var(--spacing-1);
+}
+
+.notification__icon--success {
+  color: var(--color-success-600);
+}
+
+.notification__icon--error {
+  color: var(--color-error-600);
+}
+
+.notification__icon--warning {
+  color: var(--color-warning-600);
+}
+
+.notification__icon--info {
+  color: var(--color-info-600);
+}
+
+.notification__default-icon {
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== Contenu ===== */
+.notification__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1_5);
+}
+
+.notification__title {
+  font-size: 0.9375rem; /* 15px */
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.notification__message {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* ===== Action ===== */
+.notification__action {
+  margin-top: var(--spacing-2);
+}
+
+.notification__action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-1_5) var(--spacing-3);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  border-radius: var(--radius-md);
+  border: var(--border-width-1) solid var(--color-border);
+  background-color: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.notification__action-button:hover {
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.notification__action-button:active {
+  background-color: var(--color-surface-active);
+  transform: scale(0.98);
+}
+
+.notification__action-button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.notification__action-button--primary {
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
+  color: var(--color-text-inverted);
+}
+
+.notification__action-button--primary:hover {
+  background-color: var(--color-primary-700);
+  border-color: var(--color-primary-700);
+}
+
+.notification__action-button--primary:active {
+  background-color: var(--color-primary-800);
+}
+
+/* ===== Bouton de fermeture ===== */
+.notification__close {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: var(--transition-color);
+}
+
+.notification__close:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.notification__close:active {
+  background-color: var(--color-surface-active);
+  transform: scale(0.95);
+}
+
+.notification__close:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.notification__close-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Barre de progression ===== */
+.notification__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--color-surface-hover);
+  overflow: hidden;
+}
+
+.notification__progress-bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left;
+  animation: progressShrink linear forwards;
+}
+
+@keyframes progressShrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.notification__progress-bar--success {
+  background-color: var(--color-success-600);
+}
+
+.notification__progress-bar--error {
+  background-color: var(--color-error-600);
+}
+
+.notification__progress-bar--warning {
+  background-color: var(--color-warning-600);
+}
+
+.notification__progress-bar--info {
+  background-color: var(--color-info-600);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+  .notification-container {
+    padding: var(--spacing-2);
+  }
+
+  .notification {
+    min-width: 0;
+    width: calc(100vw - var(--spacing-4));
+    max-width: calc(100vw - var(--spacing-4));
+  }
+
+  /* Ajuster les positions pour mobile */
+  .notification-container--top-right,
+  .notification-container--top-left,
+  .notification-container--top-center {
+    top: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+  }
+
+  .notification-container--bottom-right,
+  .notification-container--bottom-left,
+  .notification-container--bottom-center {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+  }
+
+  /* Animations mobile */
+  @keyframes slideInRight {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .notification--exiting {
+    animation: slideOutTop var(--duration-normal) var(--ease-in),
+               fadeOut var(--duration-normal) var(--ease-in);
+  }
+
+  @keyframes slideOutTop {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-100%);
+    }
+  }
+}
+
+/* ===== Dark Mode ===== */
+[data-theme="dark"] .notification {
+  background-color: var(--color-background-elevated);
+  box-shadow: var(--shadow-xl);
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .notification {
+    animation: none;
+  }
+
+  .notification--exiting {
+    animation: fadeOut var(--duration-fast) var(--ease-out);
+  }
+
+  .notification__progress-bar {
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ===== High Contrast Mode ===== */
+@media (prefers-contrast: high) {
+  .notification {
+    border: var(--border-width-2) solid var(--color-border-strong);
+  }
+
+  .notification__indicator {
+    width: 6px;
+  }
+}

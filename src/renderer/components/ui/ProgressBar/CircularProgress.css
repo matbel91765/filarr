@@ -1,0 +1,185 @@
+/**
+ * CircularProgress Styles
+ * Styles pour le composant de progression circulaire
+ */
+
+/* ===== Container ===== */
+.circular-progress {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== Tailles ===== */
+.circular-progress--sm {
+  width: 32px;
+  height: 32px;
+}
+
+.circular-progress--md {
+  width: 48px;
+  height: 48px;
+}
+
+.circular-progress--lg {
+  width: 64px;
+  height: 64px;
+}
+
+.circular-progress--xl {
+  width: 96px;
+  height: 96px;
+}
+
+/* ===== SVG ===== */
+.circular-progress__svg {
+  display: block;
+  transform: rotate(0deg);
+}
+
+/* ===== Track (Cercle de fond) ===== */
+.circular-progress__track {
+  stroke: var(--color-neutral-200);
+}
+
+/* Dark mode */
+[data-theme="dark"] .circular-progress__track {
+  stroke: var(--color-neutral-800);
+}
+
+/* ===== Circle (Progression) ===== */
+.circular-progress__circle {
+  transition: stroke-dashoffset var(--duration-normal) var(--ease-out);
+  transform-origin: center;
+}
+
+/* Variante Default */
+.circular-progress__circle--default {
+  stroke: var(--color-primary-600);
+}
+
+/* Variante Success */
+.circular-progress__circle--success {
+  stroke: var(--color-success-600);
+}
+
+/* Variante Warning */
+.circular-progress__circle--warning {
+  stroke: var(--color-warning-600);
+}
+
+/* Variante Error */
+.circular-progress__circle--error {
+  stroke: var(--color-error-600);
+}
+
+/* ===== Mode Indéterminé ===== */
+.circular-progress--indeterminate .circular-progress__svg {
+  animation: spin-circular 1.4s linear infinite;
+}
+
+.circular-progress--indeterminate .circular-progress__circle {
+  animation: dash-circular 1.4s ease-in-out infinite;
+}
+
+@keyframes spin-circular {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash-circular {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dashoffset: calc(var(--circumference, 150) * -0.5);
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ===== Value (Texte au centre) ===== */
+.circular-progress__value {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* Tailles de texte selon la taille du cercle */
+.circular-progress--sm .circular-progress__value {
+  font-size: 0.625rem; /* 10px */
+}
+
+.circular-progress--md .circular-progress__value {
+  font-size: 0.75rem; /* 12px */
+}
+
+.circular-progress--lg .circular-progress__value {
+  font-size: 0.875rem; /* 14px */
+}
+
+.circular-progress--xl .circular-progress__value {
+  font-size: 1.125rem; /* 18px */
+}
+
+/* ===== Accessibilité ===== */
+.circular-progress:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-full);
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+  .circular-progress__circle {
+    transition: none;
+  }
+
+  .circular-progress--indeterminate .circular-progress__svg {
+    animation: none;
+  }
+
+  .circular-progress--indeterminate .circular-progress__circle {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ===== High Contrast Mode ===== */
+@media (prefers-contrast: high) {
+  .circular-progress__track {
+    stroke-width: 2px;
+  }
+
+  .circular-progress__circle {
+    stroke-width: 3px;
+  }
+}
+
+/* ===== Variantes de couleur en hover (pour interaction) ===== */
+.circular-progress--default:hover .circular-progress__circle--default {
+  stroke: var(--color-primary-700);
+}
+
+.circular-progress--success:hover .circular-progress__circle--success {
+  stroke: var(--color-success-700);
+}
+
+.circular-progress--warning:hover .circular-progress__circle--warning {
+  stroke: var(--color-warning-700);
+}
+
+.circular-progress--error:hover .circular-progress__circle--error {
+  stroke: var(--color-error-700);
+}

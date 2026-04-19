@@ -1,0 +1,591 @@
+/* ==================== VersionScrapbook — Option 4 ==================== */
+
+.scrapbook-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  animation: scrapbook-fade 0.18s ease-out;
+}
+
+@keyframes scrapbook-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.scrapbook {
+  background: var(--color-background);
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 1400px;
+  height: 100%;
+  max-height: 900px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scrapbook-pop 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes scrapbook-pop {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---- Header ---- */
+
+.scrapbook__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  flex-shrink: 0;
+}
+
+.scrapbook__header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.scrapbook__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.scrapbook__count {
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.scrapbook__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.12s;
+}
+
+.scrapbook__close:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* ---- Body (list + preview) ---- */
+
+.scrapbook__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  min-height: 0;
+}
+
+/* ---- List ---- */
+
+.scrapbook__list {
+  border-right: 1px solid var(--color-border-light, var(--color-border));
+  overflow-y: auto;
+  padding: 12px 8px 16px;
+}
+
+.scrapbook__empty {
+  padding: 32px 16px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.scrapbook__group {
+  margin-bottom: 10px;
+}
+
+.scrapbook__group-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px 4px;
+  margin: 0;
+}
+
+.scrapbook__card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+  margin-bottom: 4px;
+}
+
+.scrapbook__card:hover {
+  background: var(--color-hover-overlay);
+}
+
+.scrapbook__card--active {
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.12));
+  border-color: var(--color-primary-300, rgba(135, 206, 235, 0.4));
+}
+
+.scrapbook__card-time {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scrapbook__card-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  align-items: center;
+}
+
+.scrapbook__card-words {
+  color: var(--color-text-secondary);
+}
+
+.scrapbook__card-delta {
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.scrapbook__card-delta--plus {
+  background: rgba(52, 211, 153, 0.14);
+  color: #16a34a;
+}
+
+.scrapbook__card-delta--minus {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+[data-theme='dark'] .scrapbook__card-delta--plus {
+  color: #22c55e;
+}
+
+[data-theme='dark'] .scrapbook__card-delta--minus {
+  color: #ef4444;
+}
+
+/* ---- Preview ---- */
+
+.scrapbook__preview {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.scrapbook__preview-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 0 32px;
+}
+
+.scrapbook__preview-empty svg {
+  opacity: 0.5;
+}
+
+.scrapbook__preview-empty p {
+  margin: 0;
+  max-width: 360px;
+}
+
+.scrapbook__preview-header {
+  padding: 20px 32px 12px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  flex-shrink: 0;
+}
+
+.scrapbook__preview-title {
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 6px 0;
+  line-height: 1.2;
+}
+
+.scrapbook__preview-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+}
+
+.scrapbook__preview-toggle {
+  display: inline-flex;
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.scrapbook__preview-tab {
+  border: none;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 5px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.scrapbook__preview-tab--active {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.scrapbook__preview-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 32px;
+}
+
+.scrapbook__render {
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--color-text-primary);
+}
+
+/* Inherit editor-ish typography from the app's global styles.
+   The ProseMirror child node carries the actual content, so we
+   just need the wrapper to not constrain it. */
+.scrapbook__render .ProseMirror {
+  outline: none;
+}
+
+.scrapbook__render .ProseMirror h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.scrapbook__render .ProseMirror h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.scrapbook__render .ProseMirror h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.scrapbook__render .ProseMirror p {
+  margin: 0.6em 0;
+}
+
+.scrapbook__render .ProseMirror ul,
+.scrapbook__render .ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.6em 0;
+}
+
+.scrapbook__render .ProseMirror blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 12px;
+  color: var(--color-text-secondary);
+  margin: 0.8em 0;
+}
+
+.scrapbook__render .ProseMirror code {
+  background: var(--color-surface);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.scrapbook__render .ProseMirror pre {
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85em;
+}
+
+/* ---- VersionRender fallback (shared) ---- */
+
+.version-render__fallback-banner {
+  background: rgba(234, 179, 8, 0.1);
+  color: #a16207;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.version-render__fallback {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: 0;
+}
+
+[data-theme='dark'] .version-render__fallback-banner {
+  background: rgba(234, 179, 8, 0.12);
+  color: #facc15;
+  border-color: rgba(234, 179, 8, 0.25);
+}
+
+/* ---- Diff ---- */
+
+.scrapbook__diff {
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.scrapbook__diff-line {
+  display: flex;
+  padding: 2px 12px;
+  border-radius: 2px;
+}
+
+.scrapbook__diff-line--added {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.scrapbook__diff-line--removed {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.scrapbook__diff-num {
+  width: 36px;
+  text-align: right;
+  padding-right: 12px;
+  color: var(--color-text-secondary);
+  opacity: 0.45;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.scrapbook__diff-text {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.scrapbook__diff-line--added .scrapbook__diff-text {
+  color: #16a34a;
+}
+
+.scrapbook__diff-line--removed .scrapbook__diff-text {
+  color: #dc2626;
+  text-decoration: line-through;
+}
+
+.scrapbook__diff-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-style: italic;
+  opacity: 0.7;
+  user-select: none;
+}
+
+.scrapbook__diff-collapsed-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.scrapbook__diff-collapsed-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ---- Footer ---- */
+
+.scrapbook__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+  flex-shrink: 0;
+}
+
+.scrapbook__btn {
+  padding: 10px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.scrapbook__btn:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+}
+
+.scrapbook__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scrapbook__btn--primary {
+  background: var(--color-primary-600, #4682b4);
+  border-color: var(--color-primary-600, #4682b4);
+  color: white;
+  font-weight: 600;
+}
+
+.scrapbook__btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-700, #3b6d96);
+  border-color: var(--color-primary-700, #3b6d96);
+}
+
+.scrapbook__btn--danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+.scrapbook__btn--danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ---- Dark mode ---- */
+
+[data-theme='dark'] .scrapbook-backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+[data-theme='dark'] .scrapbook {
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .scrapbook__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+[data-theme='dark'] .scrapbook__diff-line--added .scrapbook__diff-text {
+  color: #22c55e;
+}
+
+[data-theme='dark'] .scrapbook__diff-line--removed .scrapbook__diff-text {
+  color: #ef4444;
+}
+
+/* ---- ModeSelector (shared across modes) ---- */
+
+.version-mode-selector {
+  display: inline-flex;
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.version-mode-selector__option {
+  border: none;
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.version-mode-selector__option:hover:not(.version-mode-selector__option--active) {
+  color: var(--color-text-primary);
+}
+
+.version-mode-selector__option--active {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 900px) {
+  .scrapbook__body {
+    grid-template-columns: 240px 1fr;
+  }
+  .scrapbook__preview-header {
+    padding: 16px 20px 10px;
+  }
+  .scrapbook__preview-body {
+    padding: 16px 20px 24px;
+  }
+  .scrapbook-backdrop {
+    padding: 12px;
+  }
+}

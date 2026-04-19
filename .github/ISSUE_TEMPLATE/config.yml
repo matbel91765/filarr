@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/filarr/filarr/security/advisories/new
+    about: Please report security issues privately. See SECURITY.md for the email channel as well.
+  - name: Question or discussion
+    url: https://github.com/filarr/filarr/discussions
+    about: Use Discussions for questions, ideas and general feedback.

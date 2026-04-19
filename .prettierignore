@@ -1,0 +1,8 @@
+node_modules
+dist
+build
+coverage
+dist-electron
+storybook-static
+*.min.js
+package-lock.json

@@ -1,0 +1,119 @@
+/**
+ * Styles pour MoveCopyDialog
+ */
+
+.move-copy-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.move-copy-dialog__info {
+  font-size: 14px;
+  color: var(--text-secondary, #666);
+}
+
+.move-copy-dialog__search {
+  width: 100%;
+}
+
+.move-copy-dialog__tree {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 8px;
+  background-color: var(--bg-secondary, #f9f9f9);
+}
+
+.move-copy-dialog__empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  font-size: 14px;
+}
+
+.move-copy-dialog__rename {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.move-copy-dialog__rename-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+}
+
+/* Folder Tree Item */
+.folder-tree-item {
+  width: 100%;
+}
+
+.folder-tree-item__content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.folder-tree-item__content:hover:not(.folder-tree-item__content--disabled) {
+  background-color: var(--bg-hover, #f0f0f0);
+}
+
+.folder-tree-item__content--selected {
+  background-color: var(--primary-color, #007bff);
+  color: white;
+}
+
+.folder-tree-item__content--selected .folder-tree-item__icon svg {
+  color: white;
+  stroke: white;
+}
+
+.folder-tree-item__content--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.folder-tree-item__expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.folder-tree-item__expand:hover {
+  opacity: 0.7;
+}
+
+.folder-tree-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.folder-tree-item__icon svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary, #666);
+}
+
+.folder-tree-item__name {
+  flex: 1;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-tree-item__children {
+  margin-top: 2px;
+}

@@ -1,0 +1,115 @@
+/* ==================== Sticky Notes View ==================== */
+
+.sticky-notes-view {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: default;
+  background: radial-gradient(
+    circle,
+    var(--color-border-light, rgba(0, 0, 0, 0.03)) 1px,
+    transparent 1px
+  );
+  background-size: 20px 20px;
+}
+
+.sticky-notes-view__canvas {
+  position: relative;
+  width: 4000px;
+  height: 4000px;
+}
+
+/* ---- Sticky Note ---- */
+
+.sticky-note {
+  position: absolute;
+  padding: 14px 16px;
+  border-radius: 4px;
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.12);
+  cursor: grab;
+  transition: box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.sticky-note:hover {
+  box-shadow: 3px 5px 14px rgba(0, 0, 0, 0.18);
+  z-index: 10;
+}
+
+.sticky-note--dragging {
+  cursor: grabbing;
+  box-shadow: 4px 8px 20px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+  opacity: 0.9;
+}
+
+.sticky-note__title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.75);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sticky-note__text {
+  flex: 1;
+  font-size: 0.6875rem;
+  color: rgba(0, 0, 0, 0.55);
+  line-height: 1.4;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.sticky-note__footer {
+  margin-top: 8px;
+  font-size: 0.625rem;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+/* ---- Zoom Indicator ---- */
+
+.sticky-notes-view__zoom {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  padding: 4px 10px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
+  user-select: none;
+}
+
+/* ---- Dark Mode ---- */
+
+[data-theme='dark'] .sticky-notes-view {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+[data-theme='dark'] .sticky-note {
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .sticky-note__title {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme='dark'] .sticky-note__text {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+[data-theme='dark'] .sticky-note__footer {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme='dark'] .sticky-notes-view__zoom {
+  background: var(--color-surface, #1e1e2e);
+}

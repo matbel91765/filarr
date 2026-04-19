@@ -1,0 +1,73 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. **Please do not report security issues here** — see [SECURITY.md](../SECURITY.md) for the private channel.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing what's wrong.
+      placeholder: "Renaming a folder with a slash in the name silently deletes its contents."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps that someone else can follow on a fresh install.
+      placeholder: |
+        1. Open Filarr
+        2. Create a folder named "foo/bar"
+        3. Add a file inside
+        4. Rename the folder to "baz"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include any error messages, console output, or screenshots.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Filarr version
+      placeholder: "e.g. 2.4.0 (visible in Settings → About)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Logs, related issues, theories, custom build flags, etc.

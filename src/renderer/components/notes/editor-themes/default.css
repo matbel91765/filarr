@@ -1,0 +1,10 @@
+/* Editor Theme: Default
+ * Sets --ss-* custom properties as defaults.
+ * StyleSettingsPanel overrides these via inline style on .note-editor.
+ */
+.note-editor[data-editor-theme="default"] {
+  --ss-font-family: var(--font-family, 'Inter', -apple-system, sans-serif);
+  --ss-font-size: 0.9375rem;
+  --ss-line-height: 1.7;
+  --ss-text-color: var(--color-text-primary);
+}

@@ -1,0 +1,236 @@
+/* ==================== Note Tree View ==================== */
+
+.note-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px;
+  user-select: none;
+}
+
+.note-tree__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.note-tree__empty p {
+  margin: 0;
+  font-size: 0.875rem;
+  opacity: 0.6;
+}
+
+/* ---- Tree Node ---- */
+
+.note-tree__node {
+  position: relative;
+}
+
+.note-tree__node-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  border: 1px solid transparent;
+  margin-bottom: 1px;
+}
+
+.note-tree__node-row:hover {
+  background: var(--color-hover-overlay);
+}
+
+.note-tree__node-row--selected {
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
+  border-color: var(--color-primary-200, rgba(135, 206, 235, 0.3));
+}
+
+.note-tree__node-row--pinned {
+  border-left: 2px solid var(--color-primary-400, #87ceeb);
+}
+
+.note-tree__node-row--drag-over {
+  background: var(--color-primary-100, rgba(135, 206, 235, 0.18));
+  border-color: var(--color-primary-400, #87ceeb);
+  border-style: dashed;
+}
+
+.note-tree__node-row--dragging {
+  opacity: 0.4;
+}
+
+/* ---- Indent ---- */
+
+.note-tree__indent {
+  flex-shrink: 0;
+}
+
+/* ---- Chevron ---- */
+
+.note-tree__chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.18s ease, background 0.12s;
+}
+
+.note-tree__chevron:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.note-tree__chevron--expanded {
+  transform: rotate(90deg);
+}
+
+.note-tree__chevron--hidden {
+  visibility: hidden;
+}
+
+/* ---- Node Icon ---- */
+
+.note-tree__node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+/* ---- Title ---- */
+
+.note-tree__title {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.note-tree__node-row--selected .note-tree__title {
+  font-weight: 600;
+}
+
+/* ---- Child Count Badge ---- */
+
+.note-tree__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-border, #e2e8f0);
+  color: var(--color-text-secondary);
+  font-size: 0.625rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ---- Node Actions ---- */
+
+.note-tree__node-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+
+.note-tree__node-row:hover .note-tree__node-actions,
+.note-tree__node-row--selected .note-tree__node-actions {
+  opacity: 1;
+}
+
+.note-tree__node-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.12s;
+}
+
+.note-tree__node-action:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.note-tree__node-action--delete:hover {
+  color: var(--color-error-500, #ef4444);
+}
+
+.note-tree__node-action.is-pinned {
+  color: var(--color-primary-500, #4682b4);
+}
+
+/* ---- Children Container (collapsible) ---- */
+
+.note-tree__children {
+  overflow: hidden;
+  transition: max-height 0.2s ease;
+}
+
+.note-tree__children--collapsed {
+  max-height: 0 !important;
+}
+
+.note-tree__children--expanded {
+  max-height: 9999px;
+}
+
+/* ---- Root Drop Zone ---- */
+
+.note-tree__root-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border: 1px dashed var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  opacity: 0;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+  pointer-events: none;
+}
+
+.note-tree--dragging .note-tree__root-drop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.note-tree__root-drop--drag-over {
+  border-color: var(--color-primary-400, #87ceeb);
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.08));
+  color: var(--color-primary-600, #4682b4);
+}

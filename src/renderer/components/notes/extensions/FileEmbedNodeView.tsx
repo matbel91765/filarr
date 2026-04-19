@@ -1,0 +1,123 @@
+/**
+ * FileEmbedNodeView — React NodeView for the FileEmbed TipTap extension.
+ *
+ * Renders images with corner resize handles and file cards for non-images.
+ * Width is stored as a node attribute so it persists with the document.
+ */
+
+import React, { useCallback, useRef, useState } from 'react';
+import { NodeViewWrapper } from '@tiptap/react';
+
+interface FileEmbedNodeViewProps {
+  node: {
+    attrs: {
+      fileId: string;
+      fileName: string;
+      fileType: string;
+      src: string | null;
+      width: number | null;
+    };
+  };
+  updateAttributes: (attrs: Record<string, unknown>) => void;
+  selected: boolean;
+}
+
+function getFileIcon(fileType: string): string {
+  if (/^image/i.test(fileType)) return '\uD83D\uDDBC\uFE0F';
+  if (/pdf/i.test(fileType)) return '\uD83D\uDCC4';
+  if (/spreadsheet|excel|csv/i.test(fileType)) return '\uD83D\uDCCA';
+  if (/word|document/i.test(fileType)) return '\uD83D\uDCDD';
+  if (/zip|archive|rar/i.test(fileType)) return '\uD83D\uDCE6';
+  if (/video/i.test(fileType)) return '\uD83C\uDFAC';
+  if (/audio/i.test(fileType)) return '\uD83C\uDFB5';
+  return '\uD83D\uDCCE';
+}
+
+export const FileEmbedNodeView: React.FC<FileEmbedNodeViewProps> = ({
+  node,
+  updateAttributes,
+  selected,
+}) => {
+  const { fileId, fileName, fileType, src, width } = node.attrs;
+  const isImage = /^image\//i.test(fileType || '');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+
+      const startX = e.clientX;
+      const startWidth = containerRef.current?.offsetWidth || 300;
+
+      const onMouseMove = (ev: MouseEvent) => {
+        const delta = ev.clientX - startX;
+        const newWidth = Math.max(100, Math.min(startWidth + delta, 1200));
+        if (containerRef.current) {
+          containerRef.current.style.width = `${newWidth}px`;
+        }
+      };
+
+      const onMouseUp = (ev: MouseEvent) => {
+        const delta = ev.clientX - startX;
+        const newWidth = Math.max(100, Math.min(startWidth + delta, 1200));
+        updateAttributes({ width: Math.round(newWidth) });
+        setIsResizing(false);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [updateAttributes]
+  );
+
+  if (isImage && src) {
+    return (
+      <NodeViewWrapper className="file-embed-wrapper">
+        <div
+          ref={containerRef}
+          className={`file-embed file-embed--image ${selected ? 'file-embed--selected' : ''} ${isResizing ? 'file-embed--resizing' : ''}`}
+          style={width ? { width: `${width}px` } : undefined}
+          data-file-embed=""
+        >
+          <img src={src} alt={fileName} className="file-embed__img" draggable={false} />
+          <span className="file-embed__caption">{fileName}</span>
+
+          {/* Resize handle (bottom-right corner) */}
+          <div
+            className="file-embed__resize-handle"
+            onMouseDown={handleResizeStart}
+            title="Drag to resize"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <path d="M9 1v8H1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M9 5v4H5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+          </div>
+        </div>
+      </NodeViewWrapper>
+    );
+  }
+
+  // Non-image file card
+  return (
+    <NodeViewWrapper className="file-embed-wrapper">
+      <div
+        className={`file-embed file-embed--file ${selected ? 'file-embed--selected' : ''}`}
+        data-file-embed=""
+      >
+        <div className="file-embed__icon">
+          <span>{getFileIcon(fileType || '')}</span>
+        </div>
+        <div className="file-embed__info">
+          <span className="file-embed__name">{fileName}</span>
+          <span className="file-embed__type">{fileType || 'File'}</span>
+        </div>
+      </div>
+    </NodeViewWrapper>
+  );
+};

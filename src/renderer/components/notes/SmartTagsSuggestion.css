@@ -1,0 +1,105 @@
+/* ==================== Smart Tags Suggestion ==================== */
+
+.smart-tags {
+  padding: 10px 16px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.smart-tags__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.smart-tags__header svg {
+  color: var(--color-warning-500, #f59e0b);
+}
+
+.smart-tags__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.smart-tags__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 14px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.smart-tags__tag:hover {
+  border-color: var(--color-primary-400, #87ceeb);
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
+  color: var(--color-primary-600, #4682b4);
+}
+
+.smart-tags__tag-name {
+  font-weight: 500;
+}
+
+.smart-tags__tag svg {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.smart-tags__tag:hover svg {
+  opacity: 1;
+}
+
+.smart-tags__tag--existing {
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
+  border-color: var(--color-primary-300, #87ceeb);
+  color: var(--color-primary-700, #3a6a8a);
+  cursor: default;
+}
+
+.smart-tags__tag--existing .smart-tags__tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s;
+}
+
+.smart-tags__tag--existing:hover .smart-tags__tag-remove {
+  opacity: 0.7;
+}
+
+.smart-tags__tag--existing .smart-tags__tag-remove:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* ---- Dark Mode ---- */
+
+[data-theme="dark"] .smart-tags__tag {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .smart-tags__tag--existing {
+  background: rgba(135, 206, 235, 0.08);
+  border-color: rgba(135, 206, 235, 0.2);
+  color: var(--color-primary-400, #87ceeb);
+}

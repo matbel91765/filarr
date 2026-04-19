@@ -1,0 +1,277 @@
+/**
+ * DeleteFolderConfirmModal Styles
+ */
+
+.delete-folder-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.delete-folder-modal__header .warning-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.delete-folder-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.delete-folder-modal__message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.delete-folder-modal__message p {
+  margin: 0;
+  color: var(--text-primary, #1f2937);
+  line-height: 1.5;
+}
+
+.delete-folder-modal__message strong {
+  color: var(--text-emphasis, #111827);
+  font-weight: 600;
+}
+
+.delete-folder-modal__warning {
+  padding: 0.75rem 1rem;
+  background-color: var(--warning-bg, #fef3c7);
+  border-left: 3px solid var(--warning-border, #f59e0b);
+  border-radius: 0.375rem;
+  color: var(--warning-text, #92400e);
+  font-size: 0.875rem;
+}
+
+.delete-folder-modal__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary, #f9fafb);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.delete-folder-modal__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.delete-folder-modal__stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-light, #f3f4f6);
+}
+
+.delete-folder-modal__stat:last-child {
+  border-bottom: none;
+}
+
+.delete-folder-modal__stat .stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 500;
+}
+
+.delete-folder-modal__stat .stat-value {
+  font-size: 0.875rem;
+  color: var(--text-primary, #1f2937);
+  font-weight: 600;
+}
+
+.delete-folder-modal__items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.delete-folder-modal__items-list h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.delete-folder-modal__items-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.delete-folder-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--bg-white, #ffffff);
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-light, #f3f4f6);
+  transition: background-color 0.15s ease;
+}
+
+.delete-folder-modal__item:hover {
+  background-color: var(--bg-hover, #f9fafb);
+}
+
+.delete-folder-modal__item svg {
+  flex-shrink: 0;
+  color: var(--icon-color, #6b7280);
+}
+
+.delete-folder-modal__item .item-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-primary, #1f2937);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delete-folder-modal__item .item-size {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #6b7280);
+  flex-shrink: 0;
+}
+
+.delete-folder-modal__more {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #6b7280);
+  font-style: italic;
+  text-align: center;
+}
+
+.delete-folder-modal__empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+.delete-folder-modal__empty p {
+  margin: 0;
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+}
+
+.delete-folder-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.delete-folder-modal__actions button {
+  min-width: 100px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .delete-folder-modal__message p {
+    color: var(--text-primary-dark, #f9fafb);
+  }
+
+  .delete-folder-modal__message strong {
+    color: var(--text-emphasis-dark, #ffffff);
+  }
+
+  .delete-folder-modal__warning {
+    background-color: var(--warning-bg-dark, #451a03);
+    border-left-color: var(--warning-border-dark, #f59e0b);
+    color: var(--warning-text-dark, #fde68a);
+  }
+
+  .delete-folder-modal__info {
+    background-color: var(--bg-secondary-dark, #1f2937);
+    border-color: var(--border-color-dark, #374151);
+  }
+
+  .delete-folder-modal__stat {
+    border-bottom-color: var(--border-light-dark, #374151);
+  }
+
+  .delete-folder-modal__stat .stat-label {
+    color: var(--text-secondary-dark, #9ca3af);
+  }
+
+  .delete-folder-modal__stat .stat-value {
+    color: var(--text-primary-dark, #f9fafb);
+  }
+
+  .delete-folder-modal__items-list h4 {
+    color: var(--text-primary-dark, #f9fafb);
+  }
+
+  .delete-folder-modal__item {
+    background-color: var(--bg-white-dark, #111827);
+    border-color: var(--border-light-dark, #374151);
+  }
+
+  .delete-folder-modal__item:hover {
+    background-color: var(--bg-hover-dark, #1f2937);
+  }
+
+  .delete-folder-modal__item svg {
+    color: var(--icon-color-dark, #9ca3af);
+  }
+
+  .delete-folder-modal__item .item-name {
+    color: var(--text-primary-dark, #f9fafb);
+  }
+
+  .delete-folder-modal__item .item-size {
+    color: var(--text-secondary-dark, #9ca3af);
+  }
+
+  .delete-folder-modal__more {
+    color: var(--text-secondary-dark, #9ca3af);
+  }
+
+  .delete-folder-modal__empty p {
+    color: var(--text-secondary-dark, #9ca3af);
+  }
+}
+
+/* Scrollbar styling for items list */
+.delete-folder-modal__items-list ul::-webkit-scrollbar {
+  width: 6px;
+}
+
+.delete-folder-modal__items-list ul::-webkit-scrollbar-track {
+  background: var(--bg-secondary, #f9fafb);
+  border-radius: 3px;
+}
+
+.delete-folder-modal__items-list ul::-webkit-scrollbar-thumb {
+  background: var(--border-color, #e5e7eb);
+  border-radius: 3px;
+}
+
+.delete-folder-modal__items-list ul::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary, #6b7280);
+}
+
+@media (prefers-color-scheme: dark) {
+  .delete-folder-modal__items-list ul::-webkit-scrollbar-track {
+    background: var(--bg-secondary-dark, #1f2937);
+  }
+
+  .delete-folder-modal__items-list ul::-webkit-scrollbar-thumb {
+    background: var(--border-color-dark, #374151);
+  }
+
+  .delete-folder-modal__items-list ul::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary-dark, #9ca3af);
+  }
+}

@@ -1,0 +1,535 @@
+/**
+ * Design Tokens - Colors
+ *
+ * Palette de couleurs pour Filarr - Gestionnaire de fichiers sécurisé
+ * Basée sur la charte graphique bleu ciel (#87CEEB) et bleu foncé (#4682B4)
+ */
+
+:root {
+  /* ===== Primary Colors ===== */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #87ceeb; /* Sky Blue - Couleur principale */
+  --color-primary-400: #5fb8e3;
+  --color-primary-500: #38a3dc;
+  --color-primary-600: #4682b4; /* Dark Blue - Couleur secondaire */
+  --color-primary-700: #3a6b94;
+  --color-primary-800: #2e5575;
+  --color-primary-900: #1e3a4f;
+
+  /* ===== Neutral Colors ===== */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* ===== Semantic Colors ===== */
+  /* Success */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+
+  /* Warning */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+
+  /* Error */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+
+  /* Info */
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+
+  /* ===== Application Semantic Colors (Light Mode) ===== */
+  --color-background: var(--color-neutral-0);
+  --color-background-secondary: var(--color-neutral-50);
+  --color-background-tertiary: var(--color-neutral-100);
+  --color-background-elevated: var(--color-neutral-0);
+
+  --color-surface: var(--color-neutral-0);
+  --color-surface-hover: var(--color-neutral-50);
+  --color-surface-active: var(--color-neutral-100);
+
+  --color-border: var(--color-neutral-200);
+  --color-border-light: var(--color-neutral-100);
+  --color-border-strong: var(--color-neutral-300);
+
+  --color-text-primary: var(--color-primary-700);
+  --color-text-secondary: var(--color-neutral-600);
+  --color-text-tertiary: var(--color-neutral-500);
+  --color-text-disabled: var(--color-neutral-400);
+  --color-text-inverted: var(--color-neutral-0);
+
+  --color-link: var(--color-primary-600);
+  --color-link-hover: var(--color-primary-700);
+  --color-link-visited: var(--color-primary-800);
+
+  /* ===== Interactive States ===== */
+  --color-hover-overlay: rgba(135, 206, 235, 0.08);
+  --color-active-overlay: rgba(135, 206, 235, 0.16);
+  --color-focus-ring: var(--color-primary-300);
+  --color-selected: var(--color-primary-50);
+  --color-selected-hover: var(--color-primary-100);
+
+  /* ===== Folder Customization Colors ===== */
+  --color-folder-red: #ef4444;
+  --color-folder-orange: #f97316;
+  --color-folder-amber: #f59e0b;
+  --color-folder-yellow: #eab308;
+  --color-folder-lime: #84cc16;
+  --color-folder-green: #10b981;
+  --color-folder-emerald: #059669;
+  --color-folder-teal: #14b8a6;
+  --color-folder-cyan: #06b6d4;
+  --color-folder-sky: #87ceeb;
+  --color-folder-blue: #3b82f6;
+  --color-folder-indigo: #6366f1;
+  --color-folder-violet: #8b5cf6;
+  --color-folder-purple: #a855f7;
+  --color-folder-fuchsia: #d946ef;
+  --color-folder-pink: #ec4899;
+  --color-folder-rose: #f43f5e;
+
+  /* ===== Overlay Colors ===== */
+  --color-overlay-light: rgba(255, 255, 255, 0.8);
+  --color-overlay-dark: rgba(15, 23, 42, 0.6);
+  --color-backdrop: rgba(15, 23, 42, 0.5);
+
+  /* ===== Drag & Drop ===== */
+  --color-drag-over: rgba(135, 206, 235, 0.12);
+  --color-drop-zone: var(--color-primary-100);
+  --color-drop-zone-active: var(--color-primary-200);
+}
+
+/**
+ * Dark Mode Theme
+ */
+[data-theme='dark'] {
+  /* ===== Application Semantic Colors (Dark Mode) ===== */
+  --color-background: #0a0e1a;
+  --color-background-secondary: #10141f;
+  --color-background-tertiary: #1a1f2e;
+  --color-background-elevated: #1e2433;
+
+  --color-surface: #10141f;
+  --color-surface-hover: #1a1f2e;
+  --color-surface-active: #252b3d;
+
+  --color-border: #2a3142;
+  --color-border-light: #1e2433;
+  --color-border-strong: #3a4256;
+
+  --color-text-primary: #f0f8ff;
+  --color-text-secondary: #b8c5d6;
+  --color-text-tertiary: #8b98ac;
+  --color-text-disabled: #5e6b7f;
+  --color-text-inverted: var(--color-neutral-900);
+
+  --color-link: var(--color-primary-300);
+  --color-link-hover: var(--color-primary-200);
+  --color-link-visited: var(--color-primary-400);
+
+  /* ===== Interactive States (Dark) ===== */
+  --color-hover-overlay: rgba(135, 206, 235, 0.12);
+  --color-active-overlay: rgba(135, 206, 235, 0.2);
+  --color-selected: rgba(135, 206, 235, 0.16);
+  --color-selected-hover: rgba(135, 206, 235, 0.24);
+
+  /* ===== Overlay Colors (Dark) ===== */
+  --color-overlay-light: rgba(30, 36, 51, 0.9);
+  --color-overlay-dark: rgba(10, 14, 26, 0.8);
+  --color-backdrop: rgba(10, 14, 26, 0.7);
+}
+
+/**
+ * Theme: Space — deep cosmic with animated starfield & nebula
+ * Surfaces are semi-transparent to let the galaxy show through
+ */
+[data-theme='space'] {
+  --color-neutral-0: #0e1025;
+  --color-neutral-50: #12142a;
+  --color-neutral-100: #1a1d33;
+
+  --color-background: #080a16;
+  --color-background-secondary: rgba(14, 16, 37, 0.85);
+  --color-background-tertiary: rgba(26, 29, 51, 0.8);
+  --color-background-elevated: rgba(22, 24, 48, 0.9);
+
+  --color-surface: rgba(14, 16, 37, 0.88);
+  --color-surface-hover: rgba(26, 29, 51, 0.85);
+  --color-surface-active: rgba(37, 40, 71, 0.85);
+
+  --color-border: rgba(60, 55, 100, 0.5);
+  --color-border-light: rgba(42, 45, 74, 0.5);
+  --color-border-strong: rgba(80, 75, 130, 0.5);
+
+  --color-text-primary: #e8e0f0;
+  --color-text-secondary: #a89fc0;
+  --color-text-tertiary: #7e74a0;
+  --color-text-disabled: #5a5280;
+  --color-text-inverted: #0b0d1a;
+
+  --color-primary-50: rgba(139, 92, 246, 0.1);
+  --color-primary-100: rgba(139, 92, 246, 0.18);
+  --color-primary-200: #a78bfa;
+  --color-primary-300: #8b5cf6;
+  --color-primary-400: #7c3aed;
+  --color-primary-500: #6d28d9;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #a78bfa;
+  --color-primary-800: #c4b5fd;
+
+  --color-link: #a78bfa;
+  --color-link-hover: #c4b5fd;
+
+  --color-hover-overlay: rgba(139, 92, 246, 0.1);
+  --color-active-overlay: rgba(139, 92, 246, 0.18);
+  --color-focus-ring: #8b5cf6;
+  --color-selected: rgba(139, 92, 246, 0.14);
+  --color-selected-hover: rgba(139, 92, 246, 0.22);
+
+  --color-overlay-light: rgba(14, 16, 37, 0.92);
+  --color-overlay-dark: rgba(8, 10, 22, 0.85);
+  --color-backdrop: rgba(8, 10, 22, 0.75);
+}
+
+/**
+ * Theme: Lofi — warm muted earth tones, cozy café vibes
+ */
+[data-theme='lofi'] {
+  --color-neutral-0: #faf6f0;
+  --color-neutral-50: #f5f0e8;
+  --color-neutral-100: #ede6d9;
+
+  --color-background: #f5f0e8;
+  --color-background-secondary: #ede6d9;
+  --color-background-tertiary: #e3dace;
+  --color-background-elevated: #faf6f0;
+
+  --color-surface: #faf6f0;
+  --color-surface-hover: #ede6d9;
+  --color-surface-active: #e3dace;
+
+  --color-border: #d4c9b8;
+  --color-border-light: #e3dace;
+  --color-border-strong: #bfb09a;
+
+  --color-text-primary: #3d3229;
+  --color-text-secondary: #6b5d4f;
+  --color-text-tertiary: #8c7b6a;
+  --color-text-disabled: #a89885;
+  --color-text-inverted: #faf6f0;
+
+  --color-primary-50: rgba(180, 120, 80, 0.08);
+  --color-primary-100: rgba(180, 120, 80, 0.15);
+  --color-primary-200: #d4a574;
+  --color-primary-300: #c49060;
+  --color-primary-400: #b47850;
+  --color-primary-500: #a06838;
+  --color-primary-600: #8b5a30;
+  --color-primary-700: #6b4525;
+  --color-primary-800: #4a301a;
+
+  --color-link: #8b5a30;
+  --color-link-hover: #6b4525;
+
+  --color-hover-overlay: rgba(180, 120, 80, 0.08);
+  --color-active-overlay: rgba(180, 120, 80, 0.15);
+  --color-focus-ring: #c49060;
+  --color-selected: rgba(180, 120, 80, 0.1);
+  --color-selected-hover: rgba(180, 120, 80, 0.18);
+
+  --color-overlay-light: rgba(250, 246, 240, 0.85);
+  --color-overlay-dark: rgba(61, 50, 41, 0.5);
+  --color-backdrop: rgba(61, 50, 41, 0.4);
+}
+
+/**
+ * Theme: Sky — light airy blues and whites, open sky feel
+ */
+[data-theme='sky'] {
+  --color-neutral-0: #f5faff;
+  --color-neutral-50: #ebf4fe;
+  --color-neutral-100: #d6e8f8;
+
+  --color-background: #ebf4fe;
+  --color-background-secondary: #e0edfa;
+  --color-background-tertiary: #d6e8f8;
+  --color-background-elevated: #f5faff;
+
+  --color-surface: #f5faff;
+  --color-surface-hover: #e0edfa;
+  --color-surface-active: #d6e8f8;
+
+  --color-border: #b8d4f0;
+  --color-border-light: #d6e8f8;
+  --color-border-strong: #92bbe0;
+
+  --color-text-primary: #1a3a5c;
+  --color-text-secondary: #3e6890;
+  --color-text-tertiary: #6b92b8;
+  --color-text-disabled: #92bbe0;
+  --color-text-inverted: #ffffff;
+
+  --color-primary-50: rgba(56, 163, 220, 0.06);
+  --color-primary-100: rgba(56, 163, 220, 0.12);
+  --color-primary-200: #87ceeb;
+  --color-primary-300: #5fbadf;
+  --color-primary-400: #38a3dc;
+  --color-primary-500: #2090cc;
+  --color-primary-600: #1a7ab5;
+  --color-primary-700: #15659a;
+  --color-primary-800: #0f4f7e;
+
+  --color-link: #1a7ab5;
+  --color-link-hover: #15659a;
+
+  --color-hover-overlay: rgba(56, 163, 220, 0.06);
+  --color-active-overlay: rgba(56, 163, 220, 0.12);
+  --color-focus-ring: #5fbadf;
+  --color-selected: rgba(56, 163, 220, 0.08);
+  --color-selected-hover: rgba(56, 163, 220, 0.15);
+
+  --color-overlay-light: rgba(255, 255, 255, 0.85);
+  --color-overlay-dark: rgba(26, 58, 92, 0.5);
+  --color-backdrop: rgba(26, 58, 92, 0.4);
+}
+
+/**
+ * Theme: Aurora — northern lights, arctic night sky with green/violet accents
+ */
+[data-theme='aurora'] {
+  --color-neutral-0: #0b1120;
+  --color-neutral-50: #111b2e;
+  --color-neutral-100: #162038;
+
+  --color-background: #0b1120;
+  --color-background-secondary: #0e1b2e;
+  --color-background-tertiary: #162038;
+  --color-background-elevated: #111b2e;
+
+  --color-surface: #111b2e;
+  --color-surface-hover: #162038;
+  --color-surface-active: #1e293b;
+
+  --color-border: rgba(30, 41, 59, 0.6);
+  --color-border-light: rgba(26, 35, 50, 0.6);
+  --color-border-strong: rgba(34, 211, 160, 0.25);
+
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-text-disabled: #475569;
+  --color-text-inverted: #0b1120;
+
+  --color-primary-50: rgba(34, 211, 160, 0.08);
+  --color-primary-100: rgba(34, 211, 160, 0.14);
+  --color-primary-200: #6ee7b7;
+  --color-primary-300: #34d399;
+  --color-primary-400: #22d3a0;
+  --color-primary-500: #14b88a;
+  --color-primary-600: #22d3a0;
+  --color-primary-700: #34d399;
+  --color-primary-800: #6ee7b7;
+
+  --color-link: #22d3a0;
+  --color-link-hover: #34d399;
+
+  --color-hover-overlay: rgba(34, 211, 160, 0.08);
+  --color-active-overlay: rgba(34, 211, 160, 0.15);
+  --color-focus-ring: #22d3a0;
+  --color-selected: rgba(34, 211, 160, 0.1);
+  --color-selected-hover: rgba(34, 211, 160, 0.18);
+
+  --color-overlay-light: rgba(11, 17, 32, 0.92);
+  --color-overlay-dark: rgba(6, 10, 20, 0.85);
+  --color-backdrop: rgba(6, 10, 20, 0.75);
+}
+
+/**
+ * Theme: Sakura — soft cherry blossom pinks on warm cream, hanami vibes
+ */
+[data-theme='sakura'] {
+  --color-neutral-0: #fff8f9;
+  --color-neutral-50: #fff0f3;
+  --color-neutral-100: #ffeaef;
+
+  --color-background: #fff8f9;
+  --color-background-secondary: #fff0f3;
+  --color-background-tertiary: #ffeaef;
+  --color-background-elevated: #fffafb;
+
+  --color-surface: #fff8f9;
+  --color-surface-hover: #fff0f3;
+  --color-surface-active: #ffeaef;
+
+  --color-border: #f2c4cf;
+  --color-border-light: #fad8e0;
+  --color-border-strong: #e8a6b6;
+
+  --color-text-primary: #4a2035;
+  --color-text-secondary: #7a4a60;
+  --color-text-tertiary: #a0708a;
+  --color-text-disabled: #c8a0b2;
+  --color-text-inverted: #fff8f9;
+
+  --color-primary-50: rgba(232, 87, 138, 0.06);
+  --color-primary-100: rgba(232, 87, 138, 0.12);
+  --color-primary-200: #f2a0be;
+  --color-primary-300: #e8578a;
+  --color-primary-400: #e04078;
+  --color-primary-500: #d42e68;
+  --color-primary-600: #c02058;
+  --color-primary-700: #9a1a48;
+  --color-primary-800: #741438;
+
+  --color-link: #c02058;
+  --color-link-hover: #9a1a48;
+
+  --color-hover-overlay: rgba(232, 87, 138, 0.06);
+  --color-active-overlay: rgba(232, 87, 138, 0.12);
+  --color-focus-ring: #e8578a;
+  --color-selected: rgba(232, 87, 138, 0.08);
+  --color-selected-hover: rgba(232, 87, 138, 0.15);
+
+  --color-overlay-light: rgba(255, 248, 249, 0.88);
+  --color-overlay-dark: rgba(74, 32, 53, 0.5);
+  --color-backdrop: rgba(74, 32, 53, 0.4);
+}
+
+/**
+ * Theme: Crépuscule — warm dark twilight, amber-to-purple dusk glow
+ */
+[data-theme='crepuscule'] {
+  --color-neutral-0: #1a1018;
+  --color-neutral-50: #221620;
+  --color-neutral-100: #2a1c28;
+
+  --color-background: #1a1018;
+  --color-background-secondary: #221620;
+  --color-background-tertiary: #2a1c28;
+  --color-background-elevated: #261824;
+
+  --color-surface: #221620;
+  --color-surface-hover: #2a1c28;
+  --color-surface-active: #372432;
+
+  --color-border: rgba(80, 48, 68, 0.5);
+  --color-border-light: rgba(60, 36, 52, 0.5);
+  --color-border-strong: rgba(100, 60, 82, 0.55);
+
+  --color-text-primary: #f0e0dc;
+  --color-text-secondary: #b89a98;
+  --color-text-tertiary: #8a6e70;
+  --color-text-disabled: #604850;
+  --color-text-inverted: #1a1018;
+
+  --color-primary-50: rgba(232, 132, 92, 0.08);
+  --color-primary-100: rgba(232, 132, 92, 0.15);
+  --color-primary-200: #f0b090;
+  --color-primary-300: #e8845c;
+  --color-primary-400: #e0704a;
+  --color-primary-500: #d45c38;
+  --color-primary-600: #e8845c;
+  --color-primary-700: #f0a880;
+  --color-primary-800: #f5c8b0;
+
+  --color-link: #f0a880;
+  --color-link-hover: #f5c8b0;
+
+  --color-hover-overlay: rgba(232, 132, 92, 0.1);
+  --color-active-overlay: rgba(232, 132, 92, 0.18);
+  --color-focus-ring: #e8845c;
+  --color-selected: rgba(232, 132, 92, 0.12);
+  --color-selected-hover: rgba(232, 132, 92, 0.2);
+
+  --color-overlay-light: rgba(26, 16, 24, 0.92);
+  --color-overlay-dark: rgba(14, 8, 14, 0.85);
+  --color-backdrop: rgba(14, 8, 14, 0.75);
+}
+
+/**
+ * Theme: Forêt — deep pine-green dark theme, mossy canopy with warm amber glints
+ */
+[data-theme='foret'] {
+  --color-neutral-0: #0d1a12;
+  --color-neutral-50: #13231a;
+  --color-neutral-100: #1a2e22;
+
+  --color-background: #0f1d15;
+  --color-background-secondary: #15271c;
+  --color-background-tertiary: #1c3325;
+  --color-background-elevated: #1a2e22;
+
+  --color-surface: #15271c;
+  --color-surface-hover: #1c3325;
+  --color-surface-active: #264133;
+
+  --color-border: rgba(60, 100, 76, 0.5);
+  --color-border-light: rgba(40, 72, 52, 0.5);
+  --color-border-strong: rgba(120, 190, 140, 0.3);
+
+  --color-text-primary: #e0ecdc;
+  --color-text-secondary: #a0bca4;
+  --color-text-tertiary: #708a74;
+  --color-text-disabled: #4a604e;
+  --color-text-inverted: #0f1d15;
+
+  --color-primary-50: rgba(120, 190, 140, 0.08);
+  --color-primary-100: rgba(120, 190, 140, 0.14);
+  --color-primary-200: #b0daba;
+  --color-primary-300: #86c894;
+  --color-primary-400: #6bbe7d;
+  --color-primary-500: #55a867;
+  --color-primary-600: #6bbe7d;
+  --color-primary-700: #86c894;
+  --color-primary-800: #b0daba;
+
+  --color-link: #86c894;
+  --color-link-hover: #b0daba;
+
+  --color-hover-overlay: rgba(120, 190, 140, 0.08);
+  --color-active-overlay: rgba(120, 190, 140, 0.16);
+  --color-focus-ring: #6bbe7d;
+  --color-selected: rgba(120, 190, 140, 0.1);
+  --color-selected-hover: rgba(120, 190, 140, 0.2);
+
+  --color-overlay-light: rgba(15, 29, 21, 0.92);
+  --color-overlay-dark: rgba(8, 18, 12, 0.85);
+  --color-backdrop: rgba(8, 18, 12, 0.75);
+}
+
+/**
+ * High Contrast Mode
+ */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: var(--color-neutral-400);
+    --color-text-secondary: var(--color-neutral-700);
+  }
+
+  [data-theme='dark'] {
+    --color-border: var(--color-neutral-500);
+    --color-text-secondary: var(--color-neutral-300);
+  }
+}

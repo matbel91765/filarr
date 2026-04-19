@@ -1,0 +1,163 @@
+/**
+ * Layout Styles
+ */
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-background);
+  overflow: hidden;
+}
+
+.layout__body {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.layout__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ===== Sidebar Integration ===== */
+
+/* Pas de décalage automatique : la sidebar est en overlay sur toutes résolutions */
+@media (min-width: 1024px) {
+  .layout__content--with-sidebar {
+    /* Optionnel : décaler le contenu si souhaité (désactivé pour overlay) */
+    /* margin-left: var(--spacing-layout-sidebar-width); */
+  }
+}
+
+/* ===== Scrollbar ===== */
+
+.layout__content::-webkit-scrollbar {
+  width: 12px;
+}
+
+.layout__content::-webkit-scrollbar-track {
+  background: var(--color-background);
+}
+
+.layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+  border: 3px solid var(--color-background);
+}
+
+.layout__content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+[data-theme='dark'] .layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: var(--color-background);
+}
+
+[data-theme='dark'] .layout__content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-500);
+}
+
+/* ===== Theme: Space — transparent layout to show starfield ===== */
+
+[data-theme='space'] .layout {
+  background-color: transparent;
+}
+
+[data-theme='space'] .layout__content {
+  background: transparent;
+}
+
+[data-theme='space'] .layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: transparent;
+}
+
+/* ===== Theme: Aurora — transparent layout to show northern lights ===== */
+
+[data-theme='aurora'] .layout {
+  background-color: transparent;
+}
+
+[data-theme='aurora'] .layout__content {
+  background: transparent;
+}
+
+[data-theme='aurora'] .layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: transparent;
+}
+
+/* ===== Theme: Sakura — transparent layout to show petal halos ===== */
+
+[data-theme='sakura'] .layout {
+  background-color: transparent;
+}
+
+[data-theme='sakura'] .layout__content {
+  background: transparent;
+}
+
+[data-theme='sakura'] .layout__content::-webkit-scrollbar-thumb {
+  background: #f2c4cf;
+  border-color: transparent;
+}
+
+/* ===== Theme: Crépuscule — transparent layout to show twilight glow ===== */
+
+[data-theme='crepuscule'] .layout {
+  background-color: transparent;
+}
+
+[data-theme='crepuscule'] .layout__content {
+  background: transparent;
+}
+
+[data-theme='crepuscule'] .layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: transparent;
+}
+
+/* ===== Theme: Forêt — transparent layout to show canopy + fireflies ===== */
+
+[data-theme='foret'] .layout {
+  background-color: transparent;
+}
+
+[data-theme='foret'] .layout__content {
+  background: transparent;
+}
+
+[data-theme='foret'] .layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: transparent;
+}
+
+/* ===== Theme: Sky — propagate blue tint everywhere ===== */
+
+[data-theme='sky'] .layout {
+  background-color: #ebf4fe;
+}
+
+/* ===== Theme: Lofi — propagate warm tint everywhere ===== */
+
+[data-theme='lofi'] .layout {
+  background-color: #f5f0e8;
+}
+
+/* ===== Accessibility ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .layout__content {
+    transition: none;
+  }
+}

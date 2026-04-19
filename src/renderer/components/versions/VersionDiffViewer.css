@@ -1,0 +1,325 @@
+/**
+ * Version Diff Viewer Styles
+ *
+ * Styles for the diff comparison component
+ */
+
+/* ==================== MAIN CONTAINER ==================== */
+
+.diff-viewer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 800px;
+  background: var(--color-surface, #ffffff);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-lg, 0 10px 40px rgba(0, 0, 0, 0.15));
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+/* ==================== HEADER ==================== */
+
+.diff-viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface-elevated, #fafafa);
+}
+
+.diff-viewer__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 8px);
+}
+
+.diff-viewer__title svg {
+  color: var(--color-primary, #3b82f6);
+}
+
+.diff-viewer__title h4 {
+  margin: 0;
+  font-size: var(--font-size-md, 16px);
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+}
+
+.diff-viewer__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm, 6px);
+  color: var(--color-text-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.diff-viewer__close:hover {
+  background: var(--color-surface-hover, #f3f4f6);
+  color: var(--color-text, #1f2937);
+}
+
+/* ==================== STATS ==================== */
+
+.diff-viewer__stats {
+  display: flex;
+  gap: var(--spacing-4, 16px);
+  padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+  background: var(--color-surface, #ffffff);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.diff-viewer__stat {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1, 4px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
+}
+
+.diff-viewer__stat svg {
+  width: 14px;
+  height: 14px;
+}
+
+.diff-viewer__stat--add {
+  color: var(--color-success, #10b981);
+}
+
+.diff-viewer__stat--remove {
+  color: var(--color-error, #ef4444);
+}
+
+.diff-viewer__stat--modify {
+  color: var(--color-warning, #f59e0b);
+}
+
+/* ==================== CONTENT ==================== */
+
+.diff-viewer__content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.diff-viewer__binary,
+.diff-viewer__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-8, 32px);
+  text-align: center;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.diff-viewer__binary svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--spacing-3, 12px);
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.diff-viewer__binary p {
+  margin: 0;
+}
+
+.diff-viewer__binary-hint {
+  margin-top: var(--spacing-2, 8px) !important;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.diff-viewer__empty p {
+  margin: 0;
+  font-style: italic;
+}
+
+/* ==================== LINES ==================== */
+
+.diff-viewer__lines {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: var(--font-size-sm, 14px);
+  line-height: 1.5;
+}
+
+.diff-viewer__line {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--spacing-1, 4px) var(--spacing-3, 12px);
+  border-bottom: 1px solid transparent;
+}
+
+.diff-viewer__line:hover {
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.02));
+}
+
+.diff-viewer__line--add {
+  background: var(--color-success-bg, #ecfdf5);
+  border-left: 3px solid var(--color-success, #10b981);
+}
+
+.diff-viewer__line--remove {
+  background: var(--color-error-bg, #fef2f2);
+  border-left: 3px solid var(--color-error, #ef4444);
+}
+
+.diff-viewer__line--modify {
+  background: var(--color-warning-bg, #fffbeb);
+  border-left: 3px solid var(--color-warning, #f59e0b);
+}
+
+.diff-viewer__line-number {
+  min-width: 48px;
+  padding-right: var(--spacing-2, 8px);
+  color: var(--color-text-muted, #9ca3af);
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.diff-viewer__line-prefix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  flex-shrink: 0;
+  margin-right: var(--spacing-2, 8px);
+}
+
+.diff-viewer__line--add .diff-viewer__line-prefix {
+  color: var(--color-success, #10b981);
+}
+
+.diff-viewer__line--remove .diff-viewer__line-prefix {
+  color: var(--color-error, #ef4444);
+}
+
+.diff-viewer__line--modify .diff-viewer__line-prefix {
+  color: var(--color-warning, #f59e0b);
+}
+
+.diff-viewer__line-content {
+  flex: 1;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.diff-viewer__old-content {
+  text-decoration: line-through;
+  color: var(--color-error, #ef4444);
+  background: var(--color-error-bg, #fef2f2);
+  padding: 0 var(--spacing-1, 4px);
+  border-radius: var(--radius-xs, 2px);
+}
+
+.diff-viewer__arrow {
+  margin: 0 var(--spacing-2, 8px);
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.diff-viewer__new-content {
+  color: var(--color-success, #10b981);
+  background: var(--color-success-bg, #ecfdf5);
+  padding: 0 var(--spacing-1, 4px);
+  border-radius: var(--radius-xs, 2px);
+}
+
+/* ==================== FOOTER ==================== */
+
+.diff-viewer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3, 12px);
+  padding: var(--spacing-3, 12px) var(--spacing-4, 16px);
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface-elevated, #fafafa);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.diff-viewer__version-info {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  padding: var(--spacing-1, 4px) var(--spacing-2, 8px);
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-sm, 6px);
+}
+
+.diff-viewer__vs {
+  font-weight: 600;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+/* ==================== DARK THEME ==================== */
+
+[data-theme="dark"] .diff-viewer {
+  background: var(--color-surface-dark, #1f2937);
+  border-color: var(--color-border-dark, #374151);
+}
+
+[data-theme="dark"] .diff-viewer__header {
+  background: var(--color-surface-elevated-dark, #111827);
+  border-color: var(--color-border-dark, #374151);
+}
+
+[data-theme="dark"] .diff-viewer__title h4 {
+  color: var(--color-text-dark, #f9fafb);
+}
+
+[data-theme="dark"] .diff-viewer__stats {
+  background: var(--color-surface-dark, #1f2937);
+  border-color: var(--color-border-dark, #374151);
+}
+
+[data-theme="dark"] .diff-viewer__line--add {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="dark"] .diff-viewer__line--remove {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme="dark"] .diff-viewer__line--modify {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+[data-theme="dark"] .diff-viewer__footer {
+  background: var(--color-surface-elevated-dark, #111827);
+  border-color: var(--color-border-dark, #374151);
+}
+
+[data-theme="dark"] .diff-viewer__version-info {
+  background: var(--color-surface-dark, #1f2937);
+  border-color: var(--color-border-dark, #374151);
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 640px) {
+  .diff-viewer {
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  .diff-viewer__stats {
+    flex-wrap: wrap;
+    gap: var(--spacing-2, 8px);
+  }
+
+  .diff-viewer__footer {
+    flex-direction: column;
+    gap: var(--spacing-2, 8px);
+  }
+
+  .diff-viewer__line-number {
+    min-width: 32px;
+  }
+}

@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you start: read [CONTRIBUTING.md](../CONTRIBUTING.md) for the kinds of changes this project accepts. Cloud, sync, account and telemetry features are out of scope.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the user need first, not the solution.
+      placeholder: "I keep losing track of which notes I edited today."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should it work from the user's point of view?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds, similar features in other apps, anything you ruled out and why.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional context
+      description: Mockups, related issues, links to discussions.

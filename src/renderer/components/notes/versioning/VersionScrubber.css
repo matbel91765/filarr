@@ -1,0 +1,391 @@
+/* ==================== VersionScrubber — Option 2 ==================== */
+
+.scrubber {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  animation: scrubber-fade 0.2s ease-out;
+  /* Reserve space at the top for the frameless window's drag region +
+     native min/max/close controls. WindowDragRegion is at z-index 99999
+     with 40px height, so any Scrubber button placed at y < 40 would be
+     unreachable (clicks would pass to the drag region or native controls
+     on the right). Pushing everything down past that strip avoids the
+     dead-click zone at the top-right. */
+  padding-top: 40px;
+}
+
+@keyframes scrubber-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Header ---- */
+
+.scrubber__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  flex-shrink: 0;
+}
+
+.scrubber__close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.scrubber__close:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.scrubber__nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+
+.scrubber__nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  line-height: 1;
+  transition: all 0.12s;
+}
+
+.scrubber__nav-btn:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+}
+
+.scrubber__nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.scrubber__date {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-width: 280px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.scrubber__restore {
+  padding: 8px 16px;
+  background: var(--color-primary-600, #4682b4);
+  color: white;
+  border: 1px solid var(--color-primary-600, #4682b4);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.scrubber__restore:hover:not(:disabled) {
+  background: var(--color-primary-700, #3b6d96);
+}
+
+.scrubber__restore:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Track ---- */
+
+.scrubber__track-wrap {
+  padding: 40px 40px 12px;
+  flex-shrink: 0;
+}
+
+.scrubber__track {
+  position: relative;
+  height: 40px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ---- Bubble following the active thumb ---- */
+
+.scrubber__bubble {
+  position: absolute;
+  top: -34px;
+  transform: translateX(-50%);
+  background: var(--color-primary-600, #4682b4);
+  color: white;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: left 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+.scrubber__bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary-600, #4682b4);
+}
+
+.scrubber__bubble-sub {
+  font-size: 0.625rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* ---- Hover bubble for non-selected checkpoints ---- */
+
+.scrubber__hover-bubble {
+  position: absolute;
+  top: -26px;
+  transform: translateX(-50%);
+  background: var(--color-text-primary);
+  color: var(--color-background);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+  z-index: 1;
+}
+
+.scrubber__track:focus {
+  outline: none;
+}
+
+.scrubber__track-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background: var(--color-border);
+  border-radius: 1px;
+  transform: translateY(-50%);
+}
+
+.scrubber__checkpoint {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    background 0.12s;
+}
+
+.scrubber__checkpoint:hover {
+  transform: translate(-50%, -50%) scale(1.4);
+  background: var(--color-text-secondary);
+}
+
+.scrubber__checkpoint--active {
+  background: var(--color-primary-600, #4682b4);
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.scrubber__thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-background);
+  border: 3px solid var(--color-primary-600, #4682b4);
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: left 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.scrubber__track-ends {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 2px 0;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Preview ---- */
+
+.scrubber__preview {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--color-surface);
+  display: flex;
+  justify-content: center;
+  padding: 32px 24px 64px;
+  min-height: 0;
+}
+
+.scrubber__preview-empty {
+  align-self: center;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  font-size: 0.9375rem;
+  text-align: center;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.scrubber__doc {
+  max-width: 860px;
+  width: 100%;
+  min-height: calc(100vh - 280px);
+  background: var(--color-background);
+  border-radius: 12px;
+  padding: 48px 56px 64px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.scrubber__doc-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+.scrubber__doc-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.scrubber__render {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--color-text-primary);
+}
+
+.scrubber__render .ProseMirror {
+  outline: none;
+}
+
+.scrubber__render .ProseMirror h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.scrubber__render .ProseMirror h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.scrubber__render .ProseMirror h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 1em 0 0.5em;
+}
+
+.scrubber__render .ProseMirror p {
+  margin: 0.6em 0;
+}
+
+.scrubber__render .ProseMirror ul,
+.scrubber__render .ProseMirror ol {
+  padding-left: 1.6em;
+  margin: 0.6em 0;
+}
+
+.scrubber__render .ProseMirror blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 14px;
+  color: var(--color-text-secondary);
+  margin: 0.8em 0;
+}
+
+.scrubber__render .ProseMirror code {
+  background: var(--color-surface);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.9em;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.scrubber__render .ProseMirror pre {
+  background: var(--color-surface);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85em;
+}
+
+/* ---- Dark mode ---- */
+
+[data-theme='dark'] .scrubber__doc {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 900px) {
+  .scrubber__header {
+    flex-wrap: wrap;
+  }
+  .scrubber__date {
+    min-width: 0;
+  }
+  .scrubber__track-wrap {
+    padding: 16px 20px 6px;
+  }
+  .scrubber__doc {
+    padding: 28px 24px 36px;
+  }
+}

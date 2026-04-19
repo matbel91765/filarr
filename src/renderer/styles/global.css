@@ -1,0 +1,1268 @@
+/**
+ * Global Styles
+ *
+ * Styles globaux pour l'application Filarr
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Frameless window: all interactive elements are non-draggable */
+button,
+input,
+select,
+textarea,
+a,
+[role='button'],
+[role='menu'],
+[role='menuitem'],
+[role='listbox'] {
+  -webkit-app-region: no-drag;
+}
+
+/* Import des tokens */
+@import './tokens/index.css';
+@import './reset.css';
+
+/**
+ * Theme Initialization
+ */
+:root {
+  /* Default theme is light */
+  color-scheme: light;
+
+  /* ===== Theme Color Variables ===== */
+  /* These can be overridden by the theme service */
+  --theme-primary: var(--color-primary-600);
+  --theme-primary-hover: var(--color-primary-700);
+  --theme-primary-active: var(--color-primary-800);
+  --theme-background: var(--color-background);
+  --theme-background-secondary: var(--color-background-secondary);
+  --theme-background-tertiary: var(--color-background-tertiary);
+  --theme-surface: var(--color-surface);
+  --theme-surface-hover: var(--color-surface-hover);
+  --theme-border: var(--color-border);
+  --theme-border-light: var(--color-border-light);
+  --theme-text-primary: var(--color-text-primary);
+  --theme-text-secondary: var(--color-text-secondary);
+  --theme-text-tertiary: var(--color-text-tertiary);
+  --theme-accent: var(--color-primary-300);
+  --theme-accent-hover: var(--color-primary-400);
+  --theme-success: var(--color-success-500);
+  --theme-warning: var(--color-warning-500);
+  --theme-error: var(--color-error-500);
+  --theme-info: var(--color-info-500);
+
+  /* ===== Density Variables ===== */
+  /* Comfortable mode (default) */
+  --density-spacing: 1rem;
+  --density-item-padding: 12px 16px;
+  --density-item-gap: 12px;
+  --density-font-size: 14px;
+  --density-icon-size: 20px;
+  --density-row-height: 48px;
+  --density-grid-item-width: 180px;
+  --density-grid-size: 150px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* ===== Dark Theme Overrides ===== */
+  --theme-primary: var(--color-primary-300);
+  --theme-primary-hover: var(--color-primary-200);
+  --theme-primary-active: var(--color-primary-400);
+  --theme-accent: var(--color-primary-300);
+  --theme-accent-hover: var(--color-primary-200);
+}
+
+[data-theme='space'] {
+  color-scheme: dark;
+
+  --theme-primary: var(--color-primary-300);
+  --theme-primary-hover: var(--color-primary-200);
+  --theme-primary-active: var(--color-primary-400);
+  --theme-accent: var(--color-primary-300);
+  --theme-accent-hover: var(--color-primary-200);
+}
+
+/* ===== Space Theme: Starfield + Nebula on body background ===== */
+
+[data-theme='space'] body {
+  background-color: #080a16;
+  background-image:
+    /* Nebula glow */
+    radial-gradient(ellipse at 15% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 45%),
+    radial-gradient(ellipse at 55% 85%, rgba(236, 72, 153, 0.08) 0%, transparent 50%),
+    /* Stars — big */ radial-gradient(2px 2px at 10% 15%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 40% 10%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 85% 45%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 50% 40%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(2px 2px at 60% 5%, rgba(255, 255, 255, 0.8), transparent),
+    /* Stars — medium */
+    radial-gradient(1.5px 1.5px at 25% 35%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 70% 25%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 15% 70%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 65% 75%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 95% 10%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 45% 95%, rgba(255, 255, 255, 0.5), transparent),
+    /* Stars — small */ radial-gradient(1px 1px at 55% 60%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 30% 85%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 80% 90%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 5% 45%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 75% 55%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 90% 70%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 20% 95%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 35% 50%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 50% 20%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 3% 8%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 97% 92%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 42% 68%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 78% 12%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 18% 42%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 62% 32%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 88% 58%, rgba(255, 255, 255, 0.35), transparent);
+  background-attachment: fixed;
+}
+
+/* Surfaces must be semi-transparent to let the starfield show through */
+[data-theme='space'] #root {
+  background: transparent;
+}
+
+/* ===== Aurora Theme: Northern lights glow on body background ===== */
+
+[data-theme='aurora'] {
+  color-scheme: dark;
+
+  --theme-primary: var(--color-primary-400);
+  --theme-primary-hover: var(--color-primary-300);
+  --theme-primary-active: var(--color-primary-500);
+  --theme-accent: var(--color-primary-400);
+  --theme-accent-hover: var(--color-primary-300);
+}
+
+[data-theme='aurora'] body {
+  background-color: #0b1120;
+  background-image:
+    /* Aurora bands — green (boosted) */
+    radial-gradient(ellipse at 20% 20%, rgba(34, 211, 160, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 15%, rgba(34, 211, 160, 0.25) 0%, transparent 45%),
+    /* Aurora bands — violet (boosted) */
+    radial-gradient(ellipse at 80% 60%, rgba(192, 132, 252, 0.22) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 80%, rgba(129, 140, 248, 0.18) 0%, transparent 45%),
+    /* Stars */ radial-gradient(1.5px 1.5px at 15% 25%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 45% 12%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 75% 40%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 90% 20%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 55% 70%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 25% 55%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 85% 85%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 10% 90%, rgba(255, 255, 255, 0.35), transparent);
+  background-attachment: fixed;
+}
+
+[data-theme='aurora'] #root {
+  background: transparent;
+}
+
+[data-theme='aurora'] code {
+  background-color: rgba(11, 17, 32, 0.8);
+  border: 1px solid rgba(34, 211, 160, 0.15);
+}
+
+[data-theme='aurora'] pre {
+  background-color: rgba(6, 10, 20, 0.9) !important;
+  border-left: 3px solid rgba(34, 211, 160, 0.4);
+}
+
+[data-theme='aurora'] ::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+
+[data-theme='aurora'] ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
+[data-theme='aurora'] ::-webkit-scrollbar-thumb:hover {
+  background: #22d3a0;
+}
+
+/* ===== Sakura Theme: Cherry blossom petal halos on body background ===== */
+
+[data-theme='sakura'] {
+  color-scheme: light;
+
+  --theme-primary: var(--color-primary-400);
+  --theme-primary-hover: var(--color-primary-300);
+  --theme-primary-active: var(--color-primary-500);
+  --theme-accent: var(--color-primary-400);
+  --theme-accent-hover: var(--color-primary-300);
+}
+
+[data-theme='sakura'] body {
+  background-color: #fff8f9;
+  background-image:
+    /* Petal halos — large soft pink glows */
+    radial-gradient(ellipse at 10% 20%, rgba(232, 87, 138, 0.28) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 15%, rgba(240, 120, 160, 0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 80%, rgba(232, 87, 138, 0.2) 0%, transparent 50%),
+    /* Petal halos — warm coral glows */
+    radial-gradient(ellipse at 75% 65%, rgba(245, 158, 130, 0.22) 0%, transparent 45%),
+    radial-gradient(ellipse at 20% 70%, rgba(242, 160, 190, 0.25) 0%, transparent 50%),
+    /* Petal dots — large */
+    radial-gradient(3px 3px at 12% 18%, rgba(232, 87, 138, 0.35), transparent),
+    radial-gradient(3px 3px at 88% 25%, rgba(240, 120, 160, 0.3), transparent),
+    radial-gradient(2.5px 2.5px at 45% 12%, rgba(242, 160, 190, 0.28), transparent),
+    radial-gradient(2.5px 2.5px at 72% 78%, rgba(232, 87, 138, 0.25), transparent),
+    /* Petal dots — small */
+    radial-gradient(2px 2px at 30% 35%, rgba(240, 120, 160, 0.22), transparent),
+    radial-gradient(2px 2px at 60% 55%, rgba(232, 87, 138, 0.2), transparent),
+    radial-gradient(1.5px 1.5px at 15% 60%, rgba(245, 158, 130, 0.18), transparent),
+    radial-gradient(1.5px 1.5px at 80% 45%, rgba(242, 160, 190, 0.18), transparent),
+    radial-gradient(1.5px 1.5px at 40% 90%, rgba(232, 87, 138, 0.15), transparent),
+    radial-gradient(1.5px 1.5px at 92% 70%, rgba(240, 120, 160, 0.15), transparent);
+  background-attachment: fixed;
+}
+
+[data-theme='sakura'] code {
+  background-color: rgba(255, 234, 239, 0.7);
+  border: 1px solid rgba(232, 87, 138, 0.15);
+}
+
+[data-theme='sakura'] pre {
+  background-color: rgba(255, 240, 243, 0.8) !important;
+  border-left: 3px solid rgba(232, 87, 138, 0.35);
+}
+
+[data-theme='sakura'] ::-webkit-scrollbar-track {
+  background: #fff0f3;
+}
+
+[data-theme='sakura'] ::-webkit-scrollbar-thumb {
+  background: #f2c4cf;
+}
+
+[data-theme='sakura'] ::-webkit-scrollbar-thumb:hover {
+  background: #e8578a;
+}
+
+/* ===== Crépuscule Theme: Warm twilight amber-to-purple dusk glow ===== */
+
+[data-theme='crepuscule'] {
+  color-scheme: dark;
+
+  --theme-primary: var(--color-primary-400);
+  --theme-primary-hover: var(--color-primary-300);
+  --theme-primary-active: var(--color-primary-500);
+  --theme-accent: var(--color-primary-400);
+  --theme-accent-hover: var(--color-primary-300);
+}
+
+[data-theme='crepuscule'] body {
+  background-color: #1a1018;
+  background-image:
+    /* Dusk glow — warm amber (large halos) */
+    radial-gradient(ellipse at 25% 80%, rgba(232, 132, 92, 0.4) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 70%, rgba(220, 100, 60, 0.3) 0%, transparent 45%),
+    /* Dusk glow — coral-rose transition */
+    radial-gradient(ellipse at 60% 30%, rgba(200, 90, 120, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 10% 40%, rgba(180, 70, 110, 0.2) 0%, transparent 45%),
+    /* Dusk glow — deep purple horizon */
+    radial-gradient(ellipse at 50% 95%, rgba(120, 50, 90, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 20%, rgba(100, 40, 80, 0.18) 0%, transparent 40%),
+    /* Warm stars */ radial-gradient(1.5px 1.5px at 20% 15%, rgba(255, 220, 200, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 55% 10%, rgba(255, 200, 180, 0.5), transparent),
+    radial-gradient(1px 1px at 80% 35%, rgba(255, 220, 200, 0.45), transparent),
+    radial-gradient(1px 1px at 40% 60%, rgba(255, 200, 180, 0.4), transparent),
+    radial-gradient(1px 1px at 70% 50%, rgba(255, 220, 200, 0.45), transparent),
+    radial-gradient(1px 1px at 15% 85%, rgba(255, 200, 180, 0.35), transparent),
+    radial-gradient(1px 1px at 90% 75%, rgba(255, 220, 200, 0.4), transparent),
+    radial-gradient(1px 1px at 35% 90%, rgba(255, 200, 180, 0.35), transparent);
+  background-attachment: fixed;
+}
+
+[data-theme='crepuscule'] #root {
+  background: transparent;
+}
+
+[data-theme='crepuscule'] code {
+  background-color: rgba(26, 16, 24, 0.8);
+  border: 1px solid rgba(232, 132, 92, 0.15);
+}
+
+[data-theme='crepuscule'] pre {
+  background-color: rgba(14, 8, 14, 0.9) !important;
+  border-left: 3px solid rgba(232, 132, 92, 0.4);
+}
+
+[data-theme='crepuscule'] ::-webkit-scrollbar-track {
+  background: #1a1018;
+}
+
+[data-theme='crepuscule'] ::-webkit-scrollbar-thumb {
+  background: #3d2838;
+}
+
+[data-theme='crepuscule'] ::-webkit-scrollbar-thumb:hover {
+  background: #e8845c;
+}
+
+/* ===== Forêt Theme: Canopy dapples with golden fireflies on deep pine ===== */
+
+[data-theme='foret'] {
+  color-scheme: dark;
+
+  --theme-primary: var(--color-primary-400);
+  --theme-primary-hover: var(--color-primary-300);
+  --theme-primary-active: var(--color-primary-500);
+  --theme-accent: var(--color-primary-400);
+  --theme-accent-hover: var(--color-primary-300);
+}
+
+[data-theme='foret'] body {
+  background-color: #0f1d15;
+  background-image:
+    /* Canopy light shafts — moss green */
+    radial-gradient(ellipse at 25% 15%, rgba(107, 190, 125, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 25%, rgba(107, 190, 125, 0.16) 0%, transparent 45%),
+    /* Canopy shafts — deeper pine */
+    radial-gradient(ellipse at 15% 75%, rgba(60, 130, 90, 0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 80%, rgba(60, 130, 90, 0.16) 0%, transparent 45%),
+    /* Warm amber fireflies — big */
+    radial-gradient(2.5px 2.5px at 18% 30%, rgba(255, 210, 140, 0.6), transparent),
+    radial-gradient(2.5px 2.5px at 65% 20%, rgba(255, 200, 120, 0.55), transparent),
+    radial-gradient(2px 2px at 40% 55%, rgba(255, 220, 160, 0.5), transparent),
+    radial-gradient(2px 2px at 85% 55%, rgba(255, 200, 120, 0.5), transparent),
+    radial-gradient(2px 2px at 25% 80%, rgba(255, 210, 140, 0.5), transparent),
+    /* Fireflies — small */
+    radial-gradient(1.5px 1.5px at 55% 35%, rgba(255, 220, 160, 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 10% 50%, rgba(255, 210, 140, 0.35), transparent),
+    radial-gradient(1.5px 1.5px at 72% 68%, rgba(255, 200, 120, 0.38), transparent),
+    radial-gradient(1.5px 1.5px at 45% 92%, rgba(255, 220, 160, 0.35), transparent),
+    radial-gradient(1px 1px at 90% 15%, rgba(255, 210, 140, 0.3), transparent),
+    radial-gradient(1px 1px at 5% 20%, rgba(255, 200, 120, 0.3), transparent),
+    radial-gradient(1px 1px at 62% 88%, rgba(255, 220, 160, 0.3), transparent);
+  background-attachment: fixed;
+}
+
+[data-theme='foret'] #root {
+  background: transparent;
+}
+
+[data-theme='foret'] code {
+  background-color: rgba(15, 29, 21, 0.8);
+  border: 1px solid rgba(120, 190, 140, 0.15);
+}
+
+[data-theme='foret'] pre {
+  background-color: rgba(8, 18, 12, 0.9) !important;
+  border-left: 3px solid rgba(120, 190, 140, 0.4);
+}
+
+[data-theme='foret'] ::-webkit-scrollbar-track {
+  background: #0f1d15;
+}
+
+[data-theme='foret'] ::-webkit-scrollbar-thumb {
+  background: #264133;
+}
+
+[data-theme='foret'] ::-webkit-scrollbar-thumb:hover {
+  background: #6bbe7d;
+}
+
+/* ===== Atmospheric Overlay: gradient halos ON TOP of all content ===== */
+/* Uses ::after on .layout with pointer-events:none so it doesn't block interactions.
+   This approach avoids needing transparent intermediate elements. */
+
+[data-theme='space'] .layout::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background-image:
+    radial-gradient(ellipse at 15% 50%, rgba(139, 92, 246, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 45%),
+    radial-gradient(ellipse at 55% 85%, rgba(236, 72, 153, 0.04) 0%, transparent 50%);
+}
+
+[data-theme='aurora'] .layout::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(34, 211, 160, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 15%, rgba(34, 211, 160, 0.07) 0%, transparent 45%),
+    radial-gradient(ellipse at 80% 60%, rgba(192, 132, 252, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 80%, rgba(129, 140, 248, 0.05) 0%, transparent 45%);
+}
+
+[data-theme='sakura'] .layout::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background-image:
+    radial-gradient(ellipse at 10% 20%, rgba(232, 87, 138, 0.09) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 15%, rgba(240, 120, 160, 0.07) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 80%, rgba(232, 87, 138, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 65%, rgba(245, 158, 130, 0.07) 0%, transparent 45%),
+    radial-gradient(ellipse at 20% 70%, rgba(242, 160, 190, 0.08) 0%, transparent 50%);
+}
+
+[data-theme='crepuscule'] .layout::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background-image:
+    radial-gradient(ellipse at 25% 80%, rgba(232, 132, 92, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 70%, rgba(220, 100, 60, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 60% 30%, rgba(200, 90, 120, 0.07) 0%, transparent 50%),
+    radial-gradient(ellipse at 10% 40%, rgba(180, 70, 110, 0.06) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 95%, rgba(120, 50, 90, 0.1) 0%, transparent 50%);
+}
+
+[data-theme='foret'] .layout::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background-image:
+    radial-gradient(ellipse at 25% 15%, rgba(107, 190, 125, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 25%, rgba(107, 190, 125, 0.05) 0%, transparent 45%),
+    radial-gradient(ellipse at 15% 75%, rgba(60, 130, 90, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 75% 80%, rgba(60, 130, 90, 0.05) 0%, transparent 45%);
+}
+
+/* Note: theme-specific overrides are in Layout.css and NoteEditor.css */
+
+/* ===== Density Mode: Compact ===== */
+[data-density='compact'] {
+  --density-spacing: 0.75rem;
+  --density-item-padding: 8px 12px;
+  --density-item-gap: 8px;
+  --density-font-size: 13px;
+  --density-icon-size: 18px;
+  --density-row-height: 40px;
+  --density-grid-item-width: 150px;
+}
+
+/* ===== Density Mode: Dense ===== */
+[data-density='dense'] {
+  --density-spacing: 0.5rem;
+  --density-item-padding: 4px 8px;
+  --density-item-gap: 4px;
+  --density-font-size: 12px;
+  --density-icon-size: 16px;
+  --density-row-height: 32px;
+  --density-grid-item-width: 120px;
+}
+
+/**
+ * Global Typography Defaults
+ */
+body {
+  font-family: var(--font-family-base);
+  font-size: var(--body-size);
+  font-weight: var(--body-weight);
+  line-height: var(--body-line-height);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  letter-spacing: var(--body-letter-spacing);
+}
+
+h1 {
+  font-size: var(--heading-h1-size);
+  font-weight: var(--heading-h1-weight);
+  line-height: var(--heading-h1-line-height);
+  letter-spacing: var(--heading-h1-letter-spacing);
+  color: var(--color-text-primary);
+}
+
+h2 {
+  font-size: var(--heading-h2-size);
+  font-weight: var(--heading-h2-weight);
+  line-height: var(--heading-h2-line-height);
+  letter-spacing: var(--heading-h2-letter-spacing);
+  color: var(--color-text-primary);
+}
+
+h3 {
+  font-size: var(--heading-h3-size);
+  font-weight: var(--heading-h3-weight);
+  line-height: var(--heading-h3-line-height);
+  letter-spacing: var(--heading-h3-letter-spacing);
+  color: var(--color-text-primary);
+}
+
+h4 {
+  font-size: var(--heading-h4-size);
+  font-weight: var(--heading-h4-weight);
+  line-height: var(--heading-h4-line-height);
+  letter-spacing: var(--heading-h4-letter-spacing);
+  color: var(--color-text-primary);
+}
+
+h5 {
+  font-size: var(--heading-h5-size);
+  font-weight: var(--heading-h5-weight);
+  line-height: var(--heading-h5-line-height);
+  letter-spacing: var(--heading-h5-letter-spacing);
+  color: var(--color-text-primary);
+}
+
+h6 {
+  font-size: var(--heading-h6-size);
+  font-weight: var(--heading-h6-weight);
+  line-height: var(--heading-h6-line-height);
+  letter-spacing: var(--heading-h6-letter-spacing);
+  color: var(--color-text-primary);
+}
+
+strong,
+b {
+  font-weight: var(--font-weight-bold);
+}
+
+em,
+i {
+  font-style: italic;
+}
+
+small {
+  font-size: var(--font-size-sm);
+}
+
+code {
+  font-family: var(--font-family-mono);
+  font-size: var(--code-size);
+  background-color: var(--color-neutral-100);
+  padding: 0.125rem 0.25rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+}
+
+[data-theme='dark'] code {
+  background-color: var(--color-neutral-800);
+}
+
+pre {
+  font-family: var(--font-family-mono);
+  font-size: var(--code-size);
+  background-color: var(--color-neutral-100);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  line-height: var(--line-height-relaxed);
+}
+
+[data-theme='dark'] pre {
+  background-color: var(--color-neutral-800);
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/**
+ * Links
+ */
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+a:visited {
+  color: var(--color-link-visited);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/**
+ * User Selection
+ */
+.selected {
+  background-color: var(--color-selected);
+}
+
+.selected:hover {
+  background-color: var(--color-selected-hover);
+}
+
+/**
+ * FileCard Grid — CSS containment for paint isolation
+ */
+.file-card-grid {
+  contain: layout style paint;
+}
+
+/**
+ * Rubber-band Selection (visual-only during drag, no React re-renders)
+ */
+.rb-selecting {
+  box-shadow: inset 0 0 0 2px var(--color-primary-400) !important;
+  transition: none !important;
+}
+
+.rb-drag-active {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.rb-drag-active [data-item-id] {
+  transition: none !important;
+  contain: layout style paint;
+}
+
+/**
+ * Drag & Drop States
+ */
+.dragging {
+  opacity: 0.5;
+  cursor: grabbing !important;
+}
+
+.drag-over {
+  background-color: var(--color-drag-over);
+  border: 2px dashed var(--color-primary-300);
+}
+
+.drop-zone {
+  background-color: var(--color-drop-zone);
+  border: 2px dashed var(--color-primary-400);
+  border-radius: var(--radius-md);
+}
+
+.drop-zone-active {
+  background-color: var(--color-drop-zone-active);
+  border-color: var(--color-primary-500);
+}
+
+/**
+ * Loading States
+ */
+.loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--color-primary-300);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-200) 0%,
+    var(--color-neutral-100) 50%,
+    var(--color-neutral-200) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+[data-theme='dark'] .shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-800) 0%,
+    var(--color-neutral-700) 50%,
+    var(--color-neutral-800) 100%
+  );
+}
+
+/**
+ * Disabled States
+ */
+.disabled,
+[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/**
+ * Error States
+ */
+.error {
+  color: var(--color-error-600);
+  border-color: var(--color-error-500);
+}
+
+.error-message {
+  color: var(--color-error-600);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-1);
+}
+
+/**
+ * Success States
+ */
+.success {
+  color: var(--color-success-600);
+  border-color: var(--color-success-500);
+}
+
+.success-message {
+  color: var(--color-success-600);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-1);
+}
+
+/**
+ * Warning States
+ */
+.warning {
+  color: var(--color-warning-600);
+  border-color: var(--color-warning-500);
+}
+
+.warning-message {
+  color: var(--color-warning-600);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-1);
+}
+
+/**
+ * Accessibility
+ */
+.focus-visible:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/**
+ * Utility Classes
+ */
+
+/* Display */
+.block {
+  display: block;
+}
+.inline-block {
+  display: inline-block;
+}
+.inline {
+  display: inline;
+}
+.flex {
+  display: flex;
+}
+.inline-flex {
+  display: inline-flex;
+}
+.grid {
+  display: grid;
+}
+.inline-grid {
+  display: inline-grid;
+}
+.hidden {
+  display: none;
+}
+
+/* Flexbox */
+.flex-row {
+  flex-direction: row;
+}
+.flex-col {
+  flex-direction: column;
+}
+.flex-wrap {
+  flex-wrap: wrap;
+}
+.flex-nowrap {
+  flex-wrap: nowrap;
+}
+.items-start {
+  align-items: flex-start;
+}
+.items-center {
+  align-items: center;
+}
+.items-end {
+  align-items: flex-end;
+}
+.items-stretch {
+  align-items: stretch;
+}
+.justify-start {
+  justify-content: flex-start;
+}
+.justify-center {
+  justify-content: center;
+}
+.justify-end {
+  justify-content: flex-end;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.justify-around {
+  justify-content: space-around;
+}
+.justify-evenly {
+  justify-content: space-evenly;
+}
+.flex-1 {
+  flex: 1 1 0%;
+}
+.flex-auto {
+  flex: 1 1 auto;
+}
+.flex-none {
+  flex: none;
+}
+
+/* Grid */
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.grid-cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.grid-cols-6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/* Position */
+.relative {
+  position: relative;
+}
+.absolute {
+  position: absolute;
+}
+.fixed {
+  position: fixed;
+}
+.sticky {
+  position: sticky;
+}
+.static {
+  position: static;
+}
+
+/* Overflow */
+.overflow-auto {
+  overflow: auto;
+}
+.overflow-hidden {
+  overflow: hidden;
+}
+.overflow-visible {
+  overflow: visible;
+}
+.overflow-scroll {
+  overflow: scroll;
+}
+.overflow-x-auto {
+  overflow-x: auto;
+}
+.overflow-y-auto {
+  overflow-y: auto;
+}
+.overflow-x-hidden {
+  overflow-x: hidden;
+}
+.overflow-y-hidden {
+  overflow-y: hidden;
+}
+
+/* Width & Height */
+.w-full {
+  width: 100%;
+}
+.h-full {
+  height: 100%;
+}
+.w-screen {
+  width: 100vw;
+}
+.h-screen {
+  height: 100vh;
+}
+.w-auto {
+  width: auto;
+}
+.h-auto {
+  height: auto;
+}
+.min-w-0 {
+  min-width: 0;
+}
+.min-h-0 {
+  min-height: 0;
+}
+.max-w-full {
+  max-width: 100%;
+}
+.max-h-full {
+  max-height: 100%;
+}
+
+/* Cursor */
+.cursor-pointer {
+  cursor: pointer;
+}
+.cursor-default {
+  cursor: default;
+}
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+.cursor-grab {
+  cursor: grab;
+}
+.cursor-grabbing {
+  cursor: grabbing;
+}
+
+/* User Select */
+.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.select-text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.select-all {
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+/* Pointer Events */
+.pointer-events-none {
+  pointer-events: none;
+}
+.pointer-events-auto {
+  pointer-events: auto;
+}
+
+/* Visibility */
+.visible {
+  visibility: visible;
+}
+.invisible {
+  visibility: hidden;
+}
+
+/* Opacity */
+.opacity-0 {
+  opacity: 0;
+}
+.opacity-25 {
+  opacity: 0.25;
+}
+.opacity-50 {
+  opacity: 0.5;
+}
+.opacity-75 {
+  opacity: 0.75;
+}
+.opacity-100 {
+  opacity: 1;
+}
+
+/* Background */
+.bg-transparent {
+  background-color: transparent;
+}
+.bg-current {
+  background-color: currentColor;
+}
+
+/**
+ * Responsive Breakpoints
+ */
+@media (max-width: 640px) {
+  .sm\:hidden {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .md\:hidden {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .lg\:hidden {
+    display: none;
+  }
+}
+
+@media (max-width: 1280px) {
+  .xl\:hidden {
+    display: none;
+  }
+}
+
+/**
+ * Density-Aware Components
+ */
+
+/* File/Folder Grid View */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--density-grid-size), 1fr));
+  gap: var(--density-item-gap);
+  padding: var(--density-spacing);
+}
+
+.file-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--density-item-padding);
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.file-grid-item:hover {
+  background-color: var(--theme-surface-hover);
+}
+
+.file-grid-item__icon {
+  width: var(--density-icon-size);
+  height: var(--density-icon-size);
+  margin-bottom: var(--density-item-gap);
+}
+
+.file-grid-item__name {
+  font-size: var(--density-font-size);
+  text-align: center;
+  word-break: break-word;
+}
+
+/* File/Folder List View */
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--density-spacing);
+}
+
+.file-list-item {
+  display: flex;
+  align-items: center;
+  height: var(--density-row-height);
+  padding: var(--density-item-padding);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.file-list-item:hover {
+  background-color: var(--theme-surface-hover);
+}
+
+.file-list-item__icon {
+  width: var(--density-icon-size);
+  height: var(--density-icon-size);
+  flex-shrink: 0;
+  margin-right: var(--density-item-gap);
+}
+
+.file-list-item__name {
+  flex: 1;
+  font-size: var(--density-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-list-item__meta {
+  font-size: calc(var(--density-font-size) - 1px);
+  color: var(--theme-text-tertiary);
+  margin-left: var(--density-item-gap);
+}
+
+/* Details View */
+.file-details-header {
+  display: flex;
+  align-items: center;
+  height: var(--density-row-height);
+  padding: var(--density-item-padding);
+  background-color: var(--theme-background-secondary);
+  border-bottom: 1px solid var(--theme-border);
+  font-weight: var(--font-weight-medium);
+  font-size: var(--density-font-size);
+}
+
+.file-details-row {
+  display: flex;
+  align-items: center;
+  height: var(--density-row-height);
+  padding: var(--density-item-padding);
+  border-bottom: 1px solid var(--theme-border-light);
+  font-size: var(--density-font-size);
+}
+
+.file-details-row:hover {
+  background-color: var(--theme-surface-hover);
+}
+
+.file-details-cell {
+  padding: 0 var(--density-item-gap);
+}
+
+.file-details-cell--name {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--density-item-gap);
+}
+
+.file-details-cell--size,
+.file-details-cell--date,
+.file-details-cell--type {
+  flex: 1;
+  color: var(--theme-text-secondary);
+}
+
+/**
+ * Theme-Aware Accent Utilities
+ */
+.accent-bg {
+  background-color: var(--theme-accent);
+}
+
+.accent-bg-hover:hover {
+  background-color: var(--theme-accent-hover);
+}
+
+.accent-text {
+  color: var(--theme-accent);
+}
+
+.accent-border {
+  border-color: var(--theme-accent);
+}
+
+.primary-bg {
+  background-color: var(--theme-primary);
+}
+
+.primary-bg-hover:hover {
+  background-color: var(--theme-primary-hover);
+}
+
+.primary-text {
+  color: var(--theme-primary);
+}
+
+/**
+ * Animations
+ */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--duration-normal) var(--ease-out);
+}
+
+.animate-slide-in-up {
+  animation: slideInUp var(--duration-normal) var(--ease-out);
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--duration-normal) var(--ease-out);
+}

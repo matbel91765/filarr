@@ -1,0 +1,36 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+build
+dist-electron
+storybook-static
+design-showcase-static
+
+# Test & coverage artifacts
+coverage
+test-results
+
+# Logs
+*.log
+build-output.txt
+fix-typescript-errors.txt
+test-results.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment (secrets)
+.env
+.env.local
+.env.*.local
+
+# IDE / tools
+.claude/
+.vscode/settings.json
+.idea/
+
+# Test fixtures
+e2e/fixtures/large-file.zip

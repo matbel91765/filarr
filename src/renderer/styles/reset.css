@@ -1,0 +1,359 @@
+/**
+ * CSS Reset & Normalize
+ *
+ * Reset moderne et normalisations pour assurer une cohérence cross-browser
+ */
+
+/* Box-sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Suppression des marges/padding par défaut */
+* {
+  margin: 0;
+  padding: 0;
+}
+
+/* HTML & Body */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-size: 16px;
+  line-height: 1.5;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  height: 100%;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Root element */
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  padding: 0;
+  font-weight: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Paragraphes */
+p {
+  margin: 0;
+}
+
+/* Listes */
+ul,
+ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Liens */
+a {
+  color: var(--color-link);
+  text-decoration: none;
+  background-color: transparent;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+a:visited {
+  color: var(--color-link-visited);
+}
+
+a:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Images & Media */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Forms */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+input,
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  width: 100%;
+}
+
+/* HR */
+hr {
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  margin: var(--spacing-4) 0;
+}
+
+/* Code & Pre */
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-family-mono);
+  font-size: var(--code-size);
+}
+
+/* Blockquote */
+blockquote {
+  margin: 0;
+  padding: 0;
+}
+
+/* Fieldset */
+fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Legend */
+legend {
+  padding: 0;
+}
+
+/* Details & Summary */
+details {
+  display: block;
+}
+
+summary {
+  display: list-item;
+  cursor: pointer;
+}
+
+/* Progress & Meter */
+progress,
+meter {
+  width: 100%;
+}
+
+/* Selection — only tint the background, never override text color */
+::selection {
+  background-color: var(--color-primary-200);
+}
+
+::-moz-selection {
+  background-color: var(--color-primary-200);
+}
+
+/* Scrollbar (Webkit) */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+  border: 3px solid var(--color-background-secondary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track,
+[data-theme='space'] ::-webkit-scrollbar-track,
+[data-theme='aurora'] ::-webkit-scrollbar-track,
+[data-theme='crepuscule'] ::-webkit-scrollbar-track,
+[data-theme='foret'] ::-webkit-scrollbar-track {
+  background: var(--color-background-secondary);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb,
+[data-theme='space'] ::-webkit-scrollbar-thumb,
+[data-theme='aurora'] ::-webkit-scrollbar-thumb,
+[data-theme='crepuscule'] ::-webkit-scrollbar-thumb,
+[data-theme='foret'] ::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: var(--color-background-secondary);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='space'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='aurora'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='crepuscule'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='foret'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-500);
+}
+
+/* Placeholder */
+::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+:-ms-input-placeholder {
+  color: var(--color-text-tertiary);
+}
+
+::-ms-input-placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Hidden */
+[hidden] {
+  display: none !important;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus visible polyfill */
+.js-focus-visible :focus:not(.focus-visible) {
+  outline: none;
+}
+
+/* Print styles */
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: ' (' attr(href) ')';
+  }
+
+  abbr[title]::after {
+    content: ' (' attr(title) ')';
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr,
+  img {
+    page-break-inside: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+}
