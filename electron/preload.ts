@@ -80,6 +80,10 @@ const ALLOWED_INVOKE_CHANNELS = new Set([
   // Security (local FEK / vault password)
   'security:getEnhancedLock', 'security:setEnhancedLock',
   'security:fekStatus',
+  // Downloads Watcher (OS-level folder watcher → automation)
+  'downloads-watcher:get-config', 'downloads-watcher:set-config',
+  'downloads-watcher:delete-source', 'downloads-watcher:get-status',
+  'downloads-watcher:notify-import-success', 'downloads-watcher:scan-now',
 ]);
 
 const ALLOWED_SEND_CHANNELS = new Set([
@@ -92,6 +96,8 @@ const ALLOWED_RECEIVE_CHANNELS = new Set([
   'update-install-confirmed', 'show-notification',
   'folders-updated', 'files-updated', 'notes-updated', 'profiles-updated', 'main-process-error',
   'system-theme-changed',
+  'downloads-watcher:file-detected',
+  'downloads-watcher:status-changed',
 ]);
 
 /**

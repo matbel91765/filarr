@@ -62,7 +62,33 @@
     "copied": "Copié",
     "expand": "Déplier",
     "collapse": "Replier",
-    "lines": "lignes"
+    "lines": "lignes",
+    "done": "Terminé",
+    "print": "Imprimer",
+    "validate": "Valider"
+  },
+  "login": {
+    "2fa": {
+      "title": "Double authentification",
+      "totpDesc": "Saisissez le code à 6 chiffres de votre application d'authentification.",
+      "backupDesc": "Saisissez un de vos codes de secours (format XXXX-XXXX). Il sera consommé.",
+      "useBackup": "Utiliser un code de secours",
+      "useTotp": "Utiliser l'application d'authentification"
+    }
+  },
+  "forgotPassword": {
+    "title": "Récupération par phrase de récupération",
+    "info": "Entrez votre phrase de récupération à 24 mots pour réinitialiser votre mot de passe. Cette opération déconnectera tous vos appareils — vous devrez vous reconnecter avec le nouveau mot de passe.",
+    "emailLabel": "Adresse email",
+    "phraseLabel": "Phrase de récupération (24 mots)",
+    "phrasePlaceholder": "mot1 mot2 mot3 ... mot24",
+    "words": "mots",
+    "newPasswordLabel": "Nouveau mot de passe",
+    "confirmLabel": "Confirmer le mot de passe",
+    "submit": "Réinitialiser le mot de passe",
+    "working": "Réinitialisation en cours...",
+    "doneTitle": "Mot de passe réinitialisé",
+    "doneDesc": "Tous vos appareils ont été déconnectés. Connectez-vous maintenant avec votre nouveau mot de passe."
   },
   "favorites": {
     "title": "Favoris",
@@ -170,6 +196,14 @@
     "graphNote": "Note",
     "graphFile": "Fichier",
     "graphFolder": "Dossier",
+    "graphNotebook": "Carnet",
+    "graphShowNotebooks": "Afficher les carnets",
+    "syncBadge": {
+      "synced": "Synchronisée",
+      "syncing": "Synchronisation…",
+      "pending": "Non synchronisée",
+      "offline": "Hors ligne"
+    },
     "graphEmpty": "Créez des notes avec des [[liens]] pour voir votre graphe de connaissances",
     "graphNodes": "nœuds",
     "graphEdges": "connexions",
@@ -571,6 +605,45 @@
     "appearanceDesc": "Thème et couleurs de l'interface",
     "notifications": "Notifications",
     "notificationsDesc": "Gérez les alertes et les sons",
+    "downloadsWatcher": {
+      "title": "Surveillance des téléchargements",
+      "subtitle": "Importer automatiquement les fichiers ajoutés dans un dossier de votre PC.",
+      "enableLabel": "Activer la surveillance",
+      "enableDesc": "Importe automatiquement chaque nouveau fichier détecté dans les dossiers surveillés.",
+      "sourceFoldersLabel": "Dossiers surveillés",
+      "sourceFoldersDesc": "Le dossier Téléchargements de votre PC, ou n'importe quel dossier que vous voulez voir importé automatiquement.",
+      "noSourceFolders": "Aucun dossier surveillé pour le moment.",
+      "addFolder": "Ajouter un dossier",
+      "pickSourceTitle": "Choisir un dossier à surveiller",
+      "inboxLabel": "Boîte de réception Filarr",
+      "inboxDesc": "Dossier Filarr où chaque fichier importé est déposé. Ajoutez ensuite des règles d'automatisation pour le router automatiquement.",
+      "selectFolder": "— Choisir un dossier —",
+      "deleteOriginalLabel": "Supprimer le fichier source",
+      "deleteOriginalDesc": "Une fois le fichier importé dans Filarr, le supprimer du dossier d'origine.",
+      "hint": "Astuce : créez des règles d'automatisation avec le déclencheur \"Importé depuis l'OS\" pour trier finement les fichiers (PDF dans Documents, images dans Photos, etc.).",
+      "statusActive": "Active",
+      "statusStarting": "Démarrage…",
+      "statusError": "Erreur",
+      "statusDisabled": "Inactive",
+      "watchedCount_one": "{{count}} dossier",
+      "watchedCount_other": "{{count}} dossiers",
+      "lastImport": "Dernier import : {{name}}",
+      "totalImported_one": "{{count}} fichier importé",
+      "totalImported_other": "{{count}} fichiers importés",
+      "invalidPathsWarning": "Ces dossiers configurés n'existent pas ou sont inaccessibles : {{paths}}",
+      "extensionFilterLabel": "Filtrer par extension",
+      "extensionFilterDesc": "Si vide, tous les fichiers sont importés (sauf les exécutables, toujours bloqués). Sinon, seuls les fichiers avec ces extensions le sont.",
+      "extensionPlaceholder": "pdf, jpg…",
+      "scanNowLabel": "Lancer un scan maintenant",
+      "scanNowDesc": "Importe tous les fichiers déjà présents dans les dossiers surveillés. Sans cela, seuls les nouveaux fichiers le sont.",
+      "scanButton": "Scanner",
+      "scanInProgress": "Scan…",
+      "scanNoFiles": "Aucun fichier nouveau trouvé dans les dossiers surveillés.",
+      "validation": {
+        "needInbox": "Choisissez d'abord une boîte de réception Filarr.",
+        "needSource": "Ajoutez d'abord au moins un dossier à surveiller."
+      }
+    },
     "security": "Sécurité",
     "about": "À propos",
     "aboutDesc": "Informations sur l'application",
@@ -628,7 +701,7 @@
     "clearCacheError": "Échec du nettoyage du cache",
     "version": "Version",
     "credits": "Crédits",
-    "creditsText": "Filarr — client desktop open-source",
+    "creditsText": "Filarr — développé par Belouar-Pruvot Mathis",
     "license": "Licence",
     "uiTour": "Tour de l'interface",
     "uiTourDesc": "Relancer le tour interactif de découverte de l'interface",
@@ -708,6 +781,37 @@
     "recoveryKeyDesc": "Exportez ou restaurez une clé de secours pour récupérer vos données.",
     "exportRecoveryKey": "Exporter",
     "importRecoveryKey": "Restaurer",
+    "2fa": {
+      "label": "Double authentification (2FA)",
+      "enabledDesc": "Activée. {{count}} codes de secours restants.",
+      "disabledDesc": "Protégez votre compte avec une application d'authentification (TOTP).",
+      "enable": "Activer",
+      "disable": "Désactiver",
+      "regenBackup": "Régénérer les codes de secours",
+      "setupTitle": "Activer la double authentification",
+      "qrDesc": "Scannez ce code QR avec votre application d'authentification (Authy, Google Authenticator, 1Password, etc.).",
+      "manualEntry": "Saisie manuelle (clé secrète)",
+      "verifyDesc": "Saisissez le code à 6 chiffres affiché dans votre application pour finaliser.",
+      "verify": "Vérifier",
+      "codesTitle": "Codes de secours — à sauvegarder maintenant",
+      "codesDesc": "Chaque code s'utilise une seule fois. Ils ne seront plus jamais affichés. Perdez-les et vous devrez utiliser votre phrase de récupération pour vous reconnecter si vous perdez votre appareil TOTP.",
+      "codesSaved": "J'ai sauvegardé en lieu sûr",
+      "disableTitle": "Désactiver la 2FA",
+      "disableWarn": "Votre compte ne sera plus protégé par la double authentification. Vous pouvez toujours la réactiver plus tard.",
+      "passwordLabel": "Mot de passe du compte",
+      "codeLabel": "Code TOTP ou code de secours",
+      "totpLabel": "Code TOTP actuel",
+      "regenBackupTitle": "Régénérer les codes de secours",
+      "regenBackupWarn": "Les codes actuels seront invalidés — assurez-vous d'avoir de quoi noter les nouveaux."
+    },
+    "regenPhrase": {
+      "label": "Phrase de récupération",
+      "desc": "Régénérez votre phrase de récupération à 24 mots. L'ancienne sera invalidée.",
+      "button": "Régénérer la phrase",
+      "title": "Régénérer la phrase de récupération",
+      "warn": "La phrase actuelle sera invalidée. Assurez-vous d'avoir de quoi noter la nouvelle.",
+      "saveNow": "Copiez ou imprimez maintenant. Ne sera plus jamais affiché."
+    },
     "supportProject": "Soutenir le projet",
     "supportProjectDesc": "Si Filarr vous est utile, vous pouvez soutenir son developpement",
     "supportProjectBtn": "Faire un don",
@@ -743,6 +847,12 @@
       "disableTitle": "Désactiver la synchronisation",
       "disableDesc": "Vos données locales seront conservées.",
       "disableButton": "Désactiver",
+      "resumeTitle": "Reprendre la synchronisation",
+      "resumeDesc": "Reprendre la synchronisation cloud avec votre compte.",
+      "resumeButton": "Reprendre",
+      "logoutTitle": "Se déconnecter",
+      "logoutDesc": "Déconnectez cet appareil de votre compte. Vos données locales sont conservées. Vous pourrez vous reconnecter (avec ce compte ou un autre) depuis Paramètres.",
+      "logoutButton": "Se déconnecter",
       "deleteTitle": "Supprimer mon compte",
       "deleteDesc": "Supprime votre compte et toutes les données cloud. Irréversible.",
       "deleteButton": "Supprimer",
@@ -1741,7 +1851,8 @@
         "submit": "Se connecter",
         "connecting": "Connexion...",
         "switchToLogin": "J'ai déjà un compte",
-        "switchToRegister": "Créer un compte"
+        "switchToRegister": "Créer un compte",
+        "forgotPassword": "Mot de passe oublié ?"
       },
       "recovery": {
         "title": "Sauvegardez vos codes de récupération",
@@ -1920,7 +2031,7 @@
     "featureComparison": "Comparaison des fonctionnalités",
     "feature": "Fonctionnalité",
     "unavailable": "Les tarifs sont actuellement indisponibles.",
-    "securePayments": "Paiements sécurisés",
+    "securePayments": "Paiements sécurisés via Stripe",
     "nonprofitDiscount": "-50% pour les associations & l'éducation",
     "noHiddenFees": "Aucun frais caché"
   },
@@ -2184,6 +2295,19 @@
     "whoIsUsing": "Qui utilise Filarr ?",
     "add": "Ajouter",
     "addProfile": "Ajouter un profil",
+    "addCloudAccount": "Ajouter un compte cloud",
+    "addCloudAccountTooltip": "Crée un nouveau profil et associe-le à un compte cloud",
+    "groupLocal": "Local",
+    "filterPlaceholder": "Rechercher un profil (nom ou email)...",
+    "pinRequiredToDelete": "PIN requis pour supprimer ce profil",
+    "deletePinTitle": "Vérification du PIN",
+    "deletePinPrompt": "Entrez le PIN de « {{name}} » pour confirmer la suppression.",
+    "groupMenu": {
+      "manageDevices": "Gérer les appareils",
+      "goToSettings": "Aller aux paramètres du compte",
+      "disconnectAll": "Déconnecter tous les profils de ce compte",
+      "disconnectAllConfirm": "Déconnecter tous les profils liés à {{email}} ? Vos données locales restent intactes."
+    },
     "manage": "Gerer les profils",
     "upgradeToAdd": "Maximum 10 profils atteint",
     "maxReached": "Maximum 10 profils atteint",
@@ -2543,6 +2667,7 @@
         "created_date": "Date de création",
         "modified_date": "Date de modification",
         "folder_path": "Dossier",
+        "os_source_path": "Chemin OS d'origine",
         "tag": "Tag"
       },
       "operators": {
@@ -2573,6 +2698,7 @@
         "file_created": "Création de fichier",
         "file_modified": "Modification de fichier",
         "file_moved": "Déplacement de fichier",
+        "file_imported_from_os": "Importé depuis l'OS",
         "manual": "Exécution manuelle",
         "scheduled": "Planifié"
       }
@@ -2628,6 +2754,22 @@
       "tagNewFiles": {
         "name": "Tagger les nouveaux fichiers",
         "description": "Ajoute le tag \"nouveau\" à chaque fichier créé. Pratique pour repérer rapidement les derniers ajouts."
+      },
+      "autoRouteImports": {
+        "name": "Router les fichiers importés",
+        "description": "Déplace automatiquement chaque nouveau fichier ajouté dans Filarr vers le dossier de destination que vous choisissez. Idéal pour centraliser tout ce qui est téléchargé directement dans l'app."
+      },
+      "routeOsAllImports": {
+        "name": "Router les téléchargements OS",
+        "description": "Déplace tout fichier importé depuis le dossier Téléchargements de votre PC vers un dossier Filarr. Activez d'abord la surveillance dans les paramètres."
+      },
+      "routeOsPdfs": {
+        "name": "Trier les PDFs téléchargés",
+        "description": "Quand un PDF est ajouté dans le dossier Téléchargements, déplace-le automatiquement vers un dossier Filarr dédié."
+      },
+      "routeOsImages": {
+        "name": "Trier les images téléchargées",
+        "description": "Quand une image (JPG, PNG, GIF, WebP, HEIC) est ajoutée dans le dossier Téléchargements, déplace-la vers un dossier Filarr dédié."
       }
     }
   },

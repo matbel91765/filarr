@@ -10,8 +10,10 @@ import { fileService } from '../../services';
 import errorService from '../../services/platform/errorService';
 import searchService from '../../services/search/searchService';
 import { indexPdfContent } from '../../services/search/pdfTextExtractor';
+import { generateUniqueId } from '../../utils/idGenerator';
 import type { FileItem, Folder, DownloadResult } from '../../types';
 import { fetchFolder, fetchFolders } from './foldersSlice';
+import { processFileEvent as dispatchAutomationFileEvent } from './automationSlice';
 
 /**
  * Queue PDF text extraction for search indexing (async, non-blocking).
@@ -145,11 +147,56 @@ export const addFileToFolder = createAsyncThunk<
     // Indication de progression initiale
     dispatch(setUploadProgress({ fileId: 'pending', progress: 0 }));
 
+    // Pre-attach an id so we can wire the new file into automation rules below.
+    // fileService.addFileToFolder honors `file.id` if present, else generates one.
+    const preAssignedId = (file as any)?.id || generateUniqueId();
+    try {
+      (file as any).id = preAssignedId;
+    } catch {
+      // File objects in some environments may reject custom props; fileService
+      // will then generate its own id and the automation event will fall back
+      // to the last item in the resulting folder.
+    }
+
     // Ajout du fichier via le service
     const result = await fileService.addFileToFolder(folderId, file as any);
 
     // Mise à jour de progression finale
     dispatch(setUploadProgress({ fileId: 'pending', progress: 100 }));
+
+    // Fire automation `file_created` event (best-effort, fire-and-forget)
+    try {
+      const fileName: string = (file as any)?.name ?? '';
+      const fileType: string = (file as any)?.type || 'file';
+      const fileSize: number = typeof (file as any)?.size === 'number' ? (file as any).size : 0;
+      const newFileId: string =
+        (file as any)?.id ||
+        (Array.isArray(result?.items) && result.items.length > 0
+          ? result.items[result.items.length - 1]
+          : preAssignedId);
+      const dotIdx = fileName.lastIndexOf('.');
+      const extension = dotIdx >= 0 ? fileName.slice(dotIdx + 1).toLowerCase() : '';
+      const now = new Date().toISOString();
+      dispatch(
+        dispatchAutomationFileEvent({
+          trigger: 'file_created',
+          file: {
+            id: newFileId,
+            name: fileName,
+            extension,
+            type: fileType,
+            size: fileSize,
+            folderId,
+            folderPath: result?.name || '',
+            createdAt: now,
+            modifiedAt: now,
+            tags: [],
+          },
+        })
+      );
+    } catch (automationErr) {
+      console.warn('[filesSlice] failed to dispatch automation file_created event:', automationErr);
+    }
 
     // Retourner le résultat pour le reducer
     return result;

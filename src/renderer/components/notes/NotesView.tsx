@@ -569,7 +569,6 @@ export const NotesView: React.FC<NotesViewProps> = React.memo(function NotesView
               <>
                 <NoteBreadcrumb currentNoteId={editingNote.id} />
                 <NoteEditor
-                  key={editingNote.id}
                   note={editingNote}
                   onUpdate={handleContentUpdate}
                   onTitleChange={handleTitleChange}

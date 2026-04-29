@@ -32,6 +32,7 @@ import ProfilePicker from './renderer/components/profiles/ProfilePicker';
 import WindowDragRegion from './renderer/components/layout/WindowDragRegion';
 import { setActiveProfile } from './services/core/profileStorage';
 import { tryRestoreFEKFromSafeStorage } from './services/auth/hybridCrypto';
+import { initDownloadsWatcherBridge } from './services/features/downloadsWatcherBridge';
 
 // Importer les styles globaux
 import './renderer/styles/global.css';
@@ -281,6 +282,14 @@ const AppContent: React.FC = () => {
   // isLoading going true → false). Simply checking `isLoading === false` is
   // not enough: the initial Redux state has isLoading=false from the start,
   // so the guard would pass before loadNotesFromDisk even fires. We track two
+  // Initialize the OS downloads watcher bridge once a profile is selected.
+  // Done after profile activation so FEK is loaded and addFileToFolder will
+  // succeed if the watcher fires immediately.
+  useEffect(() => {
+    if (!profileSelected) return;
+    initDownloadsWatcherBridge(store);
+  }, [profileSelected]);
+
   // transitions: first `isLoading` must have been true (load started), then
   // it must go back to false (load completed, success or failure).
   const hasStartedLoadRef = useRef(false);

@@ -43,6 +43,15 @@ export interface SettingsState {
     sessionTimeout: number; // en minutes
   };
 
+  // Paramètres de synchronisation
+  sync: {
+    autoSyncEnabled: boolean;
+    syncInterval: number; // en minutes
+    syncOnlyOnWiFi: boolean;
+    conflictResolution: 'manual' | 'local' | 'remote' | 'newest';
+    syncFolders: string[]; // IDs des dossiers à synchroniser
+  };
+
   // Paramètres de notifications
   notifications: {
     enabled: boolean;
@@ -50,6 +59,7 @@ export interface SettingsState {
     desktopNotifications: boolean;
     emailNotifications: boolean;
     reminderNotifications: boolean;
+    syncNotifications: boolean;
     errorNotifications: boolean;
     notificationPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
     notificationDuration: number; // en millisecondes
@@ -128,12 +138,21 @@ const initialState: SettingsState = {
     sessionTimeout: 60,
   },
 
+  sync: {
+    autoSyncEnabled: false,
+    syncInterval: 15,
+    syncOnlyOnWiFi: false,
+    conflictResolution: 'manual',
+    syncFolders: [],
+  },
+
   notifications: {
     enabled: true,
     soundEnabled: true,
     desktopNotifications: true,
     emailNotifications: false,
     reminderNotifications: true,
+    syncNotifications: true,
     errorNotifications: true,
     notificationPosition: 'top-right',
     notificationDuration: 5000,
@@ -323,6 +342,32 @@ const settingsSlice = createSlice({
       state.lastSaved = new Date().toISOString();
     },
 
+    // Synchronisation
+    setAutoSync(state, action: PayloadAction<{ enabled: boolean; interval?: number }>) {
+      state.sync.autoSyncEnabled = action.payload.enabled;
+      if (action.payload.interval !== undefined) {
+        state.sync.syncInterval = action.payload.interval;
+      }
+      state.lastSaved = new Date().toISOString();
+    },
+
+    setConflictResolution(state, action: PayloadAction<'manual' | 'local' | 'remote' | 'newest'>) {
+      state.sync.conflictResolution = action.payload;
+      state.lastSaved = new Date().toISOString();
+    },
+
+    addSyncFolder(state, action: PayloadAction<string>) {
+      if (!state.sync.syncFolders.includes(action.payload)) {
+        state.sync.syncFolders.push(action.payload);
+        state.lastSaved = new Date().toISOString();
+      }
+    },
+
+    removeSyncFolder(state, action: PayloadAction<string>) {
+      state.sync.syncFolders = state.sync.syncFolders.filter((id) => id !== action.payload);
+      state.lastSaved = new Date().toISOString();
+    },
+
     // Notifications
     setNotificationsEnabled(state, action: PayloadAction<boolean>) {
       state.notifications.enabled = action.payload;
@@ -455,6 +500,9 @@ const settingsSlice = createSlice({
         if (action.payload.security) {
           state.security = { ...state.security, ...action.payload.security };
         }
+        if (action.payload.sync) {
+          state.sync = { ...state.sync, ...action.payload.sync };
+        }
         if (action.payload.notifications) {
           state.notifications = { ...state.notifications, ...action.payload.notifications };
         }
@@ -524,6 +572,12 @@ export const {
   setEncryptionEnabled,
   setBiometricAuth,
   setSessionTimeout,
+
+  // Synchronisation
+  setAutoSync,
+  setConflictResolution,
+  addSyncFolder,
+  removeSyncFolder,
 
   // Notifications
   setNotificationsEnabled,

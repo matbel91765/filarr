@@ -36,23 +36,28 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
-export const deleteProfile = createAsyncThunk(
-  'profiles/delete',
-  async (profileId: string) => {
-    await window.electron.ipcRenderer.invoke('profile:delete', profileId);
-    return profileId;
-  }
-);
+export const deleteProfile = createAsyncThunk('profiles/delete', async (profileId: string) => {
+  await window.electron.ipcRenderer.invoke('profile:delete', profileId);
+  return profileId;
+});
 
-export const activateProfile = createAsyncThunk(
-  'profiles/activate',
-  async (profileId: string) => {
-    if (window.electron?.ipcRenderer) {
-      await window.electron.ipcRenderer.invoke('profile:activate', profileId);
-    }
-    return profileId;
+export const activateProfile = createAsyncThunk('profiles/activate', async (profileId: string) => {
+  // Wipe the outgoing profile's FEK from memory BEFORE the IPC so that if
+  // the renderer starts rendering list views before auth rehydrate lands,
+  // it can't accidentally encrypt/decrypt with a stale key from the
+  // previous profile.
+  try {
+    const { clearHybridCrypto } = await import('../../services/auth/hybridCrypto');
+    clearHybridCrypto();
+  } catch {
+    /* non-fatal if module isn't loaded */
   }
-);
+
+  if (window.electron?.ipcRenderer) {
+    await window.electron.ipcRenderer.invoke('profile:activate', profileId);
+  }
+  return profileId;
+});
 
 export const reorderProfiles = createAsyncThunk(
   'profiles/reorder',

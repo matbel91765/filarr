@@ -10,6 +10,10 @@ import { migrateLegacyToDefaultProfile } from './profileMigration';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import * as noteVersionService from './noteVersionService';
+import downloadsWatcherService, {
+  DEFAULT_DOWNLOADS_WATCHER_CONFIG,
+  DownloadsWatcherConfig,
+} from './downloadsWatcherService';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -508,6 +512,7 @@ function createWindow(): void {
   }
 
   mainWindow = new BrowserWindow(windowOptions);
+  downloadsWatcherService.attachWindow(mainWindow);
 
   // Maximize if it was maximized when closed
   if (saved.isMaximized) {
@@ -901,6 +906,91 @@ ipcMain.handle('saveConfig', async (_event: IpcMainInvokeEvent, config: Record<s
   }
 });
 
+// ───────────────────── Downloads Watcher ─────────────────────
+
+async function loadDownloadsWatcherConfigFromDisk(): Promise<DownloadsWatcherConfig> {
+  try {
+    const data = await fs.readFile(getAppConfigPath(), 'utf-8');
+    const parsed = JSON.parse(data);
+    if (parsed?.downloadsWatcher && typeof parsed.downloadsWatcher === 'object') {
+      return {
+        ...DEFAULT_DOWNLOADS_WATCHER_CONFIG,
+        ...parsed.downloadsWatcher,
+        sourceFolders: Array.isArray(parsed.downloadsWatcher.sourceFolders)
+          ? parsed.downloadsWatcher.sourceFolders.filter((p: unknown) => typeof p === 'string')
+          : [],
+        extensionAllowList: Array.isArray(parsed.downloadsWatcher.extensionAllowList)
+          ? parsed.downloadsWatcher.extensionAllowList.filter(
+              (e: unknown) => typeof e === 'string'
+            )
+          : [],
+      };
+    }
+  } catch {
+    // Config doesn't exist yet — use defaults
+  }
+  return { ...DEFAULT_DOWNLOADS_WATCHER_CONFIG };
+}
+
+async function persistDownloadsWatcherConfig(config: DownloadsWatcherConfig): Promise<void> {
+  const configPath = getAppConfigPath();
+  let existing: Record<string, any> = {};
+  try {
+    const data = await fs.readFile(configPath, 'utf-8');
+    existing = JSON.parse(data);
+  } catch {
+    // No existing config — start fresh
+  }
+  existing.downloadsWatcher = config;
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, JSON.stringify(existing, null, 2), 'utf-8');
+}
+
+ipcMain.handle('downloads-watcher:get-config', async () => {
+  const live = downloadsWatcherService.getConfig();
+  if (live.sourceFolders.length === 0 && !live.enabled && !live.inboxFolderId) {
+    const fromDisk = await loadDownloadsWatcherConfigFromDisk();
+    await downloadsWatcherService.setConfig(fromDisk);
+    return downloadsWatcherService.getConfig();
+  }
+  return live;
+});
+
+ipcMain.handle(
+  'downloads-watcher:set-config',
+  async (_event: IpcMainInvokeEvent, next: Partial<DownloadsWatcherConfig>) => {
+    const applied = await downloadsWatcherService.setConfig(next);
+    await persistDownloadsWatcherConfig(applied);
+    return applied;
+  }
+);
+
+ipcMain.handle(
+  'downloads-watcher:delete-source',
+  async (_event: IpcMainInvokeEvent, sourcePath: string) => {
+    if (typeof sourcePath !== 'string' || sourcePath.length === 0) {
+      throw new Error('sourcePath is required');
+    }
+    await downloadsWatcherService.deleteSource(sourcePath);
+  }
+);
+
+ipcMain.handle('downloads-watcher:get-status', async () => {
+  return downloadsWatcherService.getStatus();
+});
+
+ipcMain.handle(
+  'downloads-watcher:notify-import-success',
+  async (_event: IpcMainInvokeEvent, name: string) => {
+    if (typeof name !== 'string' || name.length === 0) return;
+    downloadsWatcherService.notifyImportSucceeded(name);
+  }
+);
+
+ipcMain.handle('downloads-watcher:scan-now', async () => {
+  return downloadsWatcherService.scanNow();
+});
+
 // --- Profile Management ---
 
 ipcMain.handle('profile:getManifest', async () => {
@@ -978,6 +1068,11 @@ ipcMain.handle('profile:activate', async (_event: IpcMainInvokeEvent, profileId:
   try {
     const prevProfile = activeProfileId;
     log.info(`[profile:activate] Switching from ${prevProfile ?? 'none'} to ${profileId}`);
+
+    // Stop the downloads watcher — the next profile may have its own config
+    // (config is profile-scoped via appConfig.json).
+    await downloadsWatcherService.stop();
+
     // Update last accessed + set as active in manifest
     await profileManager.updateLastAccessed(profileId);
     activeProfileId = profileId;
@@ -993,6 +1088,15 @@ ipcMain.handle('profile:activate', async (_event: IpcMainInvokeEvent, profileId:
 
     // Notify renderer that folders changed (new profile = different data)
     emitFoldersUpdated();
+
+    // Hydrate the downloads watcher from this profile's config and start it
+    // if enabled. Done last so the renderer is ready to receive events.
+    try {
+      const watcherConfig = await loadDownloadsWatcherConfigFromDisk();
+      await downloadsWatcherService.setConfig(watcherConfig);
+    } catch (err) {
+      log.warn('[profile:activate] downloads watcher hydration failed:', err);
+    }
 
     return { success: true, profileId };
   } catch (error) {

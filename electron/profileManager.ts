@@ -29,6 +29,18 @@ interface ProfileMetadata {
   lastAccessedAt: string;
   isDefault: boolean;
   order: number;
+  /**
+   * Cloud account bound to this profile. Null/undefined means the profile is
+   * purely local. Populated after successful login and cleared on logout.
+   * Stored in cleartext in the encrypted manifest — it's just a label used
+   * to render badges in the profile picker and prevent FEK mix-ups at login.
+   */
+  cloudAccount?: {
+    email: string;
+    tier: string;
+    /** ISO timestamp of last successful auth */
+    linkedAt: string;
+  } | null;
 }
 
 interface ProfilesManifest {
@@ -538,6 +550,37 @@ class ProfileManager {
 
     await this.saveManifest(manifest);
     return true;
+  }
+
+  /**
+   * Bind/unbind a cloud account to a profile. Called from authService after
+   * successful login (bind) or logout/account-delete (unbind).
+   */
+  async setCloudAccount(
+    profileId: string,
+    account: { email: string; tier: string } | null
+  ): Promise<void> {
+    const manifest = this.getManifest();
+    const profile = manifest.profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+    profile.cloudAccount = account
+      ? { email: account.email, tier: account.tier, linkedAt: new Date().toISOString() }
+      : null;
+    await this.saveManifest(manifest);
+  }
+
+  /**
+   * True if any profile other than `excludeProfileId` is already bound to
+   * the given email. Used to warn the user before they bind the same cloud
+   * account to a second profile (allowed, but worth flagging).
+   */
+  isCloudAccountBoundElsewhere(email: string, excludeProfileId: string): boolean {
+    const manifest = this.getManifest();
+    return manifest.profiles.some(
+      (p) =>
+        p.id !== excludeProfileId &&
+        p.cloudAccount?.email?.toLowerCase() === email.toLowerCase()
+    );
   }
 
   /**

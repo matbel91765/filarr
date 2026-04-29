@@ -104,6 +104,7 @@ export const setupIpcListeners = (store: { dispatch: (action: AnyAction) => void
   });
 
   electron.ipcRenderer.on('notes-updated', () => {
+    // Re-load notes from disk when cloud sync updates notes.enc
     import('../slices/notesSlice').then(({ loadNotesFromDisk }) => {
       store.dispatch(loadNotesFromDisk() as any);
     });
@@ -154,6 +155,58 @@ export const setupIpcListeners = (store: { dispatch: (action: AnyAction) => void
       payload: isDarkMode,
     });
   });
+
+  // ── Sync events ───────────────────────────────────────────────────────
+
+  electron.ipcRenderer.on('sync-status-changed', (status: any) => {
+    if (!status || typeof status !== 'object') return;
+    store.dispatch({
+      type: 'sync/setSyncStatus',
+      payload: status,
+    });
+
+    // Update storage info if available
+    if (status.storageUsed != null && status.storageLimit != null) {
+      store.dispatch({
+        type: 'sync/setStorageInfo',
+        payload: {
+          storageUsed: status.storageUsed,
+          storageLimit: status.storageLimit,
+        },
+      });
+    }
+
+    // Refresh file statuses on every sync status change (not just idle)
+    // This shows pending_upload badges during the sync window
+    const profilesState = (store as any).getState?.()?.profiles;
+    const profileId = profilesState?.activeProfileId;
+    if (profileId) {
+      electron.ipcRenderer
+        .invoke('sync:getAllFileStatuses', profileId)
+        .then((statuses: Record<string, string>) => {
+          if (statuses && Object.keys(statuses).length > 0) {
+            store.dispatch({
+              type: 'sync/setFileStatuses',
+              payload: statuses,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  });
+
+  // Individual file status change (immediate, before sync triggers)
+  electron.ipcRenderer.on('sync-file-status-changed', (data: any) => {
+    if (!data || typeof data !== 'object') return;
+    const current = (store as any).getState?.()?.sync?.fileStatuses || {};
+    const updated = { ...current };
+    if (data.fileId) updated[data.fileId] = data.status;
+    if (data.localPath) updated[data.localPath] = data.status;
+    store.dispatch({ type: 'sync/setFileStatuses', payload: updated });
+  });
+
+  // sync-conflict-detected and sync-quota-exceeded are handled by
+  // SyncConflictHandler component (uses useNotification Context, not Redux)
 };
 
 export default electronMiddleware;
