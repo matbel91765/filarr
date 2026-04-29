@@ -5,7 +5,7 @@
  * plus linked files and folders.
  */
 
-import React, { useMemo } from 'react';
+import React, { useDeferredValue, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../store';
@@ -20,27 +20,49 @@ import './BacklinksPanel.css';
 
 const BacklinkIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-    <path d="M9 17H7A5 5 0 017 7h2" /><path d="M15 7h2a5 5 0 010 10h-2" />
+    <path d="M9 17H7A5 5 0 017 7h2" />
+    <path d="M15 7h2a5 5 0 010 10h-2" />
     <line x1="8" y1="12" x2="16" y2="12" />
   </svg>
 );
 
 const NoteRefIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
     <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z" />
     <polyline points="14,2 14,8 20,8" />
   </svg>
 );
 
 const FileRefIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
     <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />
     <polyline points="13,2 13,9 20,9" />
   </svg>
 );
 
 const FolderRefIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
     <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
   </svg>
 );
@@ -48,14 +70,16 @@ const FolderRefIcon = () => (
 const UnlinkedIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
     <path d="M16.88 3.549L7.12 20.451" />
-    <path d="M9 17H7A5 5 0 017 7h2" /><path d="M15 7h2a5 5 0 010 10h-2" />
+    <path d="M9 17H7A5 5 0 017 7h2" />
+    <path d="M15 7h2a5 5 0 010 10h-2" />
   </svg>
 );
 
 const MagnetIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
     <path d="M6 15a6 6 0 0012 0V4h-4v11a2 2 0 11-4 0V4H6v11z" />
-    <line x1="6" y1="4" x2="10" y2="4" /><line x1="14" y1="4" x2="18" y2="4" />
+    <line x1="6" y1="4" x2="10" y2="4" />
+    <line x1="14" y1="4" x2="18" y2="4" />
   </svg>
 );
 
@@ -79,7 +103,9 @@ interface BacklinksPanelProps {
   noteId: string;
 }
 
-export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function BacklinksPanel({ noteId }) {
+export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function BacklinksPanel({
+  noteId,
+}) {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -93,8 +119,21 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
   const [showPotential, setShowPotential] = React.useState(false);
   const [showUnlinked, setShowUnlinked] = React.useState(false);
 
+  // Defer the heavy scans (findBacklinks, findPotentialLinks, unlinked
+  // mentions) behind React's concurrent renderer. When the user opens
+  // a note, these three memos would otherwise block the main thread
+  // with O(N) / O(N*M) walks over every note before the editor can
+  // paint. With useDeferredValue the first commit uses the previous
+  // note's data (cheap reprint), then React reruns the heavy work at
+  // lower priority — the editor becomes interactive in a single frame.
+  const deferredNoteId = useDeferredValue(noteId);
+  const deferredNotesById = useDeferredValue(notesById);
+
   // Incoming: who links to this note
-  const backlinks = useMemo(() => findBacklinks(noteId, notesById), [noteId, notesById]);
+  const backlinks = useMemo(
+    () => findBacklinks(deferredNoteId, deferredNotesById),
+    [deferredNoteId, deferredNotesById]
+  );
 
   // Outgoing: what this note links to
   const linkedNotes = useMemo(
@@ -114,20 +153,21 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
 
   // Potential links: note title mentions that aren't wiki-linked
   const potentialLinks = useMemo(
-    () => findPotentialLinks(noteId, notesById),
-    [noteId, notesById]
+    () => findPotentialLinks(deferredNoteId, deferredNotesById),
+    [deferredNoteId, deferredNotesById]
   );
 
   // Unlinked mentions: other notes that mention THIS note's title without wiki-linking
+  const deferredNote = deferredNotesById[deferredNoteId];
   const unlinkedMentions = useMemo(() => {
-    if (!note || !note.title || note.title.trim().length < 2) return [];
-    const titleLower = note.title.toLowerCase();
+    if (!deferredNote || !deferredNote.title || deferredNote.title.trim().length < 2) return [];
+    const titleLower = deferredNote.title.toLowerCase();
     const results: Array<{ noteId: string; title: string; context: string }> = [];
 
-    for (const other of Object.values(notesById)) {
-      if (other.id === noteId || other.deletedAt || !other.plainText) continue;
+    for (const other of Object.values(deferredNotesById)) {
+      if (other.id === deferredNoteId || other.deletedAt || !other.plainText) continue;
       // Skip if already backlinked
-      if (other.linkedNoteIds.includes(noteId)) continue;
+      if (other.linkedNoteIds.includes(deferredNoteId)) continue;
 
       const textLower = other.plainText.toLowerCase();
       const idx = textLower.indexOf(titleLower);
@@ -135,9 +175,16 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
 
       // Check word boundaries
       const charBefore = idx > 0 ? other.plainText[idx - 1] : ' ';
-      const charAfter = idx + titleLower.length < other.plainText.length ? other.plainText[idx + titleLower.length] : ' ';
+      const charAfter =
+        idx + titleLower.length < other.plainText.length
+          ? other.plainText[idx + titleLower.length]
+          : ' ';
       if (!/[\s,.;:!?()[\]{}'"—–-]/.test(charBefore) && idx !== 0) continue;
-      if (!/[\s,.;:!?()[\]{}'"—–-]/.test(charAfter) && idx + titleLower.length !== other.plainText.length) continue;
+      if (
+        !/[\s,.;:!?()[\]{}'"—–-]/.test(charAfter) &&
+        idx + titleLower.length !== other.plainText.length
+      )
+        continue;
 
       const ctxStart = Math.max(0, idx - 30);
       const ctxEnd = Math.min(other.plainText.length, idx + titleLower.length + 30);
@@ -148,7 +195,7 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
       results.push({ noteId: other.id, title: other.title || 'Untitled', context });
     }
     return results;
-  }, [noteId, note, notesById]);
+  }, [deferredNoteId, deferredNote, deferredNotesById]);
 
   const handleBacklinkClick = (sourceNoteId: string) => {
     dispatch(setEditingNote(sourceNoteId));
@@ -168,9 +215,7 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
       >
         <ChevronIcon open={showBacklinks} />
         <BacklinkIcon />
-        <span className="backlinks-panel__section-title">
-          {t('notes.backlinks', 'Backlinks')}
-        </span>
+        <span className="backlinks-panel__section-title">{t('notes.backlinks', 'Backlinks')}</span>
         <span className="backlinks-panel__section-count">{totalBacklinks}</span>
       </button>
 
@@ -189,7 +234,9 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
               >
                 <NoteRefIcon />
                 <div className="backlinks-panel__item-info">
-                  <span className="backlinks-panel__item-title">{bl.sourceNoteTitle || 'Untitled'}</span>
+                  <span className="backlinks-panel__item-title">
+                    {bl.sourceNoteTitle || 'Untitled'}
+                  </span>
                   <span className="backlinks-panel__item-context">{bl.context}</span>
                 </div>
               </button>
@@ -213,9 +260,7 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
       {showOutgoing && (
         <div className="backlinks-panel__section-body">
           {totalOutgoing === 0 ? (
-            <p className="backlinks-panel__empty">
-              {t('notes.noLinks', 'No linked items')}
-            </p>
+            <p className="backlinks-panel__empty">{t('notes.noLinks', 'No linked items')}</p>
           ) : (
             <>
               {linkedNotes.map((n) => (

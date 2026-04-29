@@ -73,6 +73,13 @@ export interface Note {
   tagIds: string[];
   /** Notebook this note belongs to */
   notebookId?: string;
+  /**
+   * Kanban column this note belongs to in the Kanban view. Separate from
+   * `icon` so that changing a note's Kanban column doesn't clobber the
+   * user-chosen display icon. Stores the column id (e.g. `'inbox'`,
+   * `'in-progress'`, custom kebab-case ids created via "Add column").
+   */
+  kanbanStatus?: string;
   /** Pinned to top of list */
   isPinned: boolean;
   /** Freehand drawing overlay strokes (JSON-encoded Stroke[]) */
@@ -155,7 +162,7 @@ export interface Notebook {
 export interface GraphNode {
   id: string;
   label: string;
-  type: 'note' | 'file' | 'folder';
+  type: 'note' | 'file' | 'folder' | 'notebook';
   x: number;
   y: number;
   vx: number;
@@ -168,7 +175,7 @@ export interface GraphNode {
 export interface GraphEdge {
   source: string;
   target: string;
-  type: 'note-note' | 'note-file' | 'note-folder';
+  type: 'note-note' | 'note-file' | 'note-folder' | 'notebook-note';
 }
 
 export interface GraphData {

@@ -6,11 +6,16 @@
  * Drag & drop between columns using native HTML5 DnD.
  */
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../../store';
-import { selectFilteredNotes, setEditingNote, updateNote } from '../../../store/slices/notesSlice';
+import type { AppDispatch } from '../../../store';
+import {
+  selectFilteredNotes,
+  setEditingNote,
+  setKanbanStatus,
+  migrateKanbanIconPollution,
+} from '../../../store/slices/notesSlice';
 import type { Note } from '../../../types/notes';
 import './KanbanView.css';
 
@@ -33,23 +38,26 @@ const DEFAULT_COLUMNS: KanbanColumn[] = [
 
 const PlusIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
 
 const GripIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" opacity={0.3}>
-    <circle cx="9" cy="5" r="1.5" /><circle cx="15" cy="5" r="1.5" />
-    <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
-    <circle cx="9" cy="19" r="1.5" /><circle cx="15" cy="19" r="1.5" />
+    <circle cx="9" cy="5" r="1.5" />
+    <circle cx="15" cy="5" r="1.5" />
+    <circle cx="9" cy="12" r="1.5" />
+    <circle cx="15" cy="12" r="1.5" />
+    <circle cx="9" cy="19" r="1.5" />
+    <circle cx="15" cy="19" r="1.5" />
   </svg>
 );
 
 // ==================== Helpers ====================
 
 function getNoteColumn(note: Note): string {
-  // Use icon field as column status marker, default to 'inbox'
-  return note.icon || 'inbox';
+  return note.kanbanStatus || 'inbox';
 }
 
 // ==================== Component ====================
@@ -63,6 +71,13 @@ export const KanbanView: React.FC = React.memo(function KanbanView() {
   const [dropTargetCol, setDropTargetCol] = useState<string | null>(null);
   const [newColName, setNewColName] = useState('');
   const [showAddCol, setShowAddCol] = useState(false);
+
+  // Heal notes whose `icon` field was corrupted by the pre-kanbanStatus
+  // drop handler (column ids were written into `icon`, leaking into
+  // every other view). Runs once per mount — the reducer is idempotent.
+  useEffect(() => {
+    dispatch(migrateKanbanIconPollution());
+  }, [dispatch]);
 
   // Group notes by column
   const columnNotes = useMemo(() => {
@@ -104,8 +119,7 @@ export const KanbanView: React.FC = React.memo(function KanbanView() {
       e.preventDefault();
       setDropTargetCol(null);
       if (draggedNoteId) {
-        // Update note's column (stored in icon field)
-        dispatch(updateNote({ id: draggedNoteId, changes: { icon: colId } }));
+        dispatch(setKanbanStatus({ noteId: draggedNoteId, status: colId }));
         setDraggedNoteId(null);
       }
     },
@@ -145,14 +159,9 @@ export const KanbanView: React.FC = React.memo(function KanbanView() {
             onDrop={(e) => handleDrop(e, col.id)}
           >
             <div className="kanban-column__header">
-              <span
-                className="kanban-column__dot"
-                style={{ background: col.color }}
-              />
+              <span className="kanban-column__dot" style={{ background: col.color }} />
               <span className="kanban-column__title">{col.title}</span>
-              <span className="kanban-column__count">
-                {columnNotes[col.id]?.length || 0}
-              </span>
+              <span className="kanban-column__count">{columnNotes[col.id]?.length || 0}</span>
               {columns.length > 1 && (
                 <button
                   className="kanban-column__delete"
@@ -181,12 +190,12 @@ export const KanbanView: React.FC = React.memo(function KanbanView() {
                       {note.title || t('notes.untitled', 'Untitled')}
                     </div>
                     {note.plainText && (
-                      <div className="kanban-card__preview">
-                        {note.plainText.slice(0, 80)}
-                      </div>
+                      <div className="kanban-card__preview">{note.plainText.slice(0, 80)}</div>
                     )}
                     <div className="kanban-card__meta">
-                      <span>{note.wordCount} {t('notes.words', 'words')}</span>
+                      <span>
+                        {note.wordCount} {t('notes.words', 'words')}
+                      </span>
                       {note.linkedNoteIds.length > 0 && (
                         <span>{note.linkedNoteIds.length} links</span>
                       )}
@@ -218,10 +227,7 @@ export const KanbanView: React.FC = React.memo(function KanbanView() {
               </button>
             </div>
           ) : (
-            <button
-              className="kanban-view__add-col-trigger"
-              onClick={() => setShowAddCol(true)}
-            >
+            <button className="kanban-view__add-col-trigger" onClick={() => setShowAddCol(true)}>
               <PlusIcon />
               <span>{t('notes.addColumn', 'Add Column')}</span>
             </button>

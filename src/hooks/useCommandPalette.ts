@@ -562,6 +562,28 @@ export function useCommandPalette() {
           navigate('/permissions');
         },
       },
+      {
+        id: 'nav-pricing',
+        name: t('commandPalette.commands.pricing'),
+        description: t('commandPalette.commands.pricingDesc'),
+        category: 'navigation',
+        keywords: ['pricing', 'plan', 'tarif', 'prix', 'abonnement'],
+        priority: 5,
+        action: () => {
+          navigate('/pricing');
+        },
+      },
+      {
+        id: 'nav-subscription',
+        name: t('commandPalette.commands.subscription'),
+        description: t('commandPalette.commands.subscriptionDesc'),
+        category: 'navigation',
+        keywords: ['subscription', 'abonnement', 'billing', 'facturation'],
+        priority: 5,
+        action: () => {
+          navigate('/subscription');
+        },
+      },
     ];
 
     return commands;

@@ -171,6 +171,35 @@ export interface UINotification {
   metadata?: Record<string, any>;
 }
 
+export interface SyncState {
+  status: 'idle' | 'syncing' | 'error' | 'success';
+  lastSyncTime: string | null;
+  pendingChanges: number;
+  progress: number;
+  error: SerializedError | null;
+  syncedItems: string[];
+  conflicts: SyncConflict[];
+  settings: SyncSettings;
+}
+
+export interface SyncConflict {
+  id: string;
+  itemId: string;
+  itemType: 'file' | 'folder';
+  localVersion: Item;
+  remoteVersion: Item;
+  timestamp: string;
+  resolved: boolean;
+  resolution?: 'local' | 'remote' | 'merge';
+}
+
+export interface SyncSettings {
+  enabled: boolean;
+  autoSync: boolean;
+  syncInterval: number;
+  conflictResolution: 'manual' | 'local' | 'remote' | 'newest';
+}
+
 export interface SearchState {
   query: string;
   results: SearchResult[];
@@ -257,8 +286,9 @@ export interface EncryptedData {
 // ==================== STORAGE TYPES ====================
 
 export interface StorageOptions {
-  type: 'local';
+  type: 'local' | 'cloud';
   path?: string;
+  cloudProvider?: 'aws' | 'azure' | 'gcp';
 }
 
 // ==================== UI TYPES ====================
@@ -301,16 +331,29 @@ export interface ProgressState {
 // ==================== CONFIG TYPES ====================
 
 export interface AppConfig {
+  // Stockage
+  useCloudStorage: boolean;
+  cloudStorageUrl: string;
+  authToken: string | null;
+
+  // Interface utilisateur
   theme: 'light' | 'dark' | 'system';
   language: string;
 
+  // Fonctionnalités
   enableNotifications: boolean;
   enableAutoSave: boolean;
   autoSaveInterval: number;
 
+  // Sécurité
   encryptionEnabled: boolean;
   encryptionAlgorithm: string;
 
+  // Synchronisation
+  syncEnabled: boolean;
+  syncInterval: number;
+
+  // Développement
   isDevelopment: boolean;
   debugMode: boolean;
 }

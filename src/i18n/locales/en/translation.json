@@ -62,7 +62,33 @@
     "copied": "Copied",
     "expand": "Expand",
     "collapse": "Collapse",
-    "lines": "lines"
+    "lines": "lines",
+    "done": "Done",
+    "print": "Print",
+    "validate": "Validate"
+  },
+  "login": {
+    "2fa": {
+      "title": "Two-factor authentication",
+      "totpDesc": "Enter the 6-digit code from your authenticator app.",
+      "backupDesc": "Enter one of your backup codes (format XXXX-XXXX). It will be consumed.",
+      "useBackup": "Use a backup code",
+      "useTotp": "Use authenticator app"
+    }
+  },
+  "forgotPassword": {
+    "title": "Recover with recovery phrase",
+    "info": "Enter your 24-word recovery phrase to reset your password. This will log out all your devices — you'll need to log in again with the new password.",
+    "emailLabel": "Email address",
+    "phraseLabel": "Recovery phrase (24 words)",
+    "phrasePlaceholder": "word1 word2 word3 ... word24",
+    "words": "words",
+    "newPasswordLabel": "New password",
+    "confirmLabel": "Confirm password",
+    "submit": "Reset password",
+    "working": "Resetting...",
+    "doneTitle": "Password reset",
+    "doneDesc": "All your devices have been logged out. Log in now with your new password."
   },
   "favorites": {
     "title": "Favorites",
@@ -170,6 +196,14 @@
     "graphNote": "Note",
     "graphFile": "File",
     "graphFolder": "Folder",
+    "graphNotebook": "Notebook",
+    "graphShowNotebooks": "Show notebooks",
+    "syncBadge": {
+      "synced": "Synced",
+      "syncing": "Syncing…",
+      "pending": "Not synced",
+      "offline": "Offline"
+    },
     "graphEmpty": "Create notes with [[links]] to see your knowledge graph",
     "graphNodes": "nodes",
     "graphEdges": "connections",
@@ -571,6 +605,45 @@
     "appearanceDesc": "Interface theme and colors",
     "notifications": "Notifications",
     "notificationsDesc": "Manage alerts and sounds",
+    "downloadsWatcher": {
+      "title": "Downloads watcher",
+      "subtitle": "Automatically import files added to a folder on your PC.",
+      "enableLabel": "Enable watching",
+      "enableDesc": "Automatically imports every new file detected in the watched folders.",
+      "sourceFoldersLabel": "Watched folders",
+      "sourceFoldersDesc": "Your PC's Downloads folder, or any folder you want imported automatically.",
+      "noSourceFolders": "No folders watched yet.",
+      "addFolder": "Add a folder",
+      "pickSourceTitle": "Choose a folder to watch",
+      "inboxLabel": "Filarr inbox",
+      "inboxDesc": "Filarr folder where every imported file lands. Add automation rules to route them further.",
+      "selectFolder": "— Choose a folder —",
+      "deleteOriginalLabel": "Delete source file",
+      "deleteOriginalDesc": "After import, delete the file from its original location.",
+      "hint": "Tip: create automation rules with the \"Imported from OS\" trigger to sort files precisely (PDFs to Documents, images to Photos, etc.).",
+      "statusActive": "Active",
+      "statusStarting": "Starting…",
+      "statusError": "Error",
+      "statusDisabled": "Inactive",
+      "watchedCount_one": "{{count}} folder",
+      "watchedCount_other": "{{count}} folders",
+      "lastImport": "Last import: {{name}}",
+      "totalImported_one": "{{count}} file imported",
+      "totalImported_other": "{{count}} files imported",
+      "invalidPathsWarning": "These configured folders don't exist or are inaccessible: {{paths}}",
+      "extensionFilterLabel": "Filter by extension",
+      "extensionFilterDesc": "If empty, every file is imported (executables are always blocked). Otherwise, only files matching these extensions are.",
+      "extensionPlaceholder": "pdf, jpg…",
+      "scanNowLabel": "Run a scan now",
+      "scanNowDesc": "Imports all files already present in the watched folders. Without this, only new files are imported.",
+      "scanButton": "Scan",
+      "scanInProgress": "Scanning…",
+      "scanNoFiles": "No new files found in the watched folders.",
+      "validation": {
+        "needInbox": "Pick a Filarr inbox folder first.",
+        "needSource": "Add at least one folder to watch first."
+      }
+    },
     "security": "Security",
     "about": "About",
     "aboutDesc": "Application information",
@@ -628,7 +701,7 @@
     "clearCacheError": "Failed to clear cache",
     "version": "Version",
     "credits": "Credits",
-    "creditsText": "Filarr — open-source desktop client",
+    "creditsText": "Filarr — developed by Belouar-Pruvot Mathis",
     "license": "License",
     "uiTour": "Interface tour",
     "uiTourDesc": "Relaunch the interactive interface discovery tour",
@@ -708,6 +781,37 @@
     "recoveryKeyDesc": "Export or restore a recovery key to recover your data.",
     "exportRecoveryKey": "Export",
     "importRecoveryKey": "Restore",
+    "2fa": {
+      "label": "Two-factor authentication (2FA)",
+      "enabledDesc": "Enabled. {{count}} backup codes remaining.",
+      "disabledDesc": "Protect your account with a TOTP authenticator app.",
+      "enable": "Enable",
+      "disable": "Disable",
+      "regenBackup": "Regenerate backup codes",
+      "setupTitle": "Enable two-factor authentication",
+      "qrDesc": "Scan this QR code with your authenticator app (Authy, Google Authenticator, 1Password, etc.).",
+      "manualEntry": "Manual entry (secret key)",
+      "verifyDesc": "Enter the 6-digit code from your app to finalize.",
+      "verify": "Verify",
+      "codesTitle": "Backup codes — save them now",
+      "codesDesc": "Each code is single-use. They won't be shown again. If you lose them and your TOTP device, you'll need your recovery phrase to log back in.",
+      "codesSaved": "I saved my backup codes in a safe place",
+      "disableTitle": "Disable 2FA",
+      "disableWarn": "Your account will no longer be protected by two-factor authentication. You can re-enable it later.",
+      "passwordLabel": "Account password",
+      "codeLabel": "TOTP or backup code",
+      "totpLabel": "Current TOTP code",
+      "regenBackupTitle": "Regenerate backup codes",
+      "regenBackupWarn": "Current codes will be invalidated — make sure you can note down the new ones."
+    },
+    "regenPhrase": {
+      "label": "Recovery phrase",
+      "desc": "Regenerate your 24-word recovery phrase. The old one will be invalidated.",
+      "button": "Regenerate phrase",
+      "title": "Regenerate recovery phrase",
+      "warn": "The current phrase will be invalidated. Make sure you can note down the new one.",
+      "saveNow": "Copy or print now. Will not be shown again."
+    },
     "supportProject": "Support the project",
     "supportProjectDesc": "If Filarr is useful to you, you can support its development",
     "supportProjectBtn": "Donate",
@@ -743,6 +847,12 @@
       "disableTitle": "Disable sync",
       "disableDesc": "Your local data will be kept.",
       "disableButton": "Disable",
+      "resumeTitle": "Resume sync",
+      "resumeDesc": "Resume cloud synchronization with your account.",
+      "resumeButton": "Resume",
+      "logoutTitle": "Sign out",
+      "logoutDesc": "Sign this device out of your account. Your local data is preserved. You can sign back in (same account or another) from Settings.",
+      "logoutButton": "Sign out",
       "deleteTitle": "Delete my account",
       "deleteDesc": "Deletes your account and all cloud data. Irreversible.",
       "deleteButton": "Delete",
@@ -1741,7 +1851,8 @@
         "submit": "Sign in",
         "connecting": "Connecting...",
         "switchToLogin": "I already have an account",
-        "switchToRegister": "Create an account"
+        "switchToRegister": "Create an account",
+        "forgotPassword": "Forgot password?"
       },
       "recovery": {
         "title": "Save your recovery codes",
@@ -1920,7 +2031,7 @@
     "featureComparison": "Feature Comparison",
     "feature": "Feature",
     "unavailable": "Pricing information is currently unavailable.",
-    "securePayments": "Secure payments",
+    "securePayments": "Secure payments via Stripe",
     "nonprofitDiscount": "50% off for nonprofits & education",
     "noHiddenFees": "No hidden fees"
   },
@@ -2184,6 +2295,19 @@
     "whoIsUsing": "Who's using Filarr?",
     "add": "Add",
     "addProfile": "Add a new profile",
+    "addCloudAccount": "Add a cloud account",
+    "addCloudAccountTooltip": "Create a new profile and link it to a cloud account",
+    "groupLocal": "Local",
+    "filterPlaceholder": "Search profile (name or email)...",
+    "pinRequiredToDelete": "PIN required to delete this profile",
+    "deletePinTitle": "PIN verification",
+    "deletePinPrompt": "Enter the PIN for \"{{name}}\" to confirm deletion.",
+    "groupMenu": {
+      "manageDevices": "Manage devices",
+      "goToSettings": "Go to account settings",
+      "disconnectAll": "Disconnect all profiles of this account",
+      "disconnectAllConfirm": "Disconnect all profiles linked to {{email}}? Your local data stays intact."
+    },
     "manage": "Manage profiles",
     "upgradeToAdd": "Maximum 10 profiles reached",
     "maxReached": "Maximum 10 profiles reached",
@@ -2543,6 +2667,7 @@
         "created_date": "Creation date",
         "modified_date": "Modification date",
         "folder_path": "Folder",
+        "os_source_path": "OS source path",
         "tag": "Tag"
       },
       "operators": {
@@ -2573,6 +2698,7 @@
         "file_created": "File creation",
         "file_modified": "File modification",
         "file_moved": "File moved",
+        "file_imported_from_os": "Imported from OS",
         "manual": "Manual execution",
         "scheduled": "Scheduled"
       }
@@ -2628,6 +2754,22 @@
       "tagNewFiles": {
         "name": "Tag new files",
         "description": "Adds the \"new\" tag to each created file. Useful for quickly spotting recent additions."
+      },
+      "autoRouteImports": {
+        "name": "Auto-route imported files",
+        "description": "Automatically moves every new file added to Filarr into the destination folder you choose. Ideal for centralizing anything downloaded directly into the app."
+      },
+      "routeOsAllImports": {
+        "name": "Route OS downloads",
+        "description": "Moves any file imported from your PC's Downloads folder to a Filarr folder. Enable downloads watching in Settings first."
+      },
+      "routeOsPdfs": {
+        "name": "Sort downloaded PDFs",
+        "description": "When a PDF is added to your Downloads folder, automatically moves it to a dedicated Filarr folder."
+      },
+      "routeOsImages": {
+        "name": "Sort downloaded images",
+        "description": "When an image (JPG, PNG, GIF, WebP, HEIC) is added to your Downloads folder, moves it to a dedicated Filarr folder."
       }
     }
   },

@@ -39,6 +39,7 @@ import { SlashCommandMenu } from './SlashCommandMenu';
 import type { SlashCommandMenuRef, SlashCommandItem } from './SlashCommandMenu';
 import { DragHandleExtension } from './extensions/dragHandlePlugin';
 import { stripWikiLinks } from '../../../services/notes/noteLinkParser';
+import { syncEditorContent } from '../../../services/notes/noteEditorSync';
 import { FileEmbedExtension } from './extensions/fileEmbedExtension';
 import { TransclusionExtension } from './extensions/transclusionExtension';
 import { WikiLinkDecorationExtension } from './extensions/wikiLinkDecorationPlugin';
@@ -654,6 +655,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = React.memo(function NoteEdi
   const noteIdRef = useRef(note.id);
   noteIdRef.current = note.id;
 
+  // Last content string this editor instance pushed to Redux. Used to
+  // short-circuit the resync effect below: on round-trip saves the
+  // incoming note.content is byte-identical to what we just emitted,
+  // so an O(1) string compare replaces an O(n) JSON.stringify of the
+  // whole document on every keystroke-debounce cycle and every
+  // unrelated re-render.
+  //
+  // Seeded with the initial note.content so the first pass of the
+  // resync effect (right after useEditor finished parsing the same
+  // string to build its initial doc) is a no-op — prevents a second
+  // JSON.parse + setContent on every note open. NotesView mounts us
+  // with key={note.id}, so this ref is fresh on each note switch.
+  const lastSyncedContentRef = useRef<string | null>(note.content ?? null);
+
   // Build wiki-link suggestions (includes date keywords when trigger is @)
   // Track trigger in state so memo re-computes properly
   const [activeTrigger, setActiveTrigger] = useState<'[[' | '@'>('[[');
@@ -857,13 +872,32 @@ export const NoteEditor: React.FC<NoteEditorProps> = React.memo(function NoteEdi
       debounceTimer.current = setTimeout(() => {
         const json = JSON.stringify(ed.getJSON());
         const text = stripWikiLinks(ed.getText());
+        lastSyncedContentRef.current = json;
         onUpdateRef.current(json, text);
         // Version snapshot happens in the main process as part of notes:save
         // (see recordSnapshots in electron/main.ts), so nothing to do here.
       }, 300);
     },
     onFocus: () => setIsFocused(true),
-    onBlur: () => setIsFocused(false),
+    onBlur: ({ editor: ed }) => {
+      setIsFocused(false);
+      // Synchronous safety net: when the editor loses focus (clicking
+      // another note, switching to the file tree, Cmd+Tab…), flush any
+      // in-flight debounced content immediately. onUpdateRef still
+      // points to the callback bound to the current note at the moment
+      // of blur — the note switch that caused the blur hasn't been
+      // dispatched yet in React's queue.
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+        debounceTimer.current = null;
+        if (ed && !ed.isDestroyed) {
+          const json = JSON.stringify(ed.getJSON());
+          const text = stripWikiLinks(ed.getText());
+          lastSyncedContentRef.current = json;
+          onUpdateRef.current(json, text);
+        }
+      }
+    },
     editorProps: {
       attributes: {
         class: 'note-editor__content',
@@ -1049,7 +1083,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = React.memo(function NoteEdi
     editor.chain().focus().insertContent('[[').run();
   }, [editor]);
 
-  // Flush pending debounce before switching notes so content isn't lost
+  // Flush pending debounce on unmount so content isn't lost.
+  // Note switch no longer remounts this component (see NotesView — the
+  // `key` prop was removed to avoid a ~700 ms rebuild of TipTap + all
+  // extensions on every click). Flushing is now handled by:
+  //   • the per-note-id reset effect below (which runs before the
+  //     sync effect swaps content, with onUpdateRef still bound to
+  //     the OUTGOING note via a pre-render snapshot), and
+  //   • an onBlur flush inside useEditor config, so clicking another
+  //     note immediately stashes the in-flight debounced content.
   useEffect(() => {
     return () => {
       if (debounceTimer.current) {
@@ -1058,32 +1100,72 @@ export const NoteEditor: React.FC<NoteEditorProps> = React.memo(function NoteEdi
         if (editor && !editor.isDestroyed) {
           const json = JSON.stringify(editor.getJSON());
           const text = stripWikiLinks(editor.getText());
+          lastSyncedContentRef.current = json;
           onUpdateRef.current(json, text);
         }
       }
     };
-  }, [note.id, editor]);
+  }, [editor]);
+
+  // Flush any pending debounced content BEFORE we swap the editor over
+  // to the new note. `prevOnUpdateRef` holds the onUpdate callback that
+  // was bound to the outgoing note — we update it at the end of this
+  // effect so the NEXT switch has the correct snapshot. Without this,
+  // the flush would run with the new note's onUpdate and dump the old
+  // note's content into the new note.
+  const prevOnUpdateRef = useRef(onUpdate);
+  const prevNoteIdRef = useRef(note.id);
+  useEffect(() => {
+    if (prevNoteIdRef.current !== note.id) {
+      // Flush pending debounce using the OUTGOING handler.
+      if (debounceTimer.current && editor && !editor.isDestroyed) {
+        clearTimeout(debounceTimer.current);
+        debounceTimer.current = null;
+        const json = JSON.stringify(editor.getJSON());
+        const text = stripWikiLinks(editor.getText());
+        prevOnUpdateRef.current(json, text);
+      }
+      // Reset per-note UI state that would otherwise leak across notes
+      // now that we no longer force-remount via a `key` prop.
+      setNoteComments({});
+      setWikiOpen(false);
+      setWikiQuery('');
+      setWikiSelected(0);
+      wikiStartPos.current = null;
+      setActiveTrigger('[[');
+      setCommentInputOpen(false);
+      setCommentInputValue('');
+      setPendingCommentId(null);
+      setLinkInputOpen(false);
+      setLinkInputValue('');
+      setShowVersionHistory(false);
+      setShowExportDialog(false);
+      setIsDrawingMode(false);
+      // Do NOT re-seed lastSyncedContentRef here. It still holds the
+      // outgoing note's content — which is what TipTap's doc actually
+      // contains right now. The sync effect that runs right after will
+      // see note.content (incoming) !== ref (outgoing) and correctly
+      // issue a single setContent. Re-seeding to the incoming content
+      // would short-circuit the sync and leave the editor showing the
+      // previous note.
+      prevNoteIdRef.current = note.id;
+    }
+    prevOnUpdateRef.current = onUpdate;
+    // note.content intentionally omitted — it is only read on the
+    // note.id-changed branch, and we do not want this effect to fire
+    // on every keystroke that updates note.content for the current
+    // note (it would reset UI state and clobber the typing flow).
+     
+  }, [note.id, onUpdate, editor]);
 
   // Sync content when note changes — including content mutations from
   // outside the editor (e.g. restoring a previous version through the
   // version-history viewer dispatches updateNoteContent, which must
-  // reach this editor instance). The getJSON comparison prevents loops
-  // on round-trip saves (onUpdate -> Redux -> this effect -> no-op).
+  // reach this editor instance). Logic extracted to syncEditorContent
+  // so the round-trip-short-circuit is unit-tested in isolation
+  // (see noteEditorSync.test.ts).
   useEffect(() => {
-    if (!editor) return;
-    if (!note.content) {
-      editor.commands.setContent('', { emitUpdate: false });
-      return;
-    }
-    const currentContent = JSON.stringify(editor.getJSON());
-    if (note.content !== currentContent) {
-      try {
-        const parsed = JSON.parse(note.content);
-        editor.commands.setContent(parsed, { emitUpdate: false });
-      } catch {
-        editor.commands.setContent(note.content, { emitUpdate: false });
-      }
-    }
+    syncEditorContent(editor, note.content, lastSyncedContentRef);
   }, [note.id, note.content, editor]);
 
   // Expose comment actions to parent via ref (needs editor)

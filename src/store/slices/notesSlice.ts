@@ -457,6 +457,39 @@ const notesSlice = createSlice({
       state.filterNotebookId = action.payload;
     },
 
+    // ---- Kanban ----
+    setKanbanStatus(state, action: PayloadAction<{ noteId: string; status: string | null }>) {
+      const note = state.byId[action.payload.noteId];
+      if (!note) return;
+      if (action.payload.status) {
+        note.kanbanStatus = action.payload.status;
+      } else {
+        note.kanbanStatus = undefined;
+      }
+      note.updatedAt = new Date().toISOString();
+    },
+
+    /**
+     * One-shot migration: before `kanbanStatus` existed, KanbanView wrote
+     * column ids into `icon` on drop, corrupting the display icon (you'd
+     * see "in-progress" or "done" rendered where an emoji belonged).
+     * Move any icon that looks like a kebab-case column id to
+     * `kanbanStatus` and clear `icon`. Heuristic is safe because real
+     * icons are either emoji (non-ASCII), `lucide:Name` (colon + case),
+     * or `img:<dataUrl>` (colon) — none match `/^[a-z0-9-]+$/`.
+     */
+    migrateKanbanIconPollution(state) {
+      const kebabRe = /^[a-z0-9][a-z0-9-]*$/;
+      for (const note of Object.values(state.byId)) {
+        if (note.kanbanStatus) continue;
+        if (!note.icon) continue;
+        if (kebabRe.test(note.icon)) {
+          note.kanbanStatus = note.icon;
+          note.icon = undefined;
+        }
+      }
+    },
+
     // ---- Templates ----
     addTemplate(state, action: PayloadAction<NoteTemplate>) {
       state.templates.push(action.payload);
@@ -573,6 +606,8 @@ export const {
   deleteNotebook,
   setNoteNotebook,
   setNotesFilterNotebook,
+  setKanbanStatus,
+  migrateKanbanIconPollution,
   addTemplate,
   removeTemplate,
 } = notesSlice.actions;

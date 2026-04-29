@@ -138,6 +138,38 @@ export const selectSessionTimeout = createSelector(
 );
 
 /**
+ * Paramètres de synchronisation
+ */
+export const selectSyncSettings = createSelector(
+  [selectSettingsState],
+  (settings) => settings.sync
+);
+
+export const selectAutoSyncSettings = createSelector(
+  [selectSyncSettings],
+  (sync) => ({
+    enabled: sync.autoSyncEnabled,
+    interval: sync.syncInterval,
+    onlyOnWiFi: sync.syncOnlyOnWiFi
+  })
+);
+
+export const selectConflictResolution = createSelector(
+  [selectSyncSettings],
+  (sync) => sync.conflictResolution
+);
+
+export const selectSyncFolders = createSelector(
+  [selectSyncSettings],
+  (sync) => sync.syncFolders
+);
+
+export const selectIsFolderSynced = (folderId: string) => createSelector(
+  [selectSyncFolders],
+  (syncFolders) => syncFolders.includes(folderId)
+);
+
+/**
  * Paramètres de notifications
  */
 export const selectNotificationSettings = createSelector(
@@ -328,6 +360,14 @@ export const selectSecurityStatus = createSelector(
 );
 
 /**
+ * Vérifie si la synchronisation automatique est active et configurée
+ */
+export const selectIsSyncReady = createSelector(
+  [selectSyncSettings],
+  (sync) => sync.autoSyncEnabled && sync.syncFolders.length > 0
+);
+
+/**
  * Retourne un résumé des paramètres de sauvegarde
  */
 export const selectBackupStatus = createSelector(
@@ -375,6 +415,7 @@ export const selectExportableSettings = createSelector(
       ...settings.security,
       // Ne pas exporter les mots de passe ou tokens
     },
+    sync: settings.sync,
     notifications: settings.notifications,
     backup: settings.backup,
     performance: settings.performance,

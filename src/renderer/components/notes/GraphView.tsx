@@ -15,8 +15,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../store';
 import {
   selectAllNotes,
+  selectAllNotebooks,
   setEditingNote,
   setNotesViewMode,
+  setNotesFilterNotebook,
   updateNoteContent,
   resolveNoteLinks,
 } from '../../../store/slices/notesSlice';
@@ -44,6 +46,7 @@ const NODE_COLORS: Record<string, { fill: string; glow: string; light: string }>
   note: { fill: '#4a9eed', glow: 'rgba(74, 158, 237, 0.4)', light: '#7ab8f5' },
   file: { fill: '#34d399', glow: 'rgba(52, 211, 153, 0.4)', light: '#6ee7b7' },
   folder: { fill: '#fbbf24', glow: 'rgba(251, 191, 36, 0.4)', light: '#fcd34d' },
+  notebook: { fill: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)', light: '#c084fc' },
 };
 
 // ==================== Force Simulation (RAF-based) ====================
@@ -128,6 +131,20 @@ export const GraphView: React.FC = React.memo(function GraphView() {
   // New Phase 3 state
   const [showClusters, setShowClusters] = useState(true);
   const [showHeatMap, setShowHeatMap] = useState(false);
+  const [showNotebooks, setShowNotebooks] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('filarr_graph_show_notebooks') === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('filarr_graph_show_notebooks', showNotebooks ? '1' : '0');
+    } catch {
+      /* localStorage full */
+    }
+  }, [showNotebooks]);
   const [filterQuery, setFilterQuery] = useState('');
   const [draggingNode, setDraggingNode] = useState<string | null>(null);
   const draggingNodeRef = useRef<string | null>(null);
@@ -199,6 +216,7 @@ export const GraphView: React.FC = React.memo(function GraphView() {
   const foldersById = useSelector((s: RootState) => s.folders.byId);
   const selectedNoteId = useSelector((s: RootState) => s.notes.selectedNoteId);
   const notesById = useSelector((s: RootState) => s.notes.byId);
+  const notebooks = useSelector(selectAllNotebooks);
 
   // Resize observer
   useEffect(() => {
@@ -289,8 +307,47 @@ export const GraphView: React.FC = React.memo(function GraphView() {
       }
     }
 
-    // Notebook auto-linking removed — graph only shows real wiki-links [[]]
-    // This prevents artificial clustering and lets the true knowledge structure emerge
+    // Optional notebook overlay: adds hub nodes for each notebook with
+    // a child note present in the current graph. Kept behind a toggle
+    // (`showNotebooks`, persisted) because auto-linking every note to
+    // its notebook creates dense artificial clusters that drown out the
+    // wiki-link structure — users asked for it back as an opt-in layer.
+    if (showNotebooks) {
+      const notebookChildCount = new Map<string, number>();
+      for (const note of notes) {
+        if (!note.notebookId) continue;
+        if (!nodeMap.has(note.id)) continue;
+        notebookChildCount.set(note.notebookId, (notebookChildCount.get(note.notebookId) || 0) + 1);
+      }
+      for (const notebook of notebooks) {
+        const childCount = notebookChildCount.get(notebook.id) || 0;
+        if (childCount === 0) continue;
+        const notebookNodeId = `notebook:${notebook.id}`;
+        nodeMap.set(notebookNodeId, {
+          id: notebookNodeId,
+          label: notebook.name,
+          type: 'notebook',
+          x: 0,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          connections: 0,
+        });
+      }
+      for (const note of notes) {
+        if (!note.notebookId) continue;
+        if (!nodeMap.has(note.id)) continue;
+        const notebookNodeId = `notebook:${note.notebookId}`;
+        if (!nodeMap.has(notebookNodeId)) continue;
+        edgeList.push({
+          source: notebookNodeId,
+          target: note.id,
+          type: 'notebook-note',
+        });
+        connectionCount.set(notebookNodeId, (connectionCount.get(notebookNodeId) || 0) + 1);
+        connectionCount.set(note.id, (connectionCount.get(note.id) || 0) + 1);
+      }
+    }
 
     for (const [id, count] of connectionCount) {
       const node = nodeMap.get(id);
@@ -323,7 +380,7 @@ export const GraphView: React.FC = React.memo(function GraphView() {
       edges: finalEdges,
       clusterResult,
     };
-  }, [notes, filesById, foldersById]);
+  }, [notes, filesById, foldersById, notebooks, showNotebooks]);
 
   // d3-force simulation ref
   const simulationRef = useRef<Simulation<SimNode, SimulationLinkDatum<SimNode>> | null>(null);
@@ -504,6 +561,10 @@ export const GraphView: React.FC = React.memo(function GraphView() {
     // especially with a single edge where there's no mass of lines to register.
     const edgeBaseColor = isDarkTheme ? 'rgba(135, 206, 235, 0.32)' : 'rgba(71, 85, 105, 0.45)';
     const edgeHoverColor = isDarkTheme ? 'rgba(135, 206, 235, 0.85)' : 'rgba(30, 64, 124, 0.85)';
+    // Notebook-note edges are containment, not wiki-links — render them
+    // faded + dashed so they stay readable without competing with real links.
+    const notebookEdgeColor = isDarkTheme ? 'rgba(168, 85, 247, 0.22)' : 'rgba(147, 51, 234, 0.28)';
+    const notebookEdgeHover = isDarkTheme ? 'rgba(192, 132, 252, 0.7)' : 'rgba(126, 34, 206, 0.7)';
 
     // ── Draw edges ──
     ctx.lineWidth = 1.2 / t.scale;
@@ -522,14 +583,24 @@ export const GraphView: React.FC = React.memo(function GraphView() {
         continue;
 
       const isHighlighted = currentHovered === edge.source || currentHovered === edge.target;
-      ctx.strokeStyle = isHighlighted ? edgeHoverColor : edgeBaseColor;
-      ctx.lineWidth = isHighlighted ? 2.2 / t.scale : 1.4 / t.scale;
+      const isNotebookEdge = edge.type === 'notebook-note';
+
+      if (isNotebookEdge) {
+        ctx.strokeStyle = isHighlighted ? notebookEdgeHover : notebookEdgeColor;
+        ctx.lineWidth = (isHighlighted ? 1.6 : 1) / t.scale;
+        ctx.setLineDash([4 / t.scale, 3 / t.scale]);
+      } else {
+        ctx.strokeStyle = isHighlighted ? edgeHoverColor : edgeBaseColor;
+        ctx.lineWidth = (isHighlighted ? 2.2 : 1.4) / t.scale;
+        ctx.setLineDash([]);
+      }
 
       ctx.beginPath();
       ctx.moveTo(source.x, source.y);
       ctx.lineTo(target.x, target.y);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
 
     // ── Draw nodes ──
     for (const node of nodes) {
@@ -564,6 +635,14 @@ export const GraphView: React.FC = React.memo(function GraphView() {
       } else if (node.type === 'file') {
         const r = radius * 0.85;
         ctx.rect(node.x - r, node.y - r, r * 2, r * 2);
+      } else if (node.type === 'notebook') {
+        // Diamond for notebooks — larger than other nodes to read as a hub
+        const r = radius * 1.15;
+        ctx.moveTo(node.x, node.y - r);
+        ctx.lineTo(node.x + r, node.y);
+        ctx.lineTo(node.x, node.y + r);
+        ctx.lineTo(node.x - r, node.y);
+        ctx.closePath();
       } else {
         // Hexagon for folders
         for (let k = 0; k < 6; k++) {
@@ -592,7 +671,13 @@ export const GraphView: React.FC = React.memo(function GraphView() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(
-          node.type === 'note' ? 'N' : node.type === 'file' ? 'F' : 'D',
+          node.type === 'note'
+            ? 'N'
+            : node.type === 'file'
+              ? 'F'
+              : node.type === 'notebook'
+                ? 'C'
+                : 'D',
           node.x,
           node.y + 1
         );
@@ -728,6 +813,12 @@ export const GraphView: React.FC = React.memo(function GraphView() {
       } else if (nodeType === 'folder') {
         dispatch(setCurrentFolder(nodeId));
         navigate(`/folder/${nodeId}`);
+      } else if (nodeType === 'notebook') {
+        // Node ids for notebooks are prefixed with `notebook:` to avoid
+        // collisions with note/file/folder ids — strip the prefix.
+        const notebookId = nodeId.startsWith('notebook:') ? nodeId.slice(9) : nodeId;
+        dispatch(setNotesFilterNotebook(notebookId));
+        dispatch(setNotesViewMode('list'));
       }
     },
     [dispatch, filesById, navigate]
@@ -1062,6 +1153,23 @@ export const GraphView: React.FC = React.memo(function GraphView() {
           </svg>
         </button>
         <button
+          className={`graph-view__toggle-btn ${showNotebooks ? 'is-active' : ''}`}
+          onClick={() => setShowNotebooks((v) => !v)}
+          title={t('notes.graphShowNotebooks', 'Show notebooks')}
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path d="M4 4h12a2 2 0 012 2v14H6a2 2 0 01-2-2V4z" />
+            <line x1="9" y1="4" x2="9" y2="20" />
+          </svg>
+        </button>
+        <button
           className={`graph-view__toggle-btn ${showTimeTravel ? 'is-active' : ''}`}
           onClick={() => setShowTimeTravel((v) => !v)}
           title={t('notes.graphTimeTravel', 'Time Travel')}
@@ -1294,6 +1402,18 @@ export const GraphView: React.FC = React.memo(function GraphView() {
               />
               <span>{t('notes.graphFolder', 'Folder')}</span>
             </div>
+            {showNotebooks && (
+              <div className="graph-view__legend-item">
+                <span
+                  className="graph-view__legend-dot"
+                  style={{
+                    background: NODE_COLORS.notebook.fill,
+                    boxShadow: `0 0 6px ${NODE_COLORS.notebook.glow}`,
+                  }}
+                />
+                <span>{t('notes.graphNotebook', 'Notebook')}</span>
+              </div>
+            )}
           </>
         )}
       </div>

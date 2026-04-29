@@ -20,6 +20,16 @@ export interface ProfileMetadata {
   lastAccessedAt: string; // ISO 8601
   isDefault: boolean; // First profile created is default
   order: number; // Display order (0-indexed)
+  /**
+   * Cloud account bound to this profile (null/undefined = local-only).
+   * Populated by authService after login; used to render badges in
+   * ProfilePicker and disambiguate which account is active per profile.
+   */
+  cloudAccount?: {
+    email: string;
+    tier: string;
+    linkedAt: string;
+  } | null;
 }
 
 export interface ProfilesManifest {

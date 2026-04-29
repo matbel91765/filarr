@@ -30,6 +30,8 @@ function routeToTitle(pathname: string, folders: Record<string, any>): string {
   if (pathname === '/file-requests') return i18n.t('tabs.fileRequests');
   if (pathname === '/data-rooms') return i18n.t('tabs.dataRooms');
   if (pathname === '/admin') return i18n.t('tabs.admin');
+  if (pathname === '/pricing') return i18n.t('tabs.pricing');
+  if (pathname === '/subscription') return i18n.t('tabs.subscription');
   if (pathname === '/share-links') return i18n.t('tabs.shareLinks');
   if (pathname === '/api-keys') return i18n.t('tabs.apiKeys');
 

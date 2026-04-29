@@ -34,6 +34,14 @@ interface PairedClient {
 interface PairingCode {
   code: string;
   expiresAt: number;
+  /**
+   * Wrong-code attempts against this exact pairing session. Per-IP rate
+   * limit alone is insufficient because everything connects from
+   * 127.0.0.1 — counting on the SESSION instead means a malware loop on
+   * localhost burns the code after a handful of guesses regardless of
+   * what client IP it claims.
+   */
+  failedAttempts: number;
 }
 
 interface BridgeMessage {
@@ -67,6 +75,11 @@ const PAIRING_CODE_EXPIRY_MS = 60_000; // 60 seconds
 const RATE_LIMIT_MAX_FAILURES = 5;
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
 const RATE_LIMIT_COOLDOWN_MS = 300_000; // 5 minutes
+// Hard cap on guesses against any one pairing session, independent of IP.
+// 6 digits = 10^6 codes, expires in 60s — 3 attempts means an attacker has
+// p ≈ 3e-6 of brute-forcing a single session. Anything more lets a local
+// malware burn through the space across many fresh sessions.
+const PAIRING_SESSION_MAX_FAILURES = 3;
 const AUTH_TAG_LENGTH = 16;
 const CHALLENGE_EXPIRY_MS = 30_000; // 30 seconds
 
@@ -295,6 +308,21 @@ export class ExtensionBridge {
 
     if (pairingCode !== this.activePairingCode.code) {
       this.recordFailure(clientIp);
+      this.activePairingCode.failedAttempts += 1;
+      // Burn the session after enough wrong guesses, regardless of which IP
+      // (or fake IP) sent them. Without this guard, a localhost loop could
+      // exhaust the 10^6 code space across many fresh sessions.
+      if (this.activePairingCode.failedAttempts >= PAIRING_SESSION_MAX_FAILURES) {
+        console.warn(
+          `[ExtensionBridge] Pairing session burned after ${this.activePairingCode.failedAttempts} failed attempts`
+        );
+        this.activePairingCode = null;
+        return {
+          type: 'auth_result',
+          success: false,
+          error: 'Too many wrong codes — pairing session invalidated, please regenerate',
+        };
+      }
       return { type: 'auth_result', success: false, error: 'Invalid pairing code' };
     }
 
@@ -543,6 +571,7 @@ export class ExtensionBridge {
     this.activePairingCode = {
       code,
       expiresAt: Date.now() + PAIRING_CODE_EXPIRY_MS,
+      failedAttempts: 0,
     };
     return code;
   }
