@@ -1,0 +1,888 @@
+/**
+ * LES BLOCS AJOUTÉS — feuille commune.
+ *
+ * ── UN SEUL FICHIER, ET UN SEUL PRÉFIXE ─────────────────────────────────────
+ *
+ * Vingt blocs répartis en quatre fichiers de composants, mais UNE seule feuille
+ * et un seul préfixe (`blk-`). Une feuille par fichier aurait donné quatre
+ * définitions de « une ligne cliquable » qui auraient divergé au premier
+ * ajustement — c'est déjà arrivé aux libellés de section, recopiés six fois.
+ *
+ * ── TOUT PASSE PAR LES JETONS ───────────────────────────────────────────────
+ *
+ * Aucune couleur écrite en dur. Ces blocs doivent tenir sur les onze thèmes
+ * livrés ET sur n'importe quel thème composé dans l'atelier — un `#8a8a8a`
+ * posé ici serait illisible sur la moitié d'entre eux, et personne ne s'en
+ * apercevrait avant qu'un utilisateur ne le signale.
+ */
+
+/* ==================== Éléments partagés ==================== */
+
+.blk-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.blk-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Une ligne. Cliquable par défaut ; `--static` quand il n'y a nulle part où
+   aller — un curseur en main sur une ligne inerte promet une action qui
+   n'existe pas. */
+.blk-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.blk-line:hover {
+  background: var(--color-hover-overlay);
+}
+
+.blk-line--static {
+  cursor: default;
+}
+
+.blk-line--static:hover {
+  background: transparent;
+}
+
+.blk-line__title {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.blk-line__meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: none;
+}
+
+/* ==================== QUAND UN BLOC N'A RIEN À MONTRER ====================
+ *
+ * ── LE DÉFAUT QUE CETTE RÈGLE FERME ─────────────────────────────────────────
+ *
+ * C'était une ligne de douze pixels, grise, collée en haut à gauche d'un bloc
+ * qui en fait trois cents de haut. Le même défaut que le repli du panneau de
+ * coffre, et il se lit pareil : un message minuscule perdu dans un grand vide
+ * ne passe pas pour une explication, il passe pour un bloc cassé.
+ *
+ * Sur une disposition comme « Le jardin », où plusieurs blocs peuvent être
+ * vides le premier jour, ça donnait une page trouée — exactement l'inverse de
+ * ce qu'un modèle est censé montrer à quelqu'un qui le découvre.
+ *
+ * ── CE QUI CHANGE ───────────────────────────────────────────────────────────
+ *
+ * L'état vide OCCUPE son bloc, centré, avec un glyphe discret au-dessus. Il
+ * assume la place au lieu de la laisser béante : un bloc vide qui a l'air
+ * DÉLIBÉRÉMENT vide est calme ; un bloc vide qui a l'air oublié est laid.
+ *
+ * Une seule règle pour les douze endroits qui rendent cet état — c'était déjà
+ * la raison d'être de cette feuille commune.
+ */
+.blk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+  /* La largeur de lecture : une phrase d'état vide qui court sur toute la
+     largeur d'un bloc de douze colonnes se relit deux fois. */
+  max-width: 34ch;
+  margin-inline: auto;
+  color: var(--color-text-tertiary);
+}
+
+/* Le glyphe. Il n'est PAS décoratif : c'est lui qui distingue « la corbeille
+   est vide » de « aucun favori » avant même qu'on lise la phrase, sur une page
+   qui peut en afficher quatre le premier jour. Une pastille générique les
+   rendrait tous identiques — c'est-à-dire tous illisibles d'un coup d'œil. */
+.blk-empty__glyph {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+.blk-empty__glyph svg {
+  width: 18px;
+  height: 18px;
+}
+
+.blk-action {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-link);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.blk-action:hover {
+  background: var(--color-hover-overlay);
+}
+
+.blk-action--start {
+  align-self: flex-start;
+}
+
+.blk-note-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.blk-note-title:hover {
+  color: var(--color-link);
+}
+
+.blk-excerpt {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  /* Trois lignes, puis on coupe. Un extrait qui remplit le bloc n'est plus un
+     extrait, c'est la note — et le bloc a une hauteur choisie par l'utilisateur
+     qu'il ne doit pas déborder. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.blk-excerpt--long {
+  -webkit-line-clamp: 12;
+}
+
+/* ==================== 1. Titre de section ==================== */
+
+.blk-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  min-width: 0;
+}
+
+.blk-heading__text {
+  color: var(--color-text-tertiary);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blk-heading--medium .blk-heading__text {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--color-text-secondary);
+}
+
+.blk-heading--large .blk-heading__text {
+  font-size: 20px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Le filet prend la place qui reste : il souligne le titre sans jamais le
+   pousser hors du bloc, quelle que soit la largeur donnée à la case. */
+.blk-heading__rule {
+  flex: 1;
+  height: 1px;
+  min-width: 0;
+  background: var(--color-border);
+}
+
+/* ==================== 2. Filet ==================== */
+
+.blk-divider {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.blk-divider::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 1px;
+}
+
+.blk-divider--line::before {
+  background: var(--color-border);
+}
+
+.blk-divider--dashed::before {
+  background: repeating-linear-gradient(to right, var(--color-border) 0 6px, transparent 6px 12px);
+}
+
+.blk-divider--dots::before {
+  height: 3px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--color-border-strong) 0 3px,
+    transparent 3px 12px
+  );
+}
+
+.blk-divider--gradient::before {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    var(--color-primary-400),
+    color-mix(in srgb, var(--color-primary-400) 20%, transparent)
+  );
+}
+
+/* ==================== 3. Espace ==================== */
+
+.blk-spacer {
+  height: 100%;
+  width: 100%;
+}
+
+/* En édition seulement : sans ce damier, un espace est indiscernable du vide de
+   la grille, et on ne peut ni le retrouver ni le supprimer. */
+.blk-spacer--editing {
+  border-radius: 8px;
+  border: 1px dashed var(--color-border);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 6px,
+    var(--color-hover-overlay) 6px 12px
+  );
+}
+
+/* ==================== 4. Bloc de texte ==================== */
+
+.blk-text {
+  /* `pre-wrap` — c'est ce qui rend les retours à la ligne SANS passer par du
+     HTML. Le texte peut venir d'un gabarit publié par un inconnu ; il est rendu
+     par React, donc échappé. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+  color: var(--color-text-primary);
+  height: 100%;
+  overflow-y: auto;
+}
+
+.blk-text--small {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.blk-text--normal {
+  font-size: 14px;
+}
+
+.blk-text--large {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.blk-text--quote {
+  font-size: 16px;
+  font-style: italic;
+  line-height: 1.6;
+  padding-left: 14px;
+  border-left: 3px solid var(--color-primary-400);
+  color: var(--color-text-secondary);
+}
+
+.blk-text--center {
+  text-align: center;
+}
+
+/* ==================== 5. Bandeau ==================== */
+
+.blk-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+  padding: 18px 22px;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.blk-hero__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.blk-hero__subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* Les cinq teintes. Toutes dérivées de JETONS : un bandeau composé sur un
+   thème doit rester lisible après un changement de thème, ce qu'une couleur
+   écrite en dur ne garantirait pas. Le texte est toujours `text-inverted`,
+   c'est-à-dire la couleur que la dérivation garantit lisible sur l'accent. */
+.blk-hero--accent {
+  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+  color: var(--color-text-inverted);
+}
+
+.blk-hero--dusk {
+  background: linear-gradient(135deg, #4c3575, #1f2544);
+  color: #f4f1ff;
+}
+
+.blk-hero--moss {
+  background: linear-gradient(135deg, #2f5d50, #16332c);
+  color: #eaf5ef;
+}
+
+.blk-hero--ember {
+  background: linear-gradient(135deg, #a8442a, #5c1f14);
+  color: #fdf0e9;
+}
+
+.blk-hero--ink {
+  background: linear-gradient(135deg, #2b2f36, #14171b);
+  color: #eef1f5;
+}
+
+/* ==================== 11. Tags ==================== */
+
+.blk-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  line-height: 1.4;
+}
+
+.blk-cloud__tag {
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  cursor: default;
+}
+
+.blk-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 90px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 2px;
+}
+
+.blk-bar__label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blk-bar__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-background-tertiary);
+  overflow: hidden;
+}
+
+.blk-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.blk-bar__value {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==================== 12. Collections ==================== */
+
+.blk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.blk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.blk-chip em {
+  font-style: normal;
+  font-size: 11px;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==================== 16. Carte d'activité ====================
+ *
+ * ── ELLE NE DISAIT RIEN, ET C'ÉTAIT VRAI ────────────────────────────────────
+ *
+ * Des carrés colorés, sans axe, sans légende, sans échelle. On voyait « il se
+ * passe quelque chose ici » sans pouvoir dire quoi : ni quel jour, ni combien,
+ * ni ce que la couleur veut dire. Une visualisation sans légende n'est pas une
+ * visualisation, c'est une texture.
+ *
+ * Pire, les cases étaient dimensionnées en `1fr` : dans un bloc large elles
+ * devenaient d'énormes tuiles, et la grille débordait en hauteur avec une barre
+ * de défilement. Ce n'était plus une carte d'activité, c'était un damier.
+ *
+ * Les cases ont donc une taille FIXE, la semaine se lit sur l'axe vertical avec
+ * ses jours nommés, les mois sont écrits au-dessus, et une légende dit ce que
+ * la couleur signifie.
+ */
+
+.blk-heat-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 6px;
+  align-items: start;
+}
+
+/* Les initiales des jours, alignées sur les rangées de la grille. Une ligne sur
+   deux seulement : sept initiales de dix pixels empilées deviennent une colonne
+   de bruit. */
+.blk-heat-days {
+  display: grid;
+  grid-template-rows: repeat(7, var(--blk-heat-cell, 11px));
+  gap: 3px;
+  padding-top: 16px;
+  font-size: 9px;
+  line-height: var(--blk-heat-cell, 11px);
+  color: var(--color-text-tertiary);
+  text-align: right;
+}
+
+.blk-heat-months {
+  display: flex;
+  gap: 0;
+  height: 12px;
+  font-size: 9.5px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.blk-heat-months span {
+  flex: none;
+  overflow: hidden;
+}
+
+.blk-heat {
+  display: grid;
+  /* En COLONNES de sept, comme une semaine : une ligne horizontale correspond
+     alors à un jour de la semaine, ce que la colonne d'initiales annonce. */
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, var(--blk-heat-cell, 11px));
+  grid-auto-columns: var(--blk-heat-cell, 11px);
+  gap: 3px;
+  align-content: start;
+  /* La carte se coupe à droite plutôt que de déformer ses cases : une case
+     d'activité a une taille, elle ne s'étire pas pour remplir un bloc. */
+  overflow: hidden;
+}
+
+.blk-heat__cell {
+  width: var(--blk-heat-cell, 11px);
+  height: var(--blk-heat-cell, 11px);
+  border-radius: 2px;
+  background: var(--color-background-tertiary);
+}
+
+.blk-heat__cell--1 {
+  background: color-mix(in srgb, var(--color-primary-400) 30%, var(--color-background-tertiary));
+}
+
+.blk-heat__cell--2 {
+  background: color-mix(in srgb, var(--color-primary-400) 55%, var(--color-background-tertiary));
+}
+
+.blk-heat__cell--3 {
+  background: color-mix(in srgb, var(--color-primary-400) 78%, var(--color-background-tertiary));
+}
+
+.blk-heat__cell--4 {
+  background: var(--color-primary-400);
+}
+
+/* La légende. Sans elle, la couleur ne veut rien dire — et c'est exactement ce
+   que ce bloc s'entendait reprocher. */
+.blk-heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+.blk-heat-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+
+/* ==================== 17-18. Chiffres ==================== */
+
+.blk-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 10px;
+}
+
+.blk-figures--tight {
+  gap: 6px;
+}
+
+.blk-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.blk-figure strong {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.blk-figure span {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.blk-status {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.blk-status--ok {
+  color: var(--color-text-primary);
+}
+
+.blk-status--warn {
+  color: var(--color-warning-on-background);
+}
+
+.blk-status--danger {
+  color: var(--color-error-on-background);
+}
+
+.blk-status__detail {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+/* ==================== 20. Horloge ==================== */
+
+.blk-clock {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  gap: 2px;
+}
+
+.blk-clock__primary {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.blk-clock__secondary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+/* ==================== La note du jour ==================== */
+
+.blk-daily-date {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  /* Une date longue commence toujours par un jour de semaine minuscule dans les
+     langues latines ; la majuscule initiale est attendue en tête de bloc. */
+  text-transform: capitalize;
+}
+
+/* La métadonnée qui porte une mauvaise nouvelle — une clé restée en arrière,
+   un compteur en échec. Même couleur que les aveux du reste de l'application,
+   et garantie lisible sur les onze thèmes comme sur un thème composé. */
+.blk-line__meta--warn {
+  color: var(--color-warning-on-background);
+  font-weight: 600;
+}
+
+/* ==================== LES VARIANTES DES BLOCS EXISTANTS ====================
+ *
+ * Elles ne changent QUE l'habillage. Aucune ne modifie ce qui est calculé ni ce
+ * qui est dit : c'est toute la différence entre offrir un choix visuel et
+ * fabriquer deux blocs qui finiront par diverger.
+ */
+
+/* ---------- La pastille de couleur, partagée ---------- */
+.blk-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  margin-right: 7px;
+  vertical-align: baseline;
+  flex: none;
+}
+
+/* ---------- Tuile de chiffre : quatre tons, deux alignements ---------- */
+
+.blk-tile--start {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.blk-tile--center {
+  align-items: center;
+  text-align: center;
+}
+
+.blk-tile--accent {
+  background: color-mix(in srgb, var(--color-primary-500) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary-500) 35%, var(--color-border));
+}
+
+.blk-tile--accent .home-metric {
+  color: var(--color-primary-700);
+}
+
+.blk-tile--outline {
+  background: transparent;
+  box-shadow: none;
+  border-color: var(--color-border-strong);
+}
+
+/* Le dégradé prend le texte INVERSÉ — celui que la dérivation de thème
+   garantit lisible sur l'accent. Un blanc écrit en dur serait illisible dès
+   qu'on choisit un accent clair. */
+.blk-tile--gradient {
+  background: linear-gradient(140deg, var(--color-primary-500), var(--color-primary-700));
+  border-color: transparent;
+}
+
+.blk-tile--gradient .home-metric,
+.blk-tile--gradient .home-card__label {
+  color: var(--color-text-inverted);
+}
+
+.blk-tile--gradient .home-card__label {
+  opacity: 0.8;
+}
+
+/* ---------- Notes récentes en liste ---------- */
+
+/* L'extrait d'une ligne : il prend la place qui reste et se coupe. Sans
+   `min-width: 0`, un extrait long POUSSE le titre hors de la ligne au lieu de
+   se tronquer — le défaut classique d'un enfant de flex. */
+/* ⚠ L'EXTRAIT SE COLLE AU TITRE, IL NE PART PAS À L'AUTRE BOUT.
+ *
+ * Il était en `flex: 1` avec `text-align: right`, donc plaqué contre le bord
+ * droit du bloc. Sur une liste pleine largeur, ça donnait des titres à gauche,
+ * leurs extraits à quinze centimètres, et un couloir vide au milieu : deux
+ * colonnes qu'on ne peut pas lire ensemble, alors que l'extrait n'existe que
+ * pour compléter le titre.
+ *
+ * Le TITRE prend donc la place qu'il lui faut, l'extrait prend ce qui reste, et
+ * les deux se lisent d'un seul mouvement. */
+.blk-line--rich {
+  gap: 12px;
+}
+
+.blk-line--rich .blk-line__title {
+  flex: 0 1 auto;
+  max-width: 45%;
+}
+
+.blk-line__meta--excerpt {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+  /* Un cran plus effacé que le titre : c'est un complément, pas une seconde
+     colonne d'égale importance. */
+  opacity: 0.85;
+}
+
+/* ---------- Salutation : minimale et empilée ---------- */
+
+.blk-greet {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.blk-greet__hello {
+  margin: 0;
+  font-weight: 400;
+  color: var(--color-text-primary);
+  line-height: 1.15;
+}
+
+.blk-greet__date {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  /* La date longue commence par un jour de semaine minuscule dans les langues
+     latines ; la majuscule est attendue en tête de bloc. */
+  text-transform: capitalize;
+}
+
+.blk-greet--minimal .blk-greet__hello {
+  font-size: 34px;
+  letter-spacing: -0.01em;
+}
+
+.blk-greet--stacked .blk-greet__date {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.blk-greet--stacked .blk-greet__hello {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+/* ---------- Résumé discret : trois tons ---------- */
+
+.blk-summary--plain p {
+  color: var(--color-text-tertiary);
+}
+
+.blk-summary--quiet p {
+  color: var(--color-text-disabled);
+  font-size: 11px;
+}
+
+.blk-summary--accent p {
+  color: var(--color-primary-700);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* ==================== UN BLOC QUI NE PORTE QU'UNE CHOSE ====================
+ *
+ * « Une note au hasard », « Note en vitrine », « La note du jour » ne montrent
+ * qu'un titre et quelques lignes. Accrochés en haut d'un bloc de trois rangées,
+ * ils laissaient les deux tiers du bloc vides — et un vide SOUS du contenu se
+ * lit comme un chargement qui n'a pas fini, pas comme une composition.
+ *
+ * Le contenu est donc centré verticalement. Le bloc paraît alors habité quelle
+ * que soit la hauteur qu'on lui donne, ce qui est exactement la promesse d'une
+ * grille redimensionnable.
+ */
+.blk-stack--center {
+  justify-content: center;
+  height: 100%;
+}
+
+/* ── Minuteur (Pomodoro) ─────────────────────────────────────────────────────
+ *
+ * Le bloc est un BOUTON (il ouvre la fenêtre flottante) mais il doit se lire
+ * comme l'horloge, dont il est le frère visuel : on annule donc le chrome de
+ * bouton plutôt que d'écrire une seconde échelle typographique.
+ */
+.blk-pomodoro {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.blk-pomodoro:disabled {
+  cursor: default;
+}
+
+/* En marche, le chiffre prend la couleur d'accent : c'est le seul signal qui
+ * distingue « il reste 25:00 » de « il reste 25:00 et ça tourne ». */
+.blk-clock__primary.is-running {
+  color: var(--color-primary-600, var(--color-accent, currentColor));
+}

@@ -8,7 +8,12 @@
 
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
+import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { FileEmbedNodeView } from './FileEmbedNodeView';
+import { copyNoteImage } from '../../../../services/notes/noteImageClipboard';
+import { notifyImageCopyFailed } from './fileEmbedFeedback';
+import { fileEmbedIndexText } from './indexText';
 
 export interface FileEmbedAttributes {
   fileId: string;
@@ -44,7 +49,36 @@ export const FileEmbedExtension = Node.create({
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-file-embed]' }];
+    return [
+      { tag: 'div[data-file-embed]' },
+      {
+        // Images pasted as HTML (screenshot tools, other editors). Only inline
+        // `data:` URIs are accepted: a remote src would be blocked by the
+        // renderer CSP and would leak the note's content to that host.
+        tag: 'img[src]',
+        getAttrs: (element: HTMLElement | string) => {
+          if (typeof element === 'string') return false;
+          const src = element.getAttribute('src') || '';
+          if (!/^data:image\//i.test(src)) return false;
+          const width = Number.parseInt(element.getAttribute('width') || '', 10);
+          return {
+            fileId: `pasted-${Date.now()}`,
+            fileName: element.getAttribute('alt') || 'image',
+            fileType: src.slice(5).split(/[;,]/)[0] || 'image/png',
+            src,
+            width: Number.isFinite(width) && width > 0 ? width : null,
+          };
+        },
+      },
+    ];
+  },
+
+  /**
+   * Le NOM du fichier, et lui seul : `src` peut porter un data-URI de plusieurs
+   * mégaoctets, qui noierait l'index (et la note chiffrée) en base64.
+   */
+  renderText({ node }) {
+    return fileEmbedIndexText(node.attrs);
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -64,11 +98,7 @@ export const FileEmbedExtension = Node.create({
     return [
       'div',
       { ...attrs, class: 'file-embed file-embed--file' },
-      [
-        'div',
-        { class: 'file-embed__icon' },
-        ['span', {}, getFileIcon(attrs.fileType || '')],
-      ],
+      ['div', { class: 'file-embed__icon' }, ['span', {}, getFileIcon(attrs.fileType || '')]],
       [
         'div',
         { class: 'file-embed__info' },
@@ -80,6 +110,19 @@ export const FileEmbedExtension = Node.create({
 
   addNodeView() {
     return ReactNodeViewRenderer(FileEmbedNodeView as any);
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('fileEmbedImageCopy'),
+        props: {
+          handleDOMEvents: {
+            copy: (_view, event) => handleImageCopy(_view, event as ClipboardEvent),
+          },
+        },
+      }),
+    ];
   },
 
   addCommands() {
@@ -95,6 +138,38 @@ export const FileEmbedExtension = Node.create({
     };
   },
 });
+
+/**
+ * Ctrl+C sur une image sélectionnée.
+ *
+ * Laissé à ProseMirror, ce raccourci ne dépose que du HTML : le presse-papiers
+ * n'a alors AUCUN bitmap, et le collage dans Paint, Word ou une messagerie ne
+ * donne rien. On prend donc la main pour écrire l'image elle-même (le canal
+ * principal y ajoute le HTML, pour que le collage dans Filarr recrée bien un
+ * `fileEmbed`).
+ *
+ * Toute autre sélection — un fichier non-image, du texte autour — retombe sur
+ * le comportement natif.
+ */
+function handleImageCopy(view: EditorView, event: ClipboardEvent): boolean {
+  const { selection } = view.state;
+  if (!(selection instanceof NodeSelection)) return false;
+  const node = selection.node;
+  if (node.type.name !== 'fileEmbed') return false;
+
+  const src = node.attrs.src as string | null;
+  if (!src || !/^data:image\//i.test(src)) return false;
+
+  // L'écriture du presse-papiers est ASYNCHRONE (pont IPC ou API navigateur) :
+  // impossible de la faire tenir dans l'évènement. On coupe donc le
+  // comportement natif et on prévient si l'écriture échoue — un presse-papiers
+  // silencieusement inchangé est exactement le défaut qu'on corrige.
+  event.preventDefault();
+  void copyNoteImage(src, String(node.attrs.fileName || 'image')).then((ok) => {
+    if (!ok) notifyImageCopyFailed();
+  });
+  return true;
+}
 
 function getFileIcon(fileType: string): string {
   if (/^image/i.test(fileType)) return '\uD83D\uDDBC\uFE0F';

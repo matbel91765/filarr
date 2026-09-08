@@ -11,6 +11,13 @@
 
 import { createSlice, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import profileStorage from '../../services/core/profileStorage';
+import {
+  HISTORY_MAX_DAYS,
+  pomodoroDayKey,
+  pomodoroDayStats,
+  recordPomodoroCompletion,
+  type PomodoroHistoryEntry,
+} from '../../services/pomodoro/pomodoroHistory';
 
 // ==================== TYPES ====================
 
@@ -29,11 +36,13 @@ export interface PomodoroSettings {
   soundEnabled: boolean;
 }
 
-export interface PomodoroHistoryEntry {
-  date: string; // YYYY-MM-DD
-  focusCount: number;
-  totalFocusMinutes: number;
-}
+/**
+ * Le journal vit avec sa logique (`services/pomodoro/pomodoroHistory`) : la
+ * regle « une entree par jour », la borne des 90 jours et le comptage des
+ * PAUSES y sont purs, donc testes. Reexporte ici pour que les appelants n'aient
+ * qu'un import a ecrire.
+ */
+export type { PomodoroHistoryEntry };
 
 export interface PomodoroState {
   mode: PomodoroMode;
@@ -55,7 +64,6 @@ export interface PomodoroState {
 // ==================== CONSTANTS ====================
 
 const STORAGE_KEY = 'filarr_pomodoro';
-const HISTORY_MAX_DAYS = 90;
 
 const DEFAULT_SETTINGS: PomodoroSettings = {
   focusDuration: 25,
@@ -83,20 +91,12 @@ interface PersistedPomodoro {
   lastActiveDate: string;
 }
 
-const todayKey = (): string => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
-
 const loadFromStorage = (): Partial<PomodoroState> => {
   try {
     const raw = profileStorage.getItem(STORAGE_KEY);
     if (!raw) return {};
     const parsed: Partial<PersistedPomodoro> = JSON.parse(raw);
-    const today = todayKey();
+    const today = pomodoroDayKey();
     const lastActive = parsed.lastActiveDate || today;
     return {
       currentCycleFocusCount: parsed.currentCycleFocusCount ?? 0,
@@ -127,7 +127,7 @@ const saveToStorage = (state: PomodoroState): void => {
       widgetVisible: state.widgetVisible,
       widgetMinimized: state.widgetMinimized,
       widgetPosition: state.widgetPosition,
-      lastActiveDate: todayKey(),
+      lastActiveDate: pomodoroDayKey(),
     };
     profileStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch (error) {
@@ -169,21 +169,24 @@ const durationMsForMode = (mode: PomodoroMode, settings: PomodoroSettings): numb
   }
 };
 
-const recordFocusCompletion = (state: PomodoroState, minutes: number): void => {
-  const today = todayKey();
-  state.completedFocusToday += 1;
-  state.currentCycleFocusCount += 1;
-
-  const existing = state.history.find((h) => h.date === today);
-  if (existing) {
-    existing.focusCount += 1;
-    existing.totalFocusMinutes += minutes;
-  } else {
-    state.history.push({ date: today, focusCount: 1, totalFocusMinutes: minutes });
-    if (state.history.length > HISTORY_MAX_DAYS) {
-      state.history = state.history.slice(-HISTORY_MAX_DAYS);
-    }
+/**
+ * Une phase TERMINEE entre au journal — concentration OU pause.
+ *
+ * Les pauses n'y entraient pas : `breakCount` etait le seul chiffre que le
+ * telephone affichait et que l'ordinateur ne savait pas produire. Le compteur
+ * quotidien `completedFocusToday` et le cycle, eux, ne comptent QUE la
+ * concentration : ce sont eux qui declenchent la pause longue.
+ */
+const recordCompletion = (state: PomodoroState, isFocus: boolean, minutes: number): void => {
+  if (isFocus) {
+    state.completedFocusToday += 1;
+    state.currentCycleFocusCount += 1;
   }
+  state.history = recordPomodoroCompletion(state.history, {
+    day: pomodoroDayKey(),
+    isFocus,
+    minutes,
+  });
 };
 
 // ==================== SLICE ====================
@@ -232,7 +235,7 @@ const pomodoroSlice = createSlice({
      */
     completeSession(state) {
       if (state.mode === 'focus') {
-        recordFocusCompletion(state, state.settings.focusDuration);
+        recordCompletion(state, true, state.settings.focusDuration);
         const nextMode: PomodoroMode =
           state.currentCycleFocusCount >= state.settings.longBreakInterval
             ? 'longBreak'
@@ -241,6 +244,10 @@ const pomodoroSlice = createSlice({
         state.mode = nextMode;
         state.status = state.settings.autoStartBreaks ? 'running' : 'idle';
       } else {
+        // Une pause MENEE A SON TERME compte, comme sur le telephone. Elle est
+        // enregistree AVANT la bascule de mode : apres, `state.mode` vaut deja
+        // « focus » et la pause serait comptee comme une concentration.
+        recordCompletion(state, false, 0);
         state.mode = 'focus';
         state.status = state.settings.autoStartFocus ? 'running' : 'idle';
       }
@@ -345,10 +352,13 @@ export const selectPomodoroDurationMs = createSelector(
 
 export const selectTodayFocusMinutes = createSelector(
   (state: { pomodoro: PomodoroState }) => state.pomodoro.history,
-  (history) => {
-    const today = todayKey();
-    return history.find((h) => h.date === today)?.totalFocusMinutes ?? 0;
-  }
+  (history) => pomodoroDayStats(history, pomodoroDayKey()).focusMinutes
+);
+
+/** Ce que la journee raconte — concentration ET pauses (voir `pomodoroHistory`). */
+export const selectTodayPomodoroStats = createSelector(
+  (state: { pomodoro: PomodoroState }) => state.pomodoro.history,
+  (history) => pomodoroDayStats(history, pomodoroDayKey())
 );
 
 // ==================== ACTIONS EXPORT ====================

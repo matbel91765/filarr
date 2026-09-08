@@ -1,0 +1,353 @@
+.reminders-view {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--color-background);
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+/* Le repli est le plafond d'avant : voir `services/platform/pageWidth.ts`. */
+.reminders-view__container {
+  max-width: var(--page-max-width, 960px);
+  margin: 0 auto;
+}
+
+.reminders-view__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  padding-bottom: var(--spacing-5);
+  border-bottom: var(--border-width-1) solid var(--color-border);
+}
+
+.reminders-view__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-600);
+}
+
+.reminders-view__title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.reminders-view__subtitle {
+  margin: var(--spacing-2) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ───────────────────────── Sections ─────────────────────────── */
+
+.reminders-section {
+  margin-bottom: var(--spacing-6);
+}
+
+.reminders-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-text-secondary);
+}
+
+.reminders-section__title--overdue {
+  color: var(--color-danger-600, #b91c1c);
+}
+
+.reminders-section__title--upcoming {
+  color: var(--color-primary-600);
+}
+
+.reminders-section__title--later {
+  color: var(--color-text-tertiary);
+}
+
+.reminders-section__title--done {
+  color: var(--color-text-tertiary);
+}
+
+.reminders-section__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.reminders-section__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.reminders-section__bulk {
+  margin-left: auto;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.reminders-section__bulk:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-tertiary);
+}
+
+.reminders-section__expand {
+  align-self: flex-start;
+  margin-top: var(--spacing-2);
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.reminders-section__expand:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+/* ───────────────────────── Rows ─────────────────────────── */
+
+.reminder-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  transition: border-color 120ms ease;
+}
+
+.reminder-row:hover {
+  border-color: var(--color-border);
+}
+
+.reminder-row--overdue {
+  border-left: 3px solid var(--color-danger-500, #ef4444);
+}
+
+.reminder-row--upcoming {
+  border-left: 3px solid var(--color-primary-500);
+}
+
+.reminder-row--later {
+  border-left: 3px solid var(--color-border);
+}
+
+.reminder-row--done {
+  opacity: 0.7;
+}
+
+.reminder-row--flash {
+  animation: reminder-row-flash 2s ease-out;
+}
+
+@keyframes reminder-row-flash {
+  0% {
+    background: color-mix(in srgb, var(--color-primary-500) 28%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-500) 40%, transparent);
+  }
+  60% {
+    background: color-mix(in srgb, var(--color-primary-500) 14%, transparent);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  100% {
+    background: var(--color-surface);
+    box-shadow: none;
+  }
+}
+
+.reminder-row__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-row__name {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.reminder-row__type-badge {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.reminder-row__item-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.reminder-row__item-link:hover {
+  color: var(--color-primary-500);
+  text-decoration: underline;
+}
+
+.reminder-row__item-link--done {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.reminder-row__recurring {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-600);
+}
+
+.reminder-row__snoozed {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  font-size: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  color: #b45309;
+}
+
+.reminder-row__message {
+  margin: 2px 0 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.reminder-row__message--done {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.reminder-row__time {
+  margin: 4px 0 0 0;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.reminder-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.reminder-row__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.reminder-row__action:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.reminder-row__action--primary {
+  background: var(--color-primary-500);
+  color: white;
+}
+
+.reminder-row__action--primary:hover {
+  background: var(--color-primary-600);
+  color: white;
+  border-color: var(--color-primary-600);
+}
+
+.reminder-row__action--danger:hover {
+  background: color-mix(in srgb, var(--color-danger-500, #ef4444) 15%, transparent);
+  color: var(--color-danger-600, #b91c1c);
+  border-color: var(--color-danger-300, #fca5a5);
+}
+
+/* ───────────────────────── Empty state ─────────────────────────── */
+
+.reminders-empty {
+  text-align: center;
+  padding: var(--spacing-12) var(--spacing-6);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.reminders-empty__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.reminders-empty__hint {
+  margin: var(--spacing-2) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}

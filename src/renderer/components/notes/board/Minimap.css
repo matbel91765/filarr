@@ -1,0 +1,25 @@
+/* ==================== Minimap ==================== */
+
+/**
+ * Vit dans la barre de contrôles flottante (`.sticky-notes-view__controls`),
+ * qui la pose en bas à droite. Elle n'a donc pas à se positionner elle-même :
+ * elle se contente d'être une surface du thème, comme la pastille de zoom.
+ *
+ * `cursor: crosshair` et non `pointer` : on ne « clique un bouton », on DÉSIGNE
+ * un point du plan — et le geste continue si l'on garde le bouton enfoncé.
+ */
+.board-minimap {
+  display: block;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  cursor: crosshair;
+  /* Le canvas est peint en pixels physiques (voir `devicePixelRatio` côté
+     composant) ; l'interpolation du navigateur n'a rien à ajouter. */
+  image-rendering: auto;
+}
+
+.board-minimap:hover {
+  border-color: var(--color-border-strong, var(--color-border));
+}

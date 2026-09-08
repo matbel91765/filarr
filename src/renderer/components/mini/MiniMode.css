@@ -1,0 +1,370 @@
+/**
+ * MiniMode — fenêtre compacte frameless (Wave 1, Protection du bureau).
+ *
+ * Tout est exprimé en tokens du design system : la fenêtre suit
+ * automatiquement le thème actif (dark par défaut, terracotta, etc.)
+ * appliqué via data-theme sur <html> au boot du composant.
+ */
+
+.mini-root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  font-family: var(--font-family-base, 'Inter', sans-serif);
+  user-select: none;
+}
+
+/* ── Barre de titre (zone de drag de la fenêtre frameless) ── */
+.mini-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 8px 0 14px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-surface);
+  -webkit-app-region: drag;
+}
+
+.mini-titlebar__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: 0.01em;
+}
+
+.mini-titlebar__spacer {
+  flex: 1;
+}
+
+.mini-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+}
+
+/* Fond des pilules/feedback : color-mix sur les tokens -500 (les échelles -50
+   ne sont pas surchargées par thème — un pastel clair casserait le mode dark). */
+.mini-status-pill--unlocked {
+  color: var(--color-success-500);
+  background: color-mix(in srgb, var(--color-success-500) 13%, transparent);
+}
+
+.mini-status-pill--locked {
+  color: var(--color-warning-500);
+  background: color-mix(in srgb, var(--color-warning-500) 14%, transparent);
+}
+
+.mini-status-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.mini-titlebar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+
+.mini-titlebar__btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.mini-titlebar__btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* ── Corps ── */
+.mini-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+  gap: 12px;
+}
+
+/* ── Zone de dépôt ── */
+.mini-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-height: 176px;
+  padding: 20px 16px;
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-xl);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.mini-dropzone:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-drop-zone);
+}
+
+.mini-dropzone:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.mini-dropzone--active {
+  border-color: var(--color-primary-500);
+  border-style: solid;
+  background: var(--color-drop-zone-active);
+  transform: scale(1.015);
+}
+
+.mini-dropzone--disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.mini-dropzone--disabled:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-background-secondary);
+}
+
+.mini-dropzone__icon {
+  color: var(--color-primary-500);
+  transition: transform 0.18s ease;
+}
+
+.mini-dropzone--active .mini-dropzone__icon {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.mini-dropzone__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.mini-dropzone__hint {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Écran verrouillé (remplace la zone de dépôt) */
+.mini-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-height: 176px;
+  padding: 20px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-background-secondary);
+  text-align: center;
+}
+
+.mini-locked__icon {
+  color: var(--color-warning-500);
+}
+
+/* État inconnu (connexion au coffre) : neutre, pas d'alerte. */
+.mini-locked__icon--pending {
+  color: var(--color-text-tertiary);
+}
+
+.mini-locked__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.mini-locked__hint {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+  margin: 0 0 2px;
+  line-height: 1.45;
+}
+
+/* ── Message d'état (résultat d'import, erreurs) ── */
+.mini-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.mini-feedback--success {
+  color: var(--color-success-500);
+  background: color-mix(in srgb, var(--color-success-500) 12%, transparent);
+}
+
+.mini-feedback--error {
+  color: var(--color-error-500);
+  background: color-mix(in srgb, var(--color-error-500) 12%, transparent);
+}
+
+.mini-feedback--info {
+  color: var(--color-text-secondary);
+  background: var(--color-background-tertiary);
+}
+
+/* ── Récents ── */
+.mini-recent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.mini-recent__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+  margin: 0 0 6px 2px;
+}
+
+.mini-recent__label-icon {
+  flex-shrink: 0;
+}
+
+.mini-recent__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.mini-recent__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.mini-recent__item:hover {
+  background: var(--color-surface-hover);
+}
+
+.mini-recent__item:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.mini-recent__file-icon {
+  flex-shrink: 0;
+  color: var(--color-primary-500);
+}
+
+.mini-recent__name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-recent__time {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--color-text-tertiary);
+}
+
+.mini-recent__empty {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+  padding: 10px 8px;
+  margin: 0;
+}
+
+/* ── Pied : Tout verrouiller ── */
+.mini-footer {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+/* Barre de progression fine pendant un import */
+.mini-progress {
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.mini-progress__bar {
+  height: 100%;
+  width: 40%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-500);
+  animation: mini-progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes mini-progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}

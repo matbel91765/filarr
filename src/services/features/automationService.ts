@@ -21,6 +21,7 @@ export type RuleTrigger =
   | 'file_created'
   | 'file_modified'
   | 'file_moved'
+  | 'file_imported_from_os'
   | 'manual'
   | 'scheduled';
 
@@ -32,6 +33,7 @@ export type ConditionType =
   | 'created_date'
   | 'modified_date'
   | 'folder_path'
+  | 'os_source_path'
   | 'tag';
 
 export type ConditionOperator =
@@ -72,8 +74,8 @@ export interface RuleAction {
   params: {
     targetFolderId?: string;
     tagName?: string;
-    pattern?: string;  // For rename action
-    message?: string;  // For notify action
+    pattern?: string; // For rename action
+    message?: string; // For notify action
   };
   order: number;
 }
@@ -81,9 +83,9 @@ export interface RuleAction {
 export interface ScheduleConfig {
   enabled: boolean;
   type: 'daily' | 'weekly' | 'monthly' | 'cron';
-  time?: string;  // HH:mm format
-  dayOfWeek?: number;  // 0-6 for weekly
-  dayOfMonth?: number;  // 1-31 for monthly
+  time?: string; // HH:mm format
+  dayOfWeek?: number; // 0-6 for weekly
+  dayOfMonth?: number; // 1-31 for monthly
   cronExpression?: string;
   lastRun?: string;
   nextRun?: string;
@@ -99,8 +101,8 @@ export interface AutomationRule {
   conditionsLogic: 'AND' | 'OR';
   actions: RuleAction[];
   schedule?: ScheduleConfig;
-  priority: number;  // Lower = higher priority
-  stopOnMatch: boolean;  // Stop processing other rules if this matches
+  priority: number; // Lower = higher priority
+  stopOnMatch: boolean; // Stop processing other rules if this matches
   createdAt: string;
   updatedAt: string;
   lastTriggeredAt?: string;
@@ -135,6 +137,17 @@ export interface FileContext {
   createdAt: string;
   modifiedAt: string;
   tags: string[];
+  /**
+   * Absolute path of the OS-level source file when the event originated from
+   * the OS downloads watcher. Undefined for in-app file events.
+   */
+  osSourcePath?: string;
+  /**
+   * ID of the hot folder rule that surfaced the file (only set for events
+   * originating from a configured hot folder). Lets users build automation
+   * rules scoped to specific hot folders.
+   */
+  hotFolderRuleId?: string;
 }
 
 export interface RuleTemplate {
@@ -160,17 +173,27 @@ export const CONDITION_TYPE_LABELS = (): Record<ConditionType, string> => ({
   created_date: i18n.t('automation.labels.conditionTypes.created_date'),
   modified_date: i18n.t('automation.labels.conditionTypes.modified_date'),
   folder_path: i18n.t('automation.labels.conditionTypes.folder_path'),
+  os_source_path: i18n.t('automation.labels.conditionTypes.os_source_path'),
   tag: i18n.t('automation.labels.conditionTypes.tag'),
 });
 
 export const CONDITION_OPERATORS: Record<ConditionType, ConditionOperator[]> = {
-  file_name: ['equals', 'not_equals', 'contains', 'not_contains', 'starts_with', 'ends_with', 'matches_regex'],
+  file_name: [
+    'equals',
+    'not_equals',
+    'contains',
+    'not_contains',
+    'starts_with',
+    'ends_with',
+    'matches_regex',
+  ],
   file_extension: ['equals', 'not_equals', 'in_list', 'not_in_list'],
   file_type: ['equals', 'not_equals', 'in_list'],
   file_size: ['equals', 'greater_than', 'less_than', 'between'],
   created_date: ['equals', 'greater_than', 'less_than', 'between'],
   modified_date: ['equals', 'greater_than', 'less_than', 'between'],
   folder_path: ['equals', 'not_equals', 'contains', 'starts_with'],
+  os_source_path: ['equals', 'not_equals', 'contains', 'starts_with'],
   tag: ['equals', 'contains', 'in_list', 'not_in_list'],
 };
 
@@ -204,6 +227,7 @@ export const TRIGGER_LABELS = (): Record<RuleTrigger, string> => ({
   file_created: i18n.t('automation.labels.triggers.file_created'),
   file_modified: i18n.t('automation.labels.triggers.file_modified'),
   file_moved: i18n.t('automation.labels.triggers.file_moved'),
+  file_imported_from_os: i18n.t('automation.labels.triggers.file_imported_from_os'),
   manual: i18n.t('automation.labels.triggers.manual'),
   scheduled: i18n.t('automation.labels.triggers.scheduled'),
 });
@@ -224,7 +248,9 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     description: i18n.t('automation.ruleTemplates.organizeImages.description'),
     trigger: 'file_created',
     icon: '🖼️',
-    conditions: [{ type: 'file_extension', operator: 'in_list', value: ['jpg', 'jpeg', 'png', 'gif', 'webp'] }],
+    conditions: [
+      { type: 'file_extension', operator: 'in_list', value: ['jpg', 'jpeg', 'png', 'gif', 'webp'] },
+    ],
     actions: [{ type: 'move_to_folder', params: { targetFolderId: '' }, order: 0 }],
   },
   {
@@ -232,7 +258,9 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     description: i18n.t('automation.ruleTemplates.tagInvoices.description'),
     trigger: 'file_created',
     icon: '🧾',
-    conditions: [{ type: 'file_name', operator: 'matches_regex', value: '(facture|invoice)', logic: 'OR' }],
+    conditions: [
+      { type: 'file_name', operator: 'matches_regex', value: '(facture|invoice)', logic: 'OR' },
+    ],
     actions: [{ type: 'add_tag', params: { tagName: 'facture' }, order: 0 }],
   },
   {
@@ -260,7 +288,13 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     trigger: 'file_created',
     icon: '📥',
     conditions: [{ type: 'folder_path', operator: 'contains', value: 'telechargement' }],
-    actions: [{ type: 'notify', params: { message: i18n.t('automation.ruleTemplates.organizeDownloads.notifyMessage') }, order: 0 }],
+    actions: [
+      {
+        type: 'notify',
+        params: { message: i18n.t('automation.ruleTemplates.organizeDownloads.notifyMessage') },
+        order: 0,
+      },
+    ],
   },
   {
     name: i18n.t('automation.ruleTemplates.archiveOldFiles.name'),
@@ -270,7 +304,11 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     conditions: [{ type: 'modified_date', operator: 'less_than', value: -90 }],
     actions: [
       { type: 'archive', params: {}, order: 0 },
-      { type: 'notify', params: { message: i18n.t('automation.ruleTemplates.archiveOldFiles.notifyMessage') }, order: 1 },
+      {
+        type: 'notify',
+        params: { message: i18n.t('automation.ruleTemplates.archiveOldFiles.notifyMessage') },
+        order: 1,
+      },
     ],
   },
   {
@@ -279,7 +317,12 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     trigger: 'file_created',
     icon: '📸',
     conditions: [
-      { type: 'file_name', operator: 'matches_regex', value: '(screenshot|capture|screen|ecran)', logic: 'AND' },
+      {
+        type: 'file_name',
+        operator: 'matches_regex',
+        value: '(screenshot|capture|screen|ecran)',
+        logic: 'AND',
+      },
       { type: 'file_extension', operator: 'in_list', value: ['png', 'jpg', 'jpeg'], logic: 'AND' },
     ],
     actions: [
@@ -301,14 +344,26 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     trigger: 'file_created',
     icon: '⚠️',
     conditions: [{ type: 'file_size', operator: 'greater_than', value: 52428800 }],
-    actions: [{ type: 'notify', params: { message: i18n.t('automation.ruleTemplates.largeFileAlert.notifyMessage') }, order: 0 }],
+    actions: [
+      {
+        type: 'notify',
+        params: { message: i18n.t('automation.ruleTemplates.largeFileAlert.notifyMessage') },
+        order: 0,
+      },
+    ],
   },
   {
     name: i18n.t('automation.ruleTemplates.organizeVideos.name'),
     description: i18n.t('automation.ruleTemplates.organizeVideos.description'),
     trigger: 'file_created',
     icon: '🎬',
-    conditions: [{ type: 'file_extension', operator: 'in_list', value: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'webm'] }],
+    conditions: [
+      {
+        type: 'file_extension',
+        operator: 'in_list',
+        value: ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'webm'],
+      },
+    ],
     actions: [{ type: 'move_to_folder', params: { targetFolderId: '' }, order: 0 }],
   },
   {
@@ -318,6 +373,44 @@ export const RULE_TEMPLATES = (): RuleTemplate[] => [
     icon: '✨',
     conditions: [],
     actions: [{ type: 'add_tag', params: { tagName: 'nouveau' }, order: 0 }],
+  },
+  {
+    name: i18n.t('automation.ruleTemplates.autoRouteImports.name'),
+    description: i18n.t('automation.ruleTemplates.autoRouteImports.description'),
+    trigger: 'file_created',
+    icon: '➡️',
+    conditions: [],
+    actions: [{ type: 'move_to_folder', params: { targetFolderId: '' }, order: 0 }],
+  },
+  {
+    name: i18n.t('automation.ruleTemplates.routeOsAllImports.name'),
+    description: i18n.t('automation.ruleTemplates.routeOsAllImports.description'),
+    trigger: 'file_imported_from_os',
+    icon: '📥',
+    conditions: [],
+    actions: [{ type: 'move_to_folder', params: { targetFolderId: '' }, order: 0 }],
+  },
+  {
+    name: i18n.t('automation.ruleTemplates.routeOsPdfs.name'),
+    description: i18n.t('automation.ruleTemplates.routeOsPdfs.description'),
+    trigger: 'file_imported_from_os',
+    icon: '📄',
+    conditions: [{ type: 'file_extension', operator: 'equals', value: 'pdf' }],
+    actions: [{ type: 'move_to_folder', params: { targetFolderId: '' }, order: 0 }],
+  },
+  {
+    name: i18n.t('automation.ruleTemplates.routeOsImages.name'),
+    description: i18n.t('automation.ruleTemplates.routeOsImages.description'),
+    trigger: 'file_imported_from_os',
+    icon: '🖼️',
+    conditions: [
+      {
+        type: 'file_extension',
+        operator: 'in_list',
+        value: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'],
+      },
+    ],
+    actions: [{ type: 'move_to_folder', params: { targetFolderId: '' }, order: 0 }],
   },
 ];
 
@@ -391,14 +484,14 @@ export const getAllRules = (): AutomationRule[] => {
  */
 export const getRuleById = (id: string): AutomationRule | null => {
   const rules = loadRulesFromStorage();
-  return rules.find(r => r.id === id) || null;
+  return rules.find((r) => r.id === id) || null;
 };
 
 /**
  * Get rules by trigger type
  */
 export const getRulesByTrigger = (trigger: RuleTrigger): AutomationRule[] => {
-  return getAllRules().filter(r => r.enabled && r.trigger === trigger);
+  return getAllRules().filter((r) => r.enabled && r.trigger === trigger);
 };
 
 /**
@@ -426,12 +519,12 @@ export const createRule = (
  * Create rule from template
  */
 export const createRuleFromTemplate = (template: RuleTemplate): AutomationRule => {
-  const conditions: RuleCondition[] = template.conditions.map(c => ({
+  const conditions: RuleCondition[] = template.conditions.map((c) => ({
     ...c,
     id: generateUniqueId(),
   }));
 
-  const actions: RuleAction[] = template.actions.map(a => ({
+  const actions: RuleAction[] = template.actions.map((a) => ({
     ...a,
     id: generateUniqueId(),
   }));
@@ -455,7 +548,7 @@ export const createRuleFromTemplate = (template: RuleTemplate): AutomationRule =
  */
 export const updateRule = (id: string, updates: Partial<AutomationRule>): AutomationRule | null => {
   const rules = loadRulesFromStorage();
-  const index = rules.findIndex(r => r.id === id);
+  const index = rules.findIndex((r) => r.id === id);
 
   if (index === -1) return null;
 
@@ -474,7 +567,7 @@ export const updateRule = (id: string, updates: Partial<AutomationRule>): Automa
  */
 export const deleteRule = (id: string): boolean => {
   const rules = loadRulesFromStorage();
-  const index = rules.findIndex(r => r.id === id);
+  const index = rules.findIndex((r) => r.id === id);
 
   if (index === -1) return false;
 
@@ -498,7 +591,7 @@ export const toggleRuleEnabled = (id: string): AutomationRule | null => {
 export const reorderRules = (ruleIds: string[]): void => {
   const rules = loadRulesFromStorage();
   ruleIds.forEach((id, index) => {
-    const rule = rules.find(r => r.id === id);
+    const rule = rules.find((r) => r.id === id);
     if (rule) {
       rule.priority = index;
     }
@@ -538,6 +631,12 @@ const evaluateCondition = (condition: RuleCondition, file: FileContext): boolean
     case 'folder_path':
       fileValue = file.folderPath.toLowerCase();
       break;
+    case 'os_source_path':
+      // Falls back to empty string for non-OS events. Empty value means
+      // contains/starts_with checks won't match — correct since the rule
+      // is targeting OS-imports specifically.
+      fileValue = (file.osSourcePath || '').toLowerCase().replace(/\\/g, '/');
+      break;
     case 'tag':
       fileValue = file.tags;
       break;
@@ -550,6 +649,10 @@ const evaluateCondition = (condition: RuleCondition, file: FileContext): boolean
   if (type === 'file_extension' && typeof value === 'string') {
     normalizedValue = value.replace(/^\./, '');
   }
+  // Normalize OS path separators so users can write either C:\Users\… or C:/Users/…
+  if (type === 'os_source_path' && typeof value === 'string') {
+    normalizedValue = value.replace(/\\/g, '/');
+  }
 
   // Evaluate based on operator (use normalizedValue throughout)
   const v = normalizedValue;
@@ -560,12 +663,12 @@ const evaluateCondition = (condition: RuleCondition, file: FileContext): boolean
       return String(fileValue).toLowerCase() !== String(v).toLowerCase();
     case 'contains':
       if (Array.isArray(fileValue)) {
-        return fileValue.some(fv => fv.toLowerCase().includes(String(v).toLowerCase()));
+        return fileValue.some((fv) => fv.toLowerCase().includes(String(v).toLowerCase()));
       }
       return String(fileValue).toLowerCase().includes(String(v).toLowerCase());
     case 'not_contains':
       if (Array.isArray(fileValue)) {
-        return !fileValue.some(fv => fv.toLowerCase().includes(String(v).toLowerCase()));
+        return !fileValue.some((fv) => fv.toLowerCase().includes(String(v).toLowerCase()));
       }
       return !String(fileValue).toLowerCase().includes(String(v).toLowerCase());
     case 'starts_with':
@@ -604,16 +707,24 @@ const evaluateCondition = (condition: RuleCondition, file: FileContext): boolean
       return Number(fileValue) >= range.min && Number(fileValue) <= range.max;
     }
     case 'in_list': {
-      const list = Array.isArray(v) ? v : String(v).split(',').map(s => s.trim().replace(/^\./, ''));
+      const list = Array.isArray(v)
+        ? v
+        : String(v)
+            .split(',')
+            .map((s) => s.trim().replace(/^\./, ''));
       if (Array.isArray(fileValue)) {
-        return fileValue.some(fv => list.includes(fv.toLowerCase()));
+        return fileValue.some((fv) => list.includes(fv.toLowerCase()));
       }
       return list.includes(String(fileValue).toLowerCase());
     }
     case 'not_in_list': {
-      const excludeList = Array.isArray(v) ? v : String(v).split(',').map(s => s.trim().replace(/^\./, ''));
+      const excludeList = Array.isArray(v)
+        ? v
+        : String(v)
+            .split(',')
+            .map((s) => s.trim().replace(/^\./, ''));
       if (Array.isArray(fileValue)) {
-        return !fileValue.some(fv => excludeList.includes(fv.toLowerCase()));
+        return !fileValue.some((fv) => excludeList.includes(fv.toLowerCase()));
       }
       return !excludeList.includes(String(fileValue).toLowerCase());
     }
@@ -629,9 +740,9 @@ export const evaluateConditions = (rule: AutomationRule, file: FileContext): boo
   if (rule.conditions.length === 0) return true;
 
   if (rule.conditionsLogic === 'AND') {
-    return rule.conditions.every(c => evaluateCondition(c, file));
+    return rule.conditions.every((c) => evaluateCondition(c, file));
   } else {
-    return rule.conditions.some(c => evaluateCondition(c, file));
+    return rule.conditions.some((c) => evaluateCondition(c, file));
   }
 };
 
@@ -667,6 +778,10 @@ const executeAction = async (
       case 'move_to_folder': {
         const targetId = action.params.targetFolderId;
         if (!targetId) return { success: false, error: 'No target folder specified' };
+        // No-op when the file is already in the target folder. Prevents
+        // spurious errors and rule loops when a "move all new files to X"
+        // rule matches a file dropped directly into X.
+        if (targetId === file.folderId) return { success: true };
         await moveFile(file.id, file.folderId, targetId);
         return { success: true };
       }
@@ -674,6 +789,7 @@ const executeAction = async (
       case 'copy_to_folder': {
         const targetId = action.params.targetFolderId;
         if (!targetId) return { success: false, error: 'No target folder specified' };
+        if (targetId === file.folderId) return { success: true };
         await copyFile(file.id, file.folderId, targetId);
         return { success: true };
       }
@@ -683,7 +799,7 @@ const executeAction = async (
         if (!tagName) return { success: false, error: 'No tag name specified' };
         // Find existing tag by name or create one
         const allTags = tagService.getAllTags();
-        let tag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+        let tag = allTags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
         if (!tag) {
           tag = tagService.createTag({ name: tagName });
         }
@@ -695,7 +811,7 @@ const executeAction = async (
         const tagName = action.params.tagName;
         if (!tagName) return { success: false, error: 'No tag name specified' };
         const allTags = tagService.getAllTags();
-        const tag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+        const tag = allTags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
         if (tag) {
           tagService.removeTagFromFile(file.id, tag.id);
         }
@@ -715,7 +831,9 @@ const executeAction = async (
         return { success: true };
 
       case 'notify': {
-        const message = action.params.message || i18n.t('automationService.defaultNotifyMessage', { fileName: file.name });
+        const message =
+          action.params.message ||
+          i18n.t('automationService.defaultNotifyMessage', { fileName: file.name });
         // Use the Notification API if available
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           new Notification(i18n.t('automationService.notificationTitle'), { body: message });
@@ -872,7 +990,7 @@ export const getExecutionLog = (limit?: number): RuleExecutionResult[] => {
  * Get execution log for a specific rule
  */
 export const getExecutionLogForRule = (ruleId: string, limit?: number): RuleExecutionResult[] => {
-  const log = loadExecutionLog().filter(r => r.ruleId === ruleId);
+  const log = loadExecutionLog().filter((r) => r.ruleId === ruleId);
   return limit ? log.slice(0, limit) : log;
 };
 
@@ -888,7 +1006,9 @@ export const clearExecutionLog = (): void => {
 /**
  * Validate a rule before saving
  */
-export const validateRule = (rule: Partial<AutomationRule>): { valid: boolean; errors: string[] } => {
+export const validateRule = (
+  rule: Partial<AutomationRule>
+): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
 
   if (!rule.name?.trim()) {
@@ -905,14 +1025,21 @@ export const validateRule = (rule: Partial<AutomationRule>): { valid: boolean; e
 
   // Validate each action
   rule.actions?.forEach((action, index) => {
-    if ((action.type === 'move_to_folder' || action.type === 'copy_to_folder') && !action.params.targetFolderId) {
-      errors.push(i18n.t('automationService.validation.targetFolderRequired', { index: index + 1 }));
+    if (
+      (action.type === 'move_to_folder' || action.type === 'copy_to_folder') &&
+      !action.params.targetFolderId
+    ) {
+      errors.push(
+        i18n.t('automationService.validation.targetFolderRequired', { index: index + 1 })
+      );
     }
     if ((action.type === 'add_tag' || action.type === 'remove_tag') && !action.params.tagName) {
       errors.push(i18n.t('automationService.validation.tagRequired', { index: index + 1 }));
     }
     if (action.type === 'rename' && !action.params.pattern) {
-      errors.push(i18n.t('automationService.validation.renamePatternRequired', { index: index + 1 }));
+      errors.push(
+        i18n.t('automationService.validation.renamePatternRequired', { index: index + 1 })
+      );
     }
   });
 
@@ -946,11 +1073,11 @@ export const duplicateRule = (ruleId: string): AutomationRule | null => {
     updatedAt: now,
     triggerCount: 0,
     lastTriggeredAt: undefined,
-    conditions: original.conditions.map(c => ({
+    conditions: original.conditions.map((c) => ({
       ...c,
       id: generateUniqueId(),
     })),
-    actions: original.actions.map(a => ({
+    actions: original.actions.map((a) => ({
       ...a,
       id: generateUniqueId(),
     })),

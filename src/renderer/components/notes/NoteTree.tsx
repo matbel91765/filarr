@@ -17,18 +17,33 @@ import {
   togglePinNote,
 } from '../../../store/slices/notesSlice';
 import type { Note } from '../../../types/notes';
+import { NoteSharedBadge } from './NoteSharedBadge';
 import './NoteTree.css';
 
 // ==================== Icons ====================
 
 const ChevronIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.5}
+  >
     <polyline points="9,6 15,12 9,18" />
   </svg>
 );
 
 const NoteIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+  >
     <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z" />
     <polyline points="14,2 14,8 20,8" />
     <line x1="16" y1="13" x2="8" y2="13" />
@@ -39,20 +54,31 @@ const NoteIcon = () => (
 
 const CalendarIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-    <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+    <rect x="3" y="4" width="18" height="18" rx="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
   </svg>
 );
 
 const PinIcon: React.FC<{ filled?: boolean }> = ({ filled }) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
-    <path d="M12 17v5" /><path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 1 1 0 001-1V4a1 1 0 00-1-1H8a1 1 0 00-1 1v1a1 1 0 001 1 1 1 0 011 1z" />
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill={filled ? 'currentColor' : 'none'}
+    stroke="currentColor"
+    strokeWidth={2}
+  >
+    <path d="M12 17v5" />
+    <path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 1 1 0 001-1V4a1 1 0 00-1-1H8a1 1 0 00-1 1v1a1 1 0 001 1 1 1 0 011 1z" />
   </svg>
 );
 
 const TrashIcon = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-    <polyline points="3,6 5,6 21,6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+    <polyline points="3,6 5,6 21,6" />
+    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
   </svg>
 );
 
@@ -117,11 +143,20 @@ function isDescendantOf(
 
 interface NoteTreeProps {
   onSelectNote: (id: string) => void;
+  /**
+   * Clic droit sur une ligne. L'arbre n'a PAS de menu à lui : l'hôte (la
+   * liste des notes) possède déjà le menu contextuel des cartes et le branche
+   * ici — un seul menu, un seul jeu de gestes, quelle que soit la vue.
+   */
+  onContextMenu?: (e: React.MouseEvent, noteId: string) => void;
 }
 
 // ==================== Component ====================
 
-export const NoteTree: React.FC<NoteTreeProps> = React.memo(function NoteTree({ onSelectNote }) {
+export const NoteTree: React.FC<NoteTreeProps> = React.memo(function NoteTree({
+  onSelectNote,
+  onContextMenu,
+}) {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -182,19 +217,16 @@ export const NoteTree: React.FC<NoteTreeProps> = React.memo(function NoteTree({ 
 
   // ---- Drag & Drop ----
 
-  const handleDragStart = useCallback(
-    (e: React.DragEvent, noteId: string) => {
-      e.dataTransfer.setData('application/x-filarr-note', noteId);
-      e.dataTransfer.effectAllowed = 'move';
-      // Set a clean drag image from the row element
-      const el = e.currentTarget as HTMLElement;
-      if (el) {
-        e.dataTransfer.setDragImage(el, 20, 14);
-      }
-      setDraggingId(noteId);
-    },
-    []
-  );
+  const handleDragStart = useCallback((e: React.DragEvent, noteId: string) => {
+    e.dataTransfer.setData('application/x-filarr-note', noteId);
+    e.dataTransfer.effectAllowed = 'move';
+    // Set a clean drag image from the row element
+    const el = e.currentTarget as HTMLElement;
+    if (el) {
+      e.dataTransfer.setDragImage(el, 20, 14);
+    }
+    setDraggingId(noteId);
+  }, []);
 
   const handleDragEnd = useCallback(() => {
     setDraggingId(null);
@@ -312,6 +344,7 @@ export const NoteTree: React.FC<NoteTreeProps> = React.memo(function NoteTree({ 
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
+          onContextMenu={onContextMenu}
         />
       ))}
 
@@ -346,6 +379,7 @@ interface TreeNodeRowProps {
   onDragOver: (e: React.DragEvent, targetId: string) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, targetId: string) => void;
+  onContextMenu?: (e: React.MouseEvent, noteId: string) => void;
 }
 
 const INDENT_PX = 16;
@@ -366,6 +400,7 @@ const TreeNodeRow: React.FC<TreeNodeRowProps> = React.memo(function TreeNodeRow(
   onDragOver,
   onDragLeave,
   onDrop,
+  onContextMenu,
 }) {
   const { t } = useTranslation();
   const { note, children } = node;
@@ -401,22 +436,19 @@ const TreeNodeRow: React.FC<TreeNodeRowProps> = React.memo(function TreeNodeRow(
         onDragOver={(e) => onDragOver(e, note.id)}
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, note.id)}
+        onContextMenu={onContextMenu ? (e) => onContextMenu(e, note.id) : undefined}
         role="treeitem"
         tabIndex={0}
         aria-expanded={hasChildren ? isExpanded : undefined}
         onKeyDown={(e) => {
           if (e.key === 'Enter') onSelect(note.id);
-          if (e.key === 'ArrowRight' && hasChildren && !isExpanded) onToggleExpand(note.id, e as any);
+          if (e.key === 'ArrowRight' && hasChildren && !isExpanded)
+            onToggleExpand(note.id, e as any);
           if (e.key === 'ArrowLeft' && hasChildren && isExpanded) onToggleExpand(note.id, e as any);
         }}
       >
         {/* Indent spacer */}
-        {depth > 0 && (
-          <span
-            className="note-tree__indent"
-            style={{ width: depth * INDENT_PX }}
-          />
-        )}
+        {depth > 0 && <span className="note-tree__indent" style={{ width: depth * INDENT_PX }} />}
 
         {/* Expand/collapse chevron */}
         <button
@@ -425,7 +457,9 @@ const TreeNodeRow: React.FC<TreeNodeRowProps> = React.memo(function TreeNodeRow(
             if (hasChildren) onToggleExpand(note.id, e);
           }}
           tabIndex={-1}
-          aria-label={isExpanded ? t('notes.treeCollapse', 'Collapse') : t('notes.treeExpand', 'Expand')}
+          aria-label={
+            isExpanded ? t('notes.treeCollapse', 'Collapse') : t('notes.treeExpand', 'Expand')
+          }
         >
           <ChevronIcon />
         </button>
@@ -436,14 +470,13 @@ const TreeNodeRow: React.FC<TreeNodeRowProps> = React.memo(function TreeNodeRow(
         </span>
 
         {/* Title */}
-        <span className="note-tree__title">
-          {note.title || t('notes.untitled', 'Untitled')}
-        </span>
+        <span className="note-tree__title">{note.title || t('notes.untitled', 'Untitled')}</span>
+
+        {/* Badge « Partagée » (copie dans un coffre) */}
+        <NoteSharedBadge noteId={note.id} variant="dot" />
 
         {/* Child count badge */}
-        {hasChildren && (
-          <span className="note-tree__badge">{children.length}</span>
-        )}
+        {hasChildren && <span className="note-tree__badge">{children.length}</span>}
 
         {/* Actions */}
         <div className="note-tree__node-actions">
@@ -490,6 +523,7 @@ const TreeNodeRow: React.FC<TreeNodeRowProps> = React.memo(function TreeNodeRow(
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}
+              onContextMenu={onContextMenu}
             />
           ))}
         </div>

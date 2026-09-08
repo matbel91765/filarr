@@ -24,6 +24,13 @@ a,
 /* Import des tokens */
 @import './tokens/index.css';
 @import './reset.css';
+/* La bande native de fenêtre : trois variables, quatre classes, un contrat. */
+@import './chrome.css';
+/* Le decor d'un theme sur mesure : image de fond, decors vivants, et les deux
+   regles qui rendent la page transparente pour qu'on les voie. */
+@import './backdrop.css';
+/* La largeur des pages : une variable, definie dans un seul mode. */
+@import './pageWidth.css';
 
 /**
  * Theme Initialization
@@ -372,6 +379,280 @@ a,
 
 [data-theme='foret'] ::-webkit-scrollbar-thumb:hover {
   background: #6bbe7d;
+}
+
+/* ===== Minuit Theme: bleu nuit opaque, accent doré ===== */
+/* Pas d'image de fond ici, contrairement aux thèmes atmosphériques : Minuit est
+   un sombre plein, les surfaces restent opaques (cf. Layout.css). */
+
+[data-theme='minuit'] {
+  color-scheme: dark;
+
+  --theme-primary: var(--color-primary-400);
+  --theme-primary-hover: var(--color-primary-300);
+  --theme-primary-active: var(--color-primary-500);
+  --theme-accent: var(--color-primary-400);
+  --theme-accent-hover: var(--color-primary-300);
+}
+
+[data-theme='minuit'] code {
+  background-color: #141b30;
+  border: 1px solid rgba(226, 171, 85, 0.15);
+}
+
+[data-theme='minuit'] pre {
+  background-color: #0a0f1e !important;
+  border-left: 3px solid rgba(226, 171, 85, 0.4);
+}
+
+/* Les barres de défilement de Minuit vivent dans reset.css avec celles des
+   autres thèmes sombres, alimentées par --color-neutral-500/600 (colors.css).
+   Le doublon qui se trouvait ici donnait deux sources à la même règle, avec un
+   survol doré d'un côté et neutre de l'autre selon l'ordre des feuilles. */
+
+/* ===== Minuit vivant : le ciel étoilé animé du thème signature ===== */
+/* Trois couches fixes en pointer-events:none, posées PAR-DESSUS le contenu
+   exactement comme les halos atmosphériques plus bas : Minuit garde toutes ses
+   surfaces opaques, donc une nappe glissée dessous ne se verrait jamais. Leurs
+   z-index (9/10/11) restent loin sous --z-index-sticky (1020) : sidebar,
+   modales, menus et notifications passent devant sans être mouchetés.
+
+   PERF — on n'anime QUE `opacity` et `transform` sur des couches compositées
+   (jamais background-position, qui repeindrait le plein écran à chaque frame),
+   et les cycles sont longs : 12 s, 17 s, 45 s. Les étoiles sont dessinées en
+   box-shadow multiples sur un point de 1 à 2 px, avec des décalages en vw/vh
+   pour couvrir n'importe quelle taille de fenêtre sans média-query.
+
+   COUPURES — `.app-blurred` (posée sur <html> par App.tsx quand la fenêtre perd
+   le focus) met en pause, data-animated-bg='off' (préférence « Fond animé »)
+   supprime l'animation. Dans les deux cas le ciel reste visible, simplement
+   immobile : c'est le mouvement qu'on éteint, pas le thème. Le kill-switch
+   prefers-reduced-motion global (plus bas) aboutit au même résultat, les
+   couches retombant sur leur opacité de repos. */
+
+[data-theme='minuit'] .layout::before,
+[data-theme='minuit'] .layout::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border-radius: 50%;
+  will-change: opacity;
+}
+
+/* Nappe 1 — poussière ivoire, scintillement lent. 1,5 px et non 1 px : les
+   décalages en vw/vh tombent presque toujours sur une position fractionnaire,
+   et un point de 1 px s'y étale sur deux colonnes à demi-opacité — mesuré, il
+   devenait quasi invisible. 1,5 px garde un cœur franc. */
+[data-theme='minuit'] .layout::before {
+  width: 1.5px;
+  height: 1.5px;
+  z-index: 10;
+  opacity: 1;
+  animation: minuit-twinkle-a 12s ease-in-out infinite;
+  box-shadow:
+    21.3vw 12.4vh 0 0 rgba(242, 236, 224, 0.42),
+    44.5vw 13.7vh 0 0 rgba(242, 236, 224, 0.72),
+    60vw 9.3vh 0 0 rgba(242, 236, 224, 0.72),
+    63.5vw 3.3vh 0 0 rgba(242, 236, 224, 0.8),
+    79.9vw 4.6vh 0 0 rgba(242, 236, 224, 0.72),
+    92.4vw 6.6vh 0 0 rgba(242, 236, 224, 0.55),
+    11.4vw 16.2vh 0 0 rgba(242, 236, 224, 0.8),
+    15vw 16.8vh 0 0 rgba(242, 236, 224, 0.55),
+    29vw 26.8vh 0 0 rgba(242, 236, 224, 0.72),
+    40.2vw 22.4vh 0 0 rgba(242, 236, 224, 0.8),
+    52vw 22.5vh 0 0 rgba(242, 236, 224, 0.8),
+    72.8vw 28.3vh 0 0 rgba(242, 236, 224, 0.72),
+    93.6vw 16vh 0 0 rgba(242, 236, 224, 0.55),
+    1.6vw 41vh 0 0 rgba(242, 236, 224, 0.42),
+    31.3vw 39.9vh 0 0 rgba(242, 236, 224, 0.72),
+    57.4vw 36.2vh 0 0 rgba(242, 236, 224, 0.55),
+    72.3vw 41.8vh 0 0 rgba(242, 236, 224, 0.8),
+    80.6vw 39.2vh 0 0 rgba(242, 236, 224, 0.72),
+    99.4vw 31.2vh 0 0 rgba(242, 236, 224, 0.55),
+    0.4vw 47.4vh 0 0 rgba(242, 236, 224, 0.8),
+    19.3vw 54.9vh 0 0 rgba(242, 236, 224, 0.72),
+    25.4vw 48.1vh 0 0 rgba(242, 236, 224, 0.55),
+    42.1vw 54.5vh 0 0 rgba(242, 236, 224, 0.42),
+    51.7vw 48.7vh 0 0 rgba(242, 236, 224, 0.72),
+    70.2vw 51.6vh 0 0 rgba(242, 236, 224, 0.72),
+    86.7vw 47.1vh 0 0 rgba(242, 236, 224, 0.8),
+    9.3vw 66.7vh 0 0 rgba(242, 236, 224, 0.72),
+    17vw 63.5vh 0 0 rgba(242, 236, 224, 0.72),
+    25vw 68.5vh 0 0 rgba(242, 236, 224, 0.55),
+    45.9vw 62.4vh 0 0 rgba(242, 236, 224, 0.8),
+    62vw 63vh 0 0 rgba(242, 236, 224, 0.55),
+    81vw 71.1vh 0 0 rgba(242, 236, 224, 0.55),
+    87.8vw 69vh 0 0 rgba(242, 236, 224, 0.72),
+    5.3vw 85.2vh 0 0 rgba(242, 236, 224, 0.8),
+    24.1vw 74.1vh 0 0 rgba(242, 236, 224, 0.72),
+    31.2vw 79.8vh 0 0 rgba(242, 236, 224, 0.42),
+    49.4vw 79.1vh 0 0 rgba(242, 236, 224, 0.42),
+    70vw 76vh 0 0 rgba(242, 236, 224, 0.72),
+    86.9vw 72.7vh 0 0 rgba(242, 236, 224, 0.42),
+    96.9vw 78.4vh 0 0 rgba(242, 236, 224, 0.55),
+    0.9vw 95.3vh 0 0 rgba(242, 236, 224, 0.8),
+    12.5vw 98.7vh 0 0 rgba(242, 236, 224, 0.55),
+    31.9vw 99.7vh 0 0 rgba(242, 236, 224, 0.55),
+    49.6vw 94.8vh 0 0 rgba(242, 236, 224, 0.8),
+    61.2vw 91.3vh 0 0 rgba(242, 236, 224, 0.72),
+    62.8vw 87vh 0 0 rgba(242, 236, 224, 0.55),
+    82.7vw 95.6vh 0 0 rgba(242, 236, 224, 0.8),
+    92.2vw 93.3vh 0 0 rgba(242, 236, 224, 0.42);
+}
+
+/* Nappe 2 — étoiles dorées de 2 px, cycle plus long et déphasé pour que les
+   deux nappes ne battent jamais ensemble */
+[data-theme='minuit'] .layout::after {
+  width: 2px;
+  height: 2px;
+  z-index: 11;
+  opacity: 0.9;
+  animation: minuit-twinkle-b 17s ease-in-out -6s infinite;
+  box-shadow:
+    4.7vw 12.7vh 0 0 rgba(236, 193, 119, 0.45),
+    30.4vw 3.8vh 0 0 rgba(242, 236, 224, 0.55),
+    45.7vw 2.4vh 0 0 rgba(236, 193, 119, 0.62),
+    60.8vw 7.6vh 0 0 rgba(236, 193, 119, 0.62),
+    79.1vw 13.8vh 0 0 rgba(236, 193, 119, 0.45),
+    86.7vw 8.3vh 0 0 rgba(236, 193, 119, 0.34),
+    6.3vw 18.3vh 0 0 rgba(236, 193, 119, 0.45),
+    16.6vw 23.8vh 0 0 rgba(236, 193, 119, 0.62),
+    29.8vw 18.5vh 0 0 rgba(236, 193, 119, 0.62),
+    51.7vw 24.3vh 0 0 rgba(236, 193, 119, 0.34),
+    68.9vw 26.1vh 0 0 rgba(242, 236, 224, 0.55),
+    2.6vw 33.4vh 0 0 rgba(236, 193, 119, 0.34),
+    15.4vw 35.1vh 0 0 rgba(236, 193, 119, 0.45),
+    39.2vw 47.8vh 0 0 rgba(236, 193, 119, 0.45),
+    50.9vw 47.7vh 0 0 rgba(242, 236, 224, 0.55),
+    59.7vw 43.6vh 0 0 rgba(236, 193, 119, 0.45),
+    78.9vw 42.5vh 0 0 rgba(236, 193, 119, 0.62),
+    99.6vw 46.1vh 0 0 rgba(242, 236, 224, 0.55),
+    30.3vw 54.5vh 0 0 rgba(236, 193, 119, 0.34),
+    51.5vw 60.4vh 0 0 rgba(236, 193, 119, 0.62),
+    67.4vw 59.2vh 0 0 rgba(236, 193, 119, 0.34),
+    79.6vw 66.5vh 0 0 rgba(236, 193, 119, 0.45),
+    87.1vw 54.1vh 0 0 rgba(236, 193, 119, 0.62),
+    18.8vw 82.4vh 0 0 rgba(236, 193, 119, 0.62),
+    34.4vw 71.2vh 0 0 rgba(236, 193, 119, 0.45),
+    55.3vw 75.7vh 0 0 rgba(236, 193, 119, 0.62),
+    63.5vw 69.4vh 0 0 rgba(236, 193, 119, 0.62),
+    89vw 82vh 0 0 rgba(236, 193, 119, 0.62),
+    8.2vw 90vh 0 0 rgba(236, 193, 119, 0.45),
+    19.9vw 99.8vh 0 0 rgba(242, 236, 224, 0.55),
+    39vw 95.5vh 0 0 rgba(236, 193, 119, 0.34),
+    56.2vw 94.2vh 0 0 rgba(236, 193, 119, 0.62),
+    70.4vw 87.1vh 0 0 rgba(242, 236, 224, 0.55),
+    98.7vw 94.9vh 0 0 rgba(236, 193, 119, 0.62);
+}
+
+/* Halo doré qui respire, sous les étoiles. `inset` négatif : la mise à
+   l'échelle ne doit jamais découvrir un bord du dégradé. */
+[data-theme='minuit'] .layout__body::before {
+  content: '';
+  position: fixed;
+  inset: -8%;
+  pointer-events: none;
+  z-index: 9;
+  /**
+   * ⚠ LE DÉGRADÉ NE DOIT PLUS AVOIR DE FIN VISIBLE À L'ÉCRAN.
+   *
+   * ── DEUX TENTATIVES, ET LA PREMIÈRE VISAIT À CÔTÉ ─────────────────────────
+   *
+   * Les ellipses s'éteignaient à 60 % et 55 % de leur rayon. Sans taille
+   * explicite, une ellipse radiale est dimensionnée au COIN LE PLUS ÉLOIGNÉ :
+   * son extinction tombait donc EN PLEIN DANS la fenêtre, et cette fin de
+   * dégradé se lit comme une frontière — six pour cent d'ambre sur un bleu nuit,
+   * c'est une douzaine de niveaux sur huit bits, largement de quoi voir une
+   * bande.
+   *
+   * J'ai d'abord ajouté des paliers intermédiaires. Ça adoucit la pente, ça ne
+   * supprime pas la fin : le bord était toujours là, un peu plus bas.
+   *
+   * La bonne réponse est de DIMENSIONNER l'ellipse bien au-delà de la fenêtre.
+   * Ce qu'on voit n'est plus que le haut de la courbe, où elle décroît sans
+   * jamais atteindre zéro. Le halo éclaire autant le haut de la page ; il ne
+   * s'arrête simplement plus nulle part de visible.
+   *
+   * Le centre remonte hors cadre pour la même raison : un centre à l'intérieur
+   * de la fenêtre y met aussi le point le plus lumineux, donc le contraste
+   * maximal entre deux paliers voisins.
+   */
+  background-image:
+    radial-gradient(
+      ellipse 150% 175% at 50% -25%,
+      rgba(226, 171, 85, 0.055) 0%,
+      rgba(226, 171, 85, 0.03) 45%,
+      rgba(226, 171, 85, 0.014) 75%,
+      rgba(226, 171, 85, 0.006) 100%
+    ),
+    radial-gradient(
+      ellipse 130% 150% at 12% 118%,
+      rgba(226, 171, 85, 0.035) 0%,
+      rgba(226, 171, 85, 0.016) 55%,
+      rgba(226, 171, 85, 0.005) 100%
+    );
+  transform-origin: 50% 15%;
+  will-change: transform;
+  animation: minuit-breathe 45s ease-in-out infinite alternate;
+}
+
+@keyframes minuit-twinkle-a {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes minuit-twinkle-b {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes minuit-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+
+/* Fenêtre en arrière-plan : on met en pause plutôt que d'arrêter, pour que le
+   scintillement reprenne au même point au retour du focus. */
+.app-blurred[data-theme='minuit'] .layout::before,
+.app-blurred[data-theme='minuit'] .layout::after,
+.app-blurred[data-theme='minuit'] .layout__body::before {
+  animation-play-state: paused;
+}
+
+/* « Fond animé » décoché : plus d'animation du tout, et on rend la couche de
+   composition (le `will-change` gardait une texture en mémoire pour rien). */
+[data-animated-bg='off'][data-theme='minuit'] .layout::before,
+[data-animated-bg='off'][data-theme='minuit'] .layout::after,
+[data-animated-bg='off'][data-theme='minuit'] .layout__body::before {
+  animation: none;
+  will-change: auto;
+}
+
+/* Le système a demandé moins de mouvement : la même réponse que le réglage
+   « Fond animé » décoché — l'aurore (backdrop.css) le fait déjà, minuit non. */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='minuit'] .layout::before,
+  [data-theme='minuit'] .layout::after,
+  [data-theme='minuit'] .layout__body::before {
+    animation: none;
+    will-change: auto;
+  }
 }
 
 /* ===== Atmospheric Overlay: gradient halos ON TOP of all content ===== */
@@ -929,8 +1210,10 @@ a:focus-visible {
 .w-screen {
   width: 100vw;
 }
+/* 100dvh suit la barre d'URL mobile ; 100vh reste juste avant comme repli. */
 .h-screen {
   height: 100vh;
+  height: 100dvh;
 }
 .w-auto {
   width: auto;
@@ -1047,6 +1330,52 @@ a:focus-visible {
 @media (max-width: 1280px) {
   .xl\:hidden {
     display: none;
+  }
+}
+
+/**
+ * Tactile — sur un écran sans survol, tout ce qui n'apparaît qu'au survol
+ * n'apparaît jamais.
+ */
+
+/* Les actions révélées au survol (⋯, croix d'onglet, poignées) sont le SEUL
+   accès aux actions fichier sur iOS, qui n'a pas de menu contextuel : sans
+   survol elles restent à opacity 0. On les affiche en permanence.
+   Les noms de classes Tailwind portent un « : » (et un « / » pour les groupes
+   nommés) : ils doivent être échappés pour être des sélecteurs valides. */
+@media (hover: none) {
+  .group-hover\:opacity-100,
+  .group-hover\/header\:opacity-100 {
+    opacity: 1 !important;
+  }
+}
+
+/* Cibles tactiles. Les boutons d'action font 24px (p-1 + icône 16px), sous le
+   minimum confortable au doigt. On agrandit la zone sensible sans déplacer la
+   mise en page : la boîte elle-même pour les boutons, un ::after centré pour la
+   croix d'onglet — la barre d'onglets ne fait que 36px de haut et l'agrandir
+   déformerait la rangée. */
+@media (pointer: coarse) {
+  button.group-hover\:opacity-100 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  [data-tab-id] > span.rounded-sm {
+    position: relative;
+  }
+
+  [data-tab-id] > span.rounded-sm::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%);
   }
 }
 
@@ -1252,6 +1581,168 @@ a:focus-visible {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/**
+ * Attente avant l'ouverture automatique d'une cible survolée pendant un drag
+ * (voir SpringDwellRing). Le compte à rebours porte sur TOUT le pourtour de la
+ * cible : l'ancienne pastille de 22 px tombait au milieu du nom, dans la teinte
+ * exacte de la bordure de dépôt qui s'allume au même instant, et s'y noyait.
+ *
+ * Le balayage vit ici plutôt que dans du state : `handleDragOver` est throttlé à
+ * dessein, une progression pilotée en JS hacherait le drag. La durée et la
+ * longueur du tracé arrivent en style inline (minuteur partagé, hôte mesuré).
+ */
+@keyframes spring-dwell-sweep {
+  from {
+    stroke-dashoffset: var(--spring-dwell-length, 0);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spring-dwell-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.spring-dwell-ring {
+  /* Teinte du compte à rebours. Volontairement DIFFÉRENTE de la bordure de
+     dépôt (`--color-primary-400`), qui apparaît au même instant : le mélange
+     avec la couleur du texte garantit à la fois l'écart avec elle et le
+     contraste avec la surface, dans les thèmes clairs comme sombres. Le dosage
+     (25 %) est celui qui tient 4,5:1 pour la pastille de texte jusque dans le
+     thème par défaut, où la couleur du texte est elle-même un bleu. */
+  --spring-dwell-accent: color-mix(
+    in srgb,
+    var(--color-primary-400) 25%,
+    var(--color-text-primary)
+  );
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* La cible entière s'allume — c'est le signal que l'œil attrape en premier.
+   La lueur est INTERNE (`inset`) : les hôtes portent `contain: content` ou
+   `overflow: hidden`, une ombre portée vers l'extérieur serait rognée. */
+.spring-dwell-ring__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--color-primary-400) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--color-primary-400) 60%, transparent),
+    inset 0 0 20px 1px color-mix(in srgb, var(--color-primary-400) 38%, transparent);
+  animation: spring-dwell-appear 120ms ease-out;
+}
+
+/* `width`/`height` explicites, et pas seulement les attributs du SVG : le reset
+   applique `svg { max-width: 100%; height: auto }` à toute l'application, ce qui
+   étirait la boîte du calque (mesuré : 80 px de haut pour un hôte de 64) et
+   faisait déborder le tracé hors de la carte — donc rogner par `overflow`. */
+.spring-dwell-ring__svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.spring-dwell-ring__track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-primary-400) 30%, transparent);
+}
+
+.spring-dwell-ring__sweep {
+  fill: none;
+  stroke: var(--spring-dwell-accent);
+  stroke-linecap: round;
+  /* Valeur de repos = pourtour plein. C'est aussi ce qui reste affiché quand
+     l'animation est refusée (voir prefers-reduced-motion plus bas) :
+     l'information « cette cible est armée » survit à l'absence de mouvement. */
+  stroke-dashoffset: 0;
+  animation-name: spring-dwell-sweep;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.spring-dwell-ring__label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 24px);
+  padding: 3px 10px;
+  border-radius: 9999px;
+  /* Un cran plus sombre que le tracé : la pastille porte du TEXTE, elle vise
+     4,5:1 quand le tracé, objet graphique, se contente de 3:1. */
+  background: color-mix(in srgb, var(--spring-dwell-accent) 78%, var(--color-text-primary));
+  color: var(--color-surface);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: spring-dwell-appear 120ms ease-out;
+}
+
+/* Le raccourci global plus haut (animation-duration: 0.01ms !important) mènerait
+   déjà à un pourtour plein via `forwards` ; on le dit ici explicitement pour que
+   l'état de repli reste voulu, et non hérité d'une règle lointaine. */
+@media (prefers-reduced-motion: reduce) {
+  .spring-dwell-ring__halo,
+  .spring-dwell-ring__label {
+    animation: none;
+  }
+
+  .spring-dwell-ring__sweep {
+    animation-name: none;
+  }
+}
+
+/**
+ * Déplacement en vol (voir MovingOverlay) : la carte se voile et un témoin
+ * lisible s'y pose. Le voile REMPLACE l'`opacity-50` d'avant, posé sur la carte
+ * entière — qui rendait aussi le témoin à moitié transparent, donc invisible.
+ */
+.move-pending-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--color-surface) 74%, transparent);
+  animation: spring-dwell-appear 120ms ease-out;
+}
+
+.move-pending-veil__chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 9999px;
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    0 4px 12px color-mix(in srgb, var(--color-neutral-900) 22%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .move-pending-veil {
+    animation: none;
   }
 }
 

@@ -7,7 +7,11 @@
   min-height: 0;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 50% 50%, var(--color-primary-50, rgba(135, 206, 235, 0.06)) 0%, transparent 70%),
+    radial-gradient(
+      ellipse at 50% 50%,
+      var(--color-primary-50, rgba(135, 206, 235, 0.06)) 0%,
+      transparent 70%
+    ),
     var(--color-background-secondary, var(--color-surface, #f8fafc));
   background-color: var(--color-background-secondary, var(--color-surface, #f8fafc));
 }
@@ -17,7 +21,11 @@
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, var(--color-border-light, rgba(0, 0, 0, 0.06)) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    var(--color-border-light, rgba(0, 0, 0, 0.06)) 1px,
+    transparent 1px
+  );
   background-size: 24px 24px;
   pointer-events: none;
   z-index: 0;
@@ -65,7 +73,9 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .mindmap-view__btn:hover {
@@ -91,7 +101,9 @@
 /* ---- Edges ---- */
 
 .mindmap-view__edge {
-  transition: stroke 0.2s, stroke-width 0.2s;
+  transition:
+    stroke 0.2s,
+    stroke-width 0.2s;
 }
 
 .mindmap-view__edge--highlight {
@@ -105,11 +117,20 @@
 }
 
 .mindmap-node__bg {
-  transition: opacity 0.15s, stroke 0.15s;
+  transition:
+    opacity 0.15s,
+    stroke 0.15s;
 }
 
 .mindmap-node__text {
-  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  font-family: var(
+    --font-family,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif
+  );
   pointer-events: none;
   user-select: none;
 }
@@ -161,4 +182,36 @@
     background: var(--color-background, #1e293b);
     border-color: var(--color-border, #334155);
   }
+}
+
+/* ---- Collapse / expand controls in the legend strip ---- */
+.mindmap-view__legend-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--color-border-light, var(--color-border));
+}
+.mindmap-view__legend-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.mindmap-view__legend-btn:hover:not(:disabled) {
+  background: var(--color-surface-secondary, rgba(0, 0, 0, 0.04));
+}
+.mindmap-view__legend-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Per-node collapse / expand chevron */
+.mindmap-node__toggle:hover circle {
+  filter: brightness(0.94);
 }

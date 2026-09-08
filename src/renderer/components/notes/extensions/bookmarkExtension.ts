@@ -9,6 +9,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { BookmarkNodeView } from './BookmarkNodeView';
+import { bookmarkIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -35,6 +36,11 @@ export const BookmarkExtension = Node.create({
       domain:      { default: '' },
       fetched:     { default: false },
     };
+  },
+
+  /** Titre, description et domaine : exactement ce que la carte affiche. */
+  renderText({ node }) {
+    return bookmarkIndexText(node.attrs);
   },
 
   parseHTML() {

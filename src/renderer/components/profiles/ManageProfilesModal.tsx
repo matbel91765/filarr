@@ -5,7 +5,7 @@
  * Delete requires typing the profile name for confirmation.
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { avatarGradient } from '../../../utils/avatarGradient';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -18,6 +18,7 @@ import {
   verifyPin,
 } from '../../../store/slices/profilesSlice';
 import type { ProfileMetadata, UpdateProfileParams } from '../../../types/profiles';
+import { cloudOnlyProfiles, megabytes } from './cloudOnlyProfiles';
 import Modal, { ModalHeader, ModalBody, ModalFooter } from '../ui/Modal/Modal';
 
 const AVATAR_COLORS = [
@@ -40,6 +41,19 @@ interface ManageProfilesModalProps {
   onClose: () => void;
 }
 
+/** Une ligne de `GET /sync/profiles`, telle que l'IPC la rend telle quelle. */
+interface CloudProfileRow {
+  profileId: string;
+  manifestVersion?: number;
+  storageUsed?: number;
+  lastSyncAt?: string | null;
+  /** Pierre tombale : le profil a été supprimé du nuage depuis un autre appareil. */
+  deletedAt?: string | null;
+}
+
+/** Ce que le nuage sait d'un profil local — et « rien », qui est un état à part. */
+type CloudState = 'unknown' | 'synced' | 'never' | 'deleted';
+
 const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
@@ -50,6 +64,13 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
   const [editName, setEditName] = useState('');
   const [editColor, setEditColor] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Two-step delete when the target profile has a PIN: first `pin`, then
+  // `confirm`. Profiles without a PIN jump straight to `confirm` (name
+  // typing). Prevents a drive-by delete of a PIN-protected profile by
+  // someone who just has physical access to the ProfilePicker screen.
+  const [deleteStep, setDeleteStep] = useState<'pin' | 'confirm'>('confirm');
+  const [deletePinInput, setDeletePinInput] = useState('');
+  const [deletePinError, setDeletePinError] = useState<string | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [resetPinId, setResetPinId] = useState<string | null>(null);
@@ -65,6 +86,76 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetInProgress, setResetInProgress] = useState(false);
   const resetInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * L'ÉTAT NUAGE DE CHAQUE PROFIL — lu une fois à l'ouverture, jamais deviné.
+   *
+   * `null` = on n'a pas la liste (hors ligne, non connecté, appel en échec).
+   * C'est un état distinct de « liste vide » : ne pas les distinguer ferait
+   * badger « jamais synchronisé » l'intégralité des profils de quelqu'un qui a
+   * simplement coupé le réseau.
+   */
+  const [cloudRows, setCloudRows] = useState<CloudProfileRow[] | null>(null);
+  // Profils « dans le nuage seulement » : suppression depuis cette fenêtre.
+  const [cloudDeletingId, setCloudDeletingId] = useState<string | null>(null);
+  const [cloudDeleteBusy, setCloudDeleteBusy] = useState(false);
+  const [cloudDeleteError, setCloudDeleteError] = useState<string | null>(null);
+  /** Incrémenté après une suppression : relit la liste du nuage. */
+  const [cloudReload, setCloudReload] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (isOpen) {
+      void (async () => {
+        try {
+          const res = await window.electron?.ipcRenderer?.invoke('sync:getCloudProfiles');
+          if (!cancelled) {
+            // « Appel échoué » n'est pas « aucun profil » : un réseau qui
+            // cligne ne doit pas badger tous les profils « jamais synchronisé ».
+            setCloudRows(
+              res && !res.error && Array.isArray(res.profiles)
+                ? (res.profiles as CloudProfileRow[])
+                : null
+            );
+          }
+        } catch {
+          if (!cancelled) setCloudRows(null);
+        }
+      })();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, cloudReload]);
+
+  const cloudById = useMemo(() => {
+    const map = new Map<string, CloudProfileRow>();
+    for (const row of cloudRows ?? []) map.set(row.profileId, row);
+    return map;
+  }, [cloudRows]);
+
+  /**
+   * PAS DE VERDICT SANS PREUVE. Une absence de la liste ne dit « jamais
+   * synchronisé » que si l'on est sûr de PARLER AU BON COMPTE : soit la liste
+   * rend au moins un profil (le jeton est donc valide), soit ce profil-ci porte
+   * un compte lié. Sinon on ne dit rien — mieux vaut aucun badge qu'un badge
+   * faux.
+   *
+   * Un profil purement local n'est pas « en retard » : il n'a jamais demandé le
+   * nuage, et rien ne doit le lui reprocher.
+   */
+  const cloudState = useCallback(
+    (profile: ProfileMetadata): CloudState => {
+      if (!cloudRows) return 'unknown';
+      const row = cloudById.get(profile.id);
+      if (row?.deletedAt) return 'deleted';
+      const trustworthy = cloudRows.length > 0 || !!profile.cloudAccount;
+      if (!trustworthy) return 'unknown';
+      if (!row || !row.manifestVersion) return 'never';
+      return 'synced';
+    },
+    [cloudRows, cloudById]
+  );
 
   // Focus the delete confirmation input when it appears
   useEffect(() => {
@@ -170,15 +261,42 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
 
   const startDelete = useCallback((profile: ProfileMetadata) => {
     setDeletingId(profile.id);
+    // Gate the delete behind the PIN if one exists — otherwise fall through
+    // to the name-confirmation step which is already good enough for an
+    // intentionally-unprotected profile.
+    setDeleteStep(profile.pinHash ? 'pin' : 'confirm');
+    setDeletePinInput('');
+    setDeletePinError(null);
     setDeleteConfirmName('');
     setEditingId(null);
     setError(null);
   }, []);
 
+  const verifyDeletePin = useCallback(async () => {
+    if (!deletingId || !deletePinInput) return;
+    try {
+      await dispatch(verifyPin({ profileId: deletingId, pin: deletePinInput })).unwrap();
+      setDeleteStep('confirm');
+      setDeletePinInput('');
+      setDeletePinError(null);
+    } catch {
+      setDeletePinError(t('profiles.incorrectPin', 'PIN incorrect'));
+      setDeletePinInput('');
+    }
+  }, [deletingId, deletePinInput, dispatch, t]);
+
   const confirmDelete = useCallback(async () => {
     if (!deletingId) return;
     const profile = profiles.find((p) => p.id === deletingId);
     if (!profile) return;
+
+    // Defense-in-depth: if the profile has a PIN, refuse to proceed past
+    // `confirm` unless the PIN step has been cleared (step transition from
+    // `pin` → `confirm` is only done by verifyDeletePin on success).
+    if (profile.pinHash && deleteStep !== 'confirm') {
+      setError(t('profiles.pinRequiredToDelete', 'PIN requis pour supprimer ce profil'));
+      return;
+    }
 
     if (deleteConfirmName.trim() !== profile.name) {
       setError(t('profiles.errorDeleteNameMismatch'));
@@ -199,7 +317,7 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
     } catch (err: any) {
       setError(err?.message || t('profiles.errorDeleting'));
     }
-  }, [deletingId, deleteConfirmName, profiles, activeProfileId, dispatch, t, onClose]);
+  }, [deletingId, deleteStep, deleteConfirmName, profiles, activeProfileId, dispatch, t, onClose]);
 
   const startResetPin = useCallback((profileId: string) => {
     setResetPinId(profileId);
@@ -232,6 +350,43 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
       setResetPinInput('');
     }
   }, [resetPinId, resetPinInput, dispatch, t]);
+
+  /**
+   * Ce que le nuage porte et que cet appareil n'a pas — un essai d'une ancienne
+   * installation, un profil scellé sous une clé que le compte n'a plus. Rien
+   * ne permettait de s'en séparer ; il encombrait pourtant chaque lancement.
+   */
+  const cloudOnly = useMemo(
+    () =>
+      cloudOnlyProfiles(
+        cloudRows,
+        profiles.map((p) => p.id)
+      ),
+    [cloudRows, profiles]
+  );
+
+  const confirmCloudDelete = useCallback(async () => {
+    if (!cloudDeletingId) return;
+    setCloudDeleteBusy(true);
+    setCloudDeleteError(null);
+    try {
+      const ipc = window.electron?.ipcRenderer;
+      const out = (await ipc?.invoke('sync:deleteCloudProfile', cloudDeletingId)) as
+        | { success?: boolean; error?: string }
+        | undefined;
+      // Canal absent (`out` vide) = pas une réussite : on le dit.
+      if (!out || out.success === false) {
+        setCloudDeleteError(t('profiles.deleteFromCloudError', { error: out?.error ?? '?' }));
+        return;
+      }
+      setCloudDeletingId(null);
+      setCloudReload((n) => n + 1);
+    } catch (err) {
+      setCloudDeleteError(t('profiles.deleteFromCloudError', { error: (err as Error).message }));
+    } finally {
+      setCloudDeleteBusy(false);
+    }
+  }, [cloudDeletingId, t]);
 
   const deletingProfile = profiles.find((p) => p.id === deletingId);
 
@@ -326,6 +481,34 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
                       {profile.pinHash &&
                         (profile.isDefault ? ' · ' : '') + t('profiles.pinEnabled')}
                     </p>
+                    {/*
+                      Badge d'état nuage — discret, informatif, jamais alarmant :
+                      il ne signale pas une panne mais une chose que la personne
+                      seule peut faire (ouvrir le profil, ou trancher le sort
+                      d'un profil supprimé ailleurs). Rien n'est supprimé ici
+                      automatiquement.
+                    */}
+                    {cloudState(profile) === 'never' && (
+                      <span
+                        title={t('profiles.cloudNeverSyncedHint')}
+                        className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] leading-tight
+                          text-[var(--color-text-tertiary)]
+                          border border-[var(--color-border-light)]"
+                      >
+                        {t('profiles.cloudNeverSynced')}
+                      </span>
+                    )}
+                    {cloudState(profile) === 'deleted' && (
+                      <span
+                        title={t('profiles.cloudDeletedHint')}
+                        className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] leading-tight
+                          text-[var(--color-warning-700)]
+                          border border-[var(--color-warning-200)]
+                          bg-[var(--color-warning-50)]"
+                      >
+                        {t('profiles.cloudDeleted')}
+                      </span>
+                    )}
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {profile.pinHash && profile.allowPinReset && (
@@ -423,48 +606,200 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
             </div>
           ))}
 
-          {/* Delete confirmation */}
+          {/* Profils présents dans le nuage seulement — suppression possible d'ici. */}
+          {cloudOnly.length > 0 && (
+            <div className="mt-2 flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-tertiary)]">
+                {t('profiles.cloudOnlyTitle')}
+              </p>
+              <p className="text-xs text-[var(--color-text-tertiary)]">
+                {t('profiles.cloudOnlyHint')}
+              </p>
+              {cloudOnly.map((row) => (
+                <div
+                  key={row.profileId}
+                  className="flex flex-col gap-2 p-3 rounded-xl
+                    border border-[var(--color-border-light)]
+                    bg-[var(--color-surface)]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text-primary)] truncate font-mono">
+                        {row.shortId}…
+                      </p>
+                      <p className="text-xs text-[var(--color-text-tertiary)]">
+                        {row.lastSyncAt
+                          ? t('profiles.cloudOnlyLastSync', {
+                              date: new Date(row.lastSyncAt).toLocaleDateString(),
+                            })
+                          : t('profiles.cloudOnlyNeverSynced')}
+                        {' · '}
+                        {t('profiles.cloudOnlySize', { mb: megabytes(row.storageUsed) })}
+                      </p>
+                    </div>
+                    {cloudDeletingId !== row.profileId && (
+                      <button
+                        onClick={() => {
+                          setCloudDeletingId(row.profileId);
+                          setCloudDeleteError(null);
+                        }}
+                        className="px-3 py-1 rounded-lg text-xs font-medium
+                          text-[var(--color-error-500)]
+                          hover:bg-[var(--color-error-50)]
+                          transition-colors"
+                      >
+                        {t('profiles.deleteFromCloud')}
+                      </button>
+                    )}
+                  </div>
+                  {cloudDeletingId === row.profileId && (
+                    <div
+                      className="p-3 rounded-lg border border-[var(--color-error-200)]
+                        bg-[var(--color-error-50)]"
+                    >
+                      <p className="text-sm text-[var(--color-error-700)] mb-2">
+                        {t('profiles.deleteFromCloudConfirm')}
+                      </p>
+                      {cloudDeleteError && (
+                        <p className="text-xs text-[var(--color-error-500)] mb-2">
+                          {cloudDeleteError}
+                        </p>
+                      )}
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => {
+                            setCloudDeletingId(null);
+                            setCloudDeleteError(null);
+                          }}
+                          disabled={cloudDeleteBusy}
+                          className="px-3 py-1 rounded-lg text-xs font-medium
+                            text-[var(--color-text-secondary)]
+                            hover:bg-white/50 disabled:opacity-50"
+                        >
+                          {t('common.cancel')}
+                        </button>
+                        <button
+                          onClick={confirmCloudDelete}
+                          disabled={cloudDeleteBusy}
+                          className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                            bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
+                            disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {t('profiles.deleteFromCloud')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Delete confirmation — PIN gate first (if PIN set), then name. */}
           {deletingId && deletingProfile && (
             <div
               className="p-4 rounded-xl border border-[var(--color-error-200)]
               bg-[var(--color-error-50)]"
             >
-              <p className="text-sm text-[var(--color-error-700)] mb-2">
-                {t('profiles.deleteConfirmText', { name: deletingProfile.name })}
-              </p>
-              <input
-                ref={deleteInputRef}
-                type="text"
-                value={deleteConfirmName}
-                onChange={(e) => setDeleteConfirmName(e.target.value)}
-                placeholder={deletingProfile.name}
-                className="w-full px-3 py-1.5 rounded-lg text-sm mb-2
-                  bg-white border border-[var(--color-error-300)]
-                  text-[var(--color-text-primary)]
-                  focus:outline-none focus:ring-2 focus:ring-[var(--color-error-300)]"
-              />
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => {
-                    setDeletingId(null);
-                    setError(null);
-                  }}
-                  className="px-3 py-1 rounded-lg text-xs font-medium
-                    text-[var(--color-text-secondary)]
-                    hover:bg-white/50"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  disabled={deleteConfirmName.trim() !== deletingProfile.name}
-                  className="px-3 py-1 rounded-lg text-xs font-medium text-white
-                    bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {t('profiles.deleteConfirmButton')}
-                </button>
-              </div>
+              {deleteStep === 'pin' ? (
+                <>
+                  <p className="text-sm font-semibold text-[var(--color-error-700)] mb-1">
+                    {t('profiles.deletePinTitle', 'Vérification du PIN')}
+                  </p>
+                  <p className="text-xs text-[var(--color-error-600)] mb-2">
+                    {t(
+                      'profiles.deletePinPrompt',
+                      'Entrez le PIN de « {{name}} » pour confirmer la suppression.',
+                      { name: deletingProfile.name }
+                    )}
+                  </p>
+                  <input
+                    ref={deleteInputRef}
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    value={deletePinInput}
+                    onChange={(e) => {
+                      setDeletePinInput(e.target.value.replace(/\D/g, ''));
+                      if (deletePinError) setDeletePinError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && deletePinInput.length >= 4) verifyDeletePin();
+                    }}
+                    placeholder="PIN"
+                    autoFocus
+                    className="w-full px-3 py-1.5 rounded-lg text-sm mb-2 text-center tracking-[0.5em]
+                      bg-white border border-[var(--color-error-300)]
+                      text-[var(--color-text-primary)]
+                      focus:outline-none focus:ring-2 focus:ring-[var(--color-error-300)]"
+                  />
+                  {deletePinError && (
+                    <p className="text-xs text-[var(--color-error-500)] mb-2">{deletePinError}</p>
+                  )}
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => {
+                        setDeletingId(null);
+                        setError(null);
+                      }}
+                      className="px-3 py-1 rounded-lg text-xs font-medium
+                        text-[var(--color-text-secondary)]
+                        hover:bg-white/50"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      onClick={verifyDeletePin}
+                      disabled={deletePinInput.length < 4}
+                      className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                        bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('common.next', 'Suivant')}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-[var(--color-error-700)] mb-2">
+                    {t('profiles.deleteConfirmText', { name: deletingProfile.name })}
+                  </p>
+                  <input
+                    ref={deleteInputRef}
+                    type="text"
+                    value={deleteConfirmName}
+                    onChange={(e) => setDeleteConfirmName(e.target.value)}
+                    placeholder={deletingProfile.name}
+                    className="w-full px-3 py-1.5 rounded-lg text-sm mb-2
+                      bg-white border border-[var(--color-error-300)]
+                      text-[var(--color-text-primary)]
+                      focus:outline-none focus:ring-2 focus:ring-[var(--color-error-300)]"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => {
+                        setDeletingId(null);
+                        setError(null);
+                      }}
+                      className="px-3 py-1 rounded-lg text-xs font-medium
+                        text-[var(--color-text-secondary)]
+                        hover:bg-white/50"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      onClick={confirmDelete}
+                      disabled={deleteConfirmName.trim() !== deletingProfile.name}
+                      className="px-3 py-1 rounded-lg text-xs font-medium text-white
+                        bg-[var(--color-error-500)] hover:bg-[var(--color-error-600)]
+                        disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('profiles.deleteConfirmButton')}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -512,7 +847,7 @@ const ManageProfilesModal: React.FC<ManageProfilesModalProps> = ({ isOpen, onClo
                   {resetStep === 'confirm' && (
                     <div>
                       <p className="text-xs text-[var(--color-text-secondary)] mb-1.5">
-                        {t('profiles.deleteConfirmText', { name: profile.name })}
+                        {t('profiles.resetConfirmText', { name: profile.name })}
                       </p>
                       <input
                         ref={resetInputRef}

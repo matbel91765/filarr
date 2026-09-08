@@ -5,9 +5,11 @@
  * de stockage pour les opérations de persistance.
  */
 
-import storageAdapter from './storageAdapter';
+import storageAdapter, { ROOT_FOLDER_ID } from './storageAdapter';
 import { generateUniqueId } from '../../utils/idGenerator';
 import type { Folder, FolderCreateData, PathItem } from '../../types';
+
+export { ROOT_FOLDER_ID };
 
 /**
  * Récupère tous les dossiers
@@ -19,7 +21,7 @@ export const getFolders = async (): Promise<Folder[]> => {
     return await storageAdapter.getFolders();
   } catch (error) {
     console.error('Erreur lors de la récupération des dossiers:', error);
-    throw new Error('Impossible de récupérer les dossiers');
+    throw new Error('Impossible de récupérer les dossiers', { cause: error });
   }
 };
 
@@ -38,7 +40,7 @@ export const getFolder = async (id: string): Promise<Folder> => {
     return await storageAdapter.getFolder(id);
   } catch (error) {
     console.error(`Erreur lors de la récupération du dossier ${id}:`, error);
-    throw new Error(`Impossible de récupérer le dossier ${id}`);
+    throw new Error(`Impossible de récupérer le dossier ${id}`, { cause: error });
   }
 };
 
@@ -69,7 +71,7 @@ export const createFolder = async (folderData: FolderCreateData): Promise<Folder
     return await storageAdapter.saveFolder(folder);
   } catch (error) {
     console.error('Erreur lors de la création du dossier:', error);
-    throw new Error('Impossible de créer le dossier');
+    throw new Error('Impossible de créer le dossier', { cause: error });
   }
 };
 
@@ -99,7 +101,7 @@ export const updateFolder = async (id: string, updatedData: Partial<Folder>): Pr
     return await storageAdapter.updateFolder(id, updatedFolder);
   } catch (error) {
     console.error(`Erreur lors de la mise à jour du dossier ${id}:`, error);
-    throw new Error(`Impossible de mettre à jour le dossier ${id}`);
+    throw new Error(`Impossible de mettre à jour le dossier ${id}`, { cause: error });
   }
 };
 
@@ -119,7 +121,7 @@ export const deleteFolder = async (id: string, permanent?: boolean): Promise<boo
     return await storageAdapter.deleteFolder(id, permanent);
   } catch (error) {
     console.error(`Erreur lors de la suppression du dossier ${id}:`, error);
-    throw new Error(`Impossible de supprimer le dossier ${id}`);
+    throw new Error(`Impossible de supprimer le dossier ${id}`, { cause: error });
   }
 };
 
@@ -151,7 +153,7 @@ export const addItemToFolder = async (folderId: string, item: any): Promise<Fold
     return await storageAdapter.addItemToFolder(folderId, newItem);
   } catch (error) {
     console.error(`Erreur lors de l'ajout de l'élément au dossier ${folderId}:`, error);
-    throw new Error(`Impossible d'ajouter l'élément au dossier ${folderId}`);
+    throw new Error(`Impossible d'ajouter l'élément au dossier ${folderId}`, { cause: error });
   }
 };
 
@@ -170,8 +172,13 @@ export const removeItemFromFolder = async (folderId: string, itemId: string): Pr
   try {
     return await storageAdapter.removeItemFromFolder(folderId, itemId);
   } catch (error) {
-    console.error(`Erreur lors de la suppression de l'élément ${itemId} du dossier ${folderId}:`, error);
-    throw new Error(`Impossible de supprimer l'élément ${itemId} du dossier ${folderId}`);
+    console.error(
+      `Erreur lors de la suppression de l'élément ${itemId} du dossier ${folderId}:`,
+      error
+    );
+    throw new Error(`Impossible de supprimer l'élément ${itemId} du dossier ${folderId}`, {
+      cause: error,
+    });
   }
 };
 
@@ -183,7 +190,11 @@ export const removeItemFromFolder = async (folderId: string, itemId: string): Pr
  * @returns true si le renommage a réussi
  * @throws Error si les paramètres sont manquants ou si le renommage échoue
  */
-export const renameItem = async (parentId: string, itemId: string, newName: string): Promise<boolean> => {
+export const renameItem = async (
+  parentId: string,
+  itemId: string,
+  newName: string
+): Promise<boolean> => {
   if (!parentId || !itemId || !newName) {
     throw new Error("ID de dossier parent, ID d'élément et nouveau nom requis");
   }
@@ -203,7 +214,7 @@ export const renameItem = async (parentId: string, itemId: string, newName: stri
     return await storageAdapter.renameItem(parentId, itemId, oldName, newName);
   } catch (error) {
     console.error(`Erreur lors du renommage de l'élément ${itemId}:`, error);
-    throw new Error(`Impossible de renommer l'élément ${itemId}`);
+    throw new Error(`Impossible de renommer l'élément ${itemId}`, { cause: error });
   }
 };
 
@@ -213,7 +224,7 @@ export const renameItem = async (parentId: string, itemId: string, newName: stri
  * @returns Liste des éléments (fichiers et sous-dossiers)
  * @throws Error si l'ID est manquant ou si la récupération échoue
  */
-export const getFolderItems = async (folderId: string): Promise<(any)[]> => {
+export const getFolderItems = async (folderId: string): Promise<any[]> => {
   if (!folderId) {
     throw new Error('ID de dossier requis');
   }
@@ -223,7 +234,9 @@ export const getFolderItems = async (folderId: string): Promise<(any)[]> => {
     return folder.items || [];
   } catch (error) {
     console.error(`Erreur lors de la récupération des éléments du dossier ${folderId}:`, error);
-    throw new Error(`Impossible de récupérer les éléments du dossier ${folderId}`);
+    throw new Error(`Impossible de récupérer les éléments du dossier ${folderId}`, {
+      cause: error,
+    });
   }
 };
 
@@ -251,19 +264,28 @@ export const getFolderPath = async (folderId: string): Promise<PathItem[]> => {
     return path;
   } catch (error) {
     console.error(`Erreur lors de la récupération du chemin du dossier ${folderId}:`, error);
-    throw new Error(`Impossible de récupérer le chemin du dossier ${folderId}`);
+    throw new Error(`Impossible de récupérer le chemin du dossier ${folderId}`, { cause: error });
   }
 };
 
 /**
  * Déplace un dossier d'un dossier parent vers un autre
+ *
+ * `sourceFolderId`/`targetFolderId` acceptent la sentinelle {@link ROOT_FOLDER_ID} :
+ * la racine n'est pas un dossier stocké, c'est l'absence de parent. Sans elle,
+ * remonter un dossier au premier niveau était impossible.
+ *
  * @param folderId - ID du dossier à déplacer
- * @param sourceFolderId - ID du dossier parent source
- * @param targetFolderId - ID du dossier parent cible
+ * @param sourceFolderId - ID du dossier parent source (ou `'root'`)
+ * @param targetFolderId - ID du dossier parent cible (ou `'root'`)
  * @returns Résultat du déplacement
  * @throws Error si les paramètres sont manquants ou si le déplacement échoue
  */
-export const moveFolder = async (folderId: string, sourceFolderId: string, targetFolderId: string): Promise<import('../../types').MoveResult> => {
+export const moveFolder = async (
+  folderId: string,
+  sourceFolderId: string,
+  targetFolderId: string
+): Promise<import('../../types').MoveResult> => {
   if (!folderId || !sourceFolderId || !targetFolderId) {
     throw new Error('ID de dossier, ID de dossier source et ID de dossier cible requis');
   }
@@ -272,7 +294,7 @@ export const moveFolder = async (folderId: string, sourceFolderId: string, targe
     throw new Error('Le dossier source et le dossier cible doivent être différents');
   }
 
-  if (folderId === targetFolderId) {
+  if (folderId === targetFolderId || folderId === ROOT_FOLDER_ID) {
     throw new Error('Impossible de déplacer un dossier dans lui-même');
   }
 
@@ -280,7 +302,14 @@ export const moveFolder = async (folderId: string, sourceFolderId: string, targe
     return await storageAdapter.moveItem(folderId, sourceFolderId, targetFolderId);
   } catch (error) {
     console.error(`Erreur lors du déplacement du dossier ${folderId}:`, error);
-    throw new Error(`Impossible de déplacer le dossier ${folderId}`);
+    // Conserver le motif : le toast de drag and drop l'affiche à l'utilisateur.
+    const detail = error instanceof Error ? error.message : '';
+    throw new Error(
+      detail
+        ? `Impossible de déplacer le dossier ${folderId} : ${detail}`
+        : `Impossible de déplacer le dossier ${folderId}`,
+      { cause: error }
+    );
   }
 };
 
@@ -293,7 +322,12 @@ export const moveFolder = async (folderId: string, sourceFolderId: string, targe
  * @returns Résultat de la copie
  * @throws Error si les paramètres sont manquants ou si la copie échoue
  */
-export const copyFolder = async (folderId: string, sourceFolderId: string, targetFolderId: string, newName?: string): Promise<import('../../types').CopyResult> => {
+export const copyFolder = async (
+  folderId: string,
+  sourceFolderId: string,
+  targetFolderId: string,
+  newName?: string
+): Promise<import('../../types').CopyResult> => {
   if (!folderId || !sourceFolderId || !targetFolderId) {
     throw new Error('ID de dossier, ID de dossier source et ID de dossier cible requis');
   }
@@ -302,6 +336,6 @@ export const copyFolder = async (folderId: string, sourceFolderId: string, targe
     return await storageAdapter.copyItem(folderId, sourceFolderId, targetFolderId, newName);
   } catch (error) {
     console.error(`Erreur lors de la copie du dossier ${folderId}:`, error);
-    throw new Error(`Impossible de copier le dossier ${folderId}`);
+    throw new Error(`Impossible de copier le dossier ${folderId}`, { cause: error });
   }
 };

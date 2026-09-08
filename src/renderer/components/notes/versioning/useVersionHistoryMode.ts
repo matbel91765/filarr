@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import * as profileStorage from '../../../../services/core/profileStorage';
 
 /**
  * 'palette' is reserved for the future command-palette mode
@@ -25,7 +26,7 @@ const DEFAULT_MODE: VersionHistoryMode = 'sidebar';
 
 function readMode(): VersionHistoryMode {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = profileStorage.getItemWithLegacyFallback(STORAGE_KEY);
     if (raw && (VALID as string[]).includes(raw)) {
       return raw as VersionHistoryMode;
     }
@@ -41,7 +42,7 @@ export function useVersionHistoryMode(): [VersionHistoryMode, (mode: VersionHist
   const setMode = useCallback((next: VersionHistoryMode) => {
     setModeState(next);
     try {
-      localStorage.setItem(STORAGE_KEY, next);
+      profileStorage.setItem(STORAGE_KEY, next);
     } catch {
       /* localStorage unavailable — in-memory only */
     }
@@ -51,7 +52,11 @@ export function useVersionHistoryMode(): [VersionHistoryMode, (mode: VersionHist
   // in more than one place during a switch animation).
   useEffect(() => {
     const handler = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue && (VALID as string[]).includes(e.newValue)) {
+      if (
+        profileStorage.matchesKey(e.key, STORAGE_KEY) &&
+        e.newValue &&
+        (VALID as string[]).includes(e.newValue)
+      ) {
         setModeState(e.newValue as VersionHistoryMode);
       }
     };

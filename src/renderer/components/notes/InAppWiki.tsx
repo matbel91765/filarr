@@ -29,7 +29,7 @@ function getWikiTopics(t: TFunction): WikiTopic[] {
       category: t('wiki.categories.gettingStarted', 'Getting Started'),
       content: t(
         'wiki.gettingStarted.content',
-        "Welcome to **Filarr Notes** — your personal knowledge management system built right into Filarr.\n\n**Create your first note:** Click the **+** button in the Notes sidebar, or press `Ctrl+N`.\n\n**Write freely:** The editor supports rich text, markdown shortcuts, slash commands, and more. Just start typing.\n\n**Connect your knowledge:** Type `[[` to create wiki-links between notes, files, and folders. These connections build your personal knowledge graph.\n\n**Daily journaling:** Press `Ctrl+Shift+D` to create (or open) today's daily note — perfect for journaling, stand-ups, or daily logs.\n\n**Explore views:** Switch between List, Masonry, Kanban, Sticky Notes, Canvas, and Graph views using the view toggle bar at the top."
+        "Welcome to **Filarr Notes** — your personal knowledge management system built right into Filarr.\n\n**Create your first note:** Click the **+** button in the Notes sidebar, or press `Ctrl+N`.\n\n**Write freely:** The editor supports rich text, markdown shortcuts, slash commands, and more. Just start typing.\n\n**Connect your knowledge:** Type `[[` to create wiki-links between notes, files, and folders. These connections build your personal knowledge graph.\n\n**Daily journaling:** Press `Ctrl+Shift+D` to create (or open) today's daily note — perfect for journaling, stand-ups, or daily logs.\n\n**Explore views:** Switch between List, Masonry, Kanban, Sticky Notes, Database, Tasks, Calendar, Mind Map and Graph views using the view toggle bar at the top."
       ),
     },
     {
@@ -38,7 +38,7 @@ function getWikiTopics(t: TFunction): WikiTopic[] {
       category: t('wiki.categories.gettingStarted', 'Getting Started'),
       content: t(
         'wiki.shortcuts.content',
-        "**Navigation:**\n- `Ctrl+N` — Create a new note\n- `Ctrl+Shift+D` — Open/create today's daily note\n- `Ctrl+Shift+G` — Toggle graph view\n- `Ctrl+Shift+F` — Toggle focus mode (distraction-free writing)\n- `Ctrl+P` — Open command palette\n\n**Text Formatting:**\n- `Ctrl+B` — Bold\n- `Ctrl+I` — Italic\n- `Ctrl+U` — Underline\n- `Ctrl+Shift+X` — Strikethrough\n- `Ctrl+Shift+H` — Highlight text\n\n**Editor Shortcuts:**\n- `/` — Open slash command menu\n- `[[` — Insert wiki-link with autocomplete\n- `#` at start of line — Heading (## for H2, ### for H3)\n- `-` or `*` at start — Bullet list\n- `1.` at start — Numbered list\n- `[]` at start — Task/checkbox\n- `>` at start — Blockquote\n- `---` — Horizontal rule\n- ` ``` ` — Code block"
+        "**Navigation:**\n- `Ctrl+N` — Create a new note\n- `Ctrl+Shift+D` — Open/create today's daily note\n- `Ctrl+Shift+G` — Toggle graph view\n- `Ctrl+P` — Open command palette\n\n**Text Formatting:**\n- `Ctrl+B` — Bold\n- `Ctrl+I` — Italic\n- `Ctrl+U` — Underline\n- `Ctrl+Shift+X` — Strikethrough\n- `Ctrl+Shift+H` — Highlight text\n\n**Editor Shortcuts:**\n- `/` — Open slash command menu\n- `[[` — Insert wiki-link with autocomplete\n- `#` at start of line — Heading (## for H2, ### for H3)\n- `-` or `*` at start — Bullet list\n- `1.` at start — Numbered list\n- `[]` at start — Task/checkbox\n- `>` at start — Blockquote\n- `---` — Horizontal rule\n- ` ``` ` — Code block"
       ),
     },
     {
@@ -47,7 +47,7 @@ function getWikiTopics(t: TFunction): WikiTopic[] {
       category: t('wiki.categories.gettingStarted', 'Getting Started'),
       content: t(
         'wiki.interfaceOverview.content',
-        'The Notes interface is divided into three main areas:\n\n**Left Panel — Notes List:**\n- Browse, search, sort, and filter your notes\n- Create new notes, daily notes, or notes from templates\n- Pin important notes to keep them at the top\n- Access Flashcards, Templates, and this Wiki\n\n**Center — Editor:**\n- Rich text editor powered by TipTap\n- Floating bubble menu for quick formatting (select text to see it)\n- Toolbar at top with formatting, focus mode, version history, and export\n- Breadcrumb trail showing recently visited notes\n- Slash commands (`/`) for inserting blocks\n\n**Right Panel — Backlinks & Smart Tags:**\n- See which notes link to the current one (backlinks)\n- Discover potential unlinked mentions\n- View outgoing links\n- Get AI-suggested tags based on content analysis'
+        'The Notes interface is divided into three main areas:\n\n**Left Panel — Notes List:**\n- Browse, search, sort, and filter your notes\n- Create new notes, daily notes, or notes from templates\n- Pin important notes to keep them at the top\n- Access Flashcards, Templates, and this Wiki\n\n**Center — Editor:**\n- Rich text editor powered by TipTap\n- Floating bubble menu for quick formatting (select text to see it)\n- Toolbar at top with formatting, version history, and export\n- Breadcrumb trail showing recently visited notes\n- Slash commands (`/`) for inserting blocks\n\n**Right Panel — Backlinks & Smart Tags:**\n- See which notes link to the current one (backlinks)\n- Discover potential unlinked mentions\n- View outgoing links\n- Get AI-suggested tags based on content analysis'
       ),
     },
 
@@ -77,15 +77,6 @@ function getWikiTopics(t: TFunction): WikiTopic[] {
       content: t(
         'wiki.highlightColors.content',
         'Filarr Notes supports **multicolor highlighting** — perfect for color-coding different types of information.\n\n**How to use:**\n- Select text and click the highlight button in the bubble menu or toolbar\n- Choose from 8 preset colors: yellow, green, blue, purple, pink, red, orange, gray\n- Click the same color again to remove the highlight\n\n**Use cases:**\n- **Yellow** for key takeaways\n- **Green** for action items\n- **Blue** for references and sources\n- **Red** for warnings or critical items\n- **Purple** for ideas and brainstorming'
-      ),
-    },
-    {
-      id: 'focus-mode',
-      title: t('wiki.focusMode.title', 'Focus Mode'),
-      category: t('wiki.categories.editor', 'Editor'),
-      content: t(
-        'wiki.focusMode.content',
-        '**Focus mode** removes all distractions so you can concentrate on writing.\n\n**Activate:** Press `Ctrl+Shift+F` or click the focus icon in the toolbar.\n\n**What changes:**\n- The sidebar and backlinks panel are hidden\n- The editor takes up the full screen\n- Non-active paragraphs are slightly faded to help you focus on the current block\n\n**Exit:** Press `Ctrl+Shift+F` again or click the exit button in the toolbar.\n\nFocus mode pairs well with the **Writer** editor theme for a distraction-free writing experience.'
       ),
     },
     {
@@ -198,15 +189,6 @@ function getWikiTopics(t: TFunction): WikiTopic[] {
       content: t(
         'wiki.stickyNotesView.content',
         'A **free-form 2D canvas** where notes appear as colored sticky notes.\n\n**Controls:**\n- **Drag** a sticky note to reposition it\n- **Scroll wheel** to zoom in/out\n- **Shift+click** and drag on the background to pan the canvas\n- Notes snap to a 20px grid for clean alignment\n\n**Colors:** Each note gets a color from the palette (yellow, green, blue, purple, pink, orange). Colors cycle automatically.\n\n**Best for:** Brainstorming, mind mapping, spatial organization, visual thinkers.'
-      ),
-    },
-    {
-      id: 'canvas-view',
-      title: t('wiki.canvasView.title', 'Canvas / Whiteboard'),
-      category: t('wiki.categories.views', 'Views'),
-      content: t(
-        'wiki.canvasView.content',
-        'An **infinite 2D whiteboard** that displays note cards with connection lines.\n\n**Features:**\n- Note cards show title, preview, and metadata\n- **SVG connection lines** are automatically drawn between linked notes\n- **Zoom** with scroll wheel or toolbar buttons (+, -, Reset)\n- **Pan** with Shift+click and drag\n- Zoom percentage displayed in toolbar\n\n**Controls:**\n- Click a card to open it in the editor\n- Cards are positioned in a 4-column grid by default\n- The connection lines follow wiki-links between notes\n\n**Best for:** Visualizing note relationships, system design, project mapping.'
       ),
     },
 

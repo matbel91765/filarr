@@ -12,12 +12,7 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import Modal, { ModalBody, ModalFooter } from '../ui/Modal/Modal';
-import {
-  addNotesBatch,
-  addNotebook,
-  setNoteNotebook,
-  saveNotesToDisk,
-} from '../../../store/slices/notesSlice';
+import { addNotesBatch, addNotebook, saveNotesToDisk } from '../../../store/slices/notesSlice';
 import { createTag } from '../../../store/slices/tagsSlice';
 import store from '../../../store';
 import type { AppDispatch } from '../../../store';
@@ -54,14 +49,14 @@ const SOURCES: {
     fileType: 'directory',
     instructionKey: 'import.obsidianInstructions',
   },
-  // Notion & Evernote — uncomment when tested
-  // {
-  //   id: 'notion',
-  //   icon: '📝',
-  //   fileType: 'file',
-  //   filters: [{ name: 'ZIP', extensions: ['zip'] }],
-  //   instructionKey: 'import.notionInstructions',
-  // },
+  {
+    id: 'notion',
+    icon: '📝',
+    fileType: 'file',
+    filters: [{ name: 'ZIP', extensions: ['zip'] }],
+    instructionKey: 'import.notionInstructions',
+  },
+  // Evernote — uncomment when tested
   // {
   //   id: 'evernote',
   //   icon: '🐘',
@@ -106,12 +101,20 @@ const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose }) => {
 
     let selectedPath: string | null = null;
 
-    if (sourceConfig.fileType === 'directory') {
-      selectedPath = await window.electron.ipcRenderer.invoke('import:selectDirectory');
-    } else {
-      selectedPath = await window.electron.ipcRenderer.invoke('import:selectFile', {
-        filters: sourceConfig.filters,
-      });
+    // Les sélecteurs sont des dialogues natifs du bureau ; sur le web le
+    // dispatcher lève (canaux `import:*` pas encore portés — palier M2) et la
+    // promesse partait en rejet non géré. Rien de choisi, l'assistant reste
+    // sur place : c'est le même verdict qu'un dialogue annulé.
+    try {
+      if (sourceConfig.fileType === 'directory') {
+        selectedPath = await window.electron.ipcRenderer.invoke('import:selectDirectory');
+      } else {
+        selectedPath = await window.electron.ipcRenderer.invoke('import:selectFile', {
+          filters: sourceConfig.filters,
+        });
+      }
+    } catch {
+      selectedPath = null;
     }
 
     if (selectedPath) {
@@ -140,18 +143,33 @@ const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose }) => {
         (p) => setProgress(p)
       );
 
-      // Create tags in Redux and build name→id mapping (batch-friendly)
+      // Create tags in Redux and build name→id mapping.
+      // Chunked: a large vault can yield thousands of tags, and dispatching
+      // them all at once runs every store subscriber thousands of times back
+      // to back, freezing the window. Yielding between chunks keeps the
+      // progress bar alive.
       const tagIdMap = new Map<string, string>();
       if (importTags && importResult.tags.length > 0) {
-        // Dispatch all tag creations and collect results
-        const tagPromises = importResult.tags.map((tagData) =>
-          dispatch(createTag({ name: tagData.name, color: tagData.color }))
-        );
-        const tagResults = await Promise.all(tagPromises);
-        for (const tagAction of tagResults) {
-          if (createTag.fulfilled.match(tagAction)) {
-            tagIdMap.set(tagAction.payload.name, tagAction.payload.id);
+        const TAG_CHUNK = 250;
+        for (let i = 0; i < importResult.tags.length; i += TAG_CHUNK) {
+          const chunk = importResult.tags.slice(i, i + TAG_CHUNK);
+          const tagResults = await Promise.all(
+            chunk.map((tagData) =>
+              dispatch(createTag({ name: tagData.name, color: tagData.color }))
+            )
+          );
+          for (const tagAction of tagResults) {
+            if (createTag.fulfilled.match(tagAction)) {
+              tagIdMap.set(tagAction.payload.name, tagAction.payload.id);
+            }
           }
+          setProgress({
+            phase: 'linking',
+            current: Math.min(i + TAG_CHUNK, importResult.tags.length),
+            total: importResult.tags.length,
+            detail: 'Creating tags...',
+          });
+          await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
 
@@ -174,12 +192,20 @@ const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose }) => {
           const nb = importResult.notebooks[i];
           const color = NOTEBOOK_COLORS[i % NOTEBOOK_COLORS.length];
           dispatch(addNotebook({ name: nb.name, color }));
-          // Find the newly created notebook ID
-          const currentNotebooks = store.getState().notes.notebooks;
-          const created = Object.values(currentNotebooks).find((n: any) => n.name === nb.name);
-          if (created) {
-            notebookIdMap.set(nb.name, created.id);
-          }
+        }
+        // Resolve names → IDs from a single state read. The previous version
+        // re-read the store and re-scanned every notebook inside the loop,
+        // which is quadratic in the number of top-level vault folders.
+        const currentNotebooks = store.getState().notes.notebooks;
+        const idByName = new Map<string, string>();
+        for (const nb of Object.values(currentNotebooks) as { id: string; name: string }[]) {
+          // First match wins, matching the previous `.find()` semantics when a
+          // notebook of the same name already existed.
+          if (!idByName.has(nb.name)) idByName.set(nb.name, nb.id);
+        }
+        for (const nb of importResult.notebooks) {
+          const id = idByName.get(nb.name);
+          if (id) notebookIdMap.set(nb.name, id);
         }
       }
 
@@ -211,7 +237,10 @@ const ImportWizard: React.FC<ImportWizardProps> = ({ isOpen, onClose }) => {
       // Single batch dispatch — 1 Redux update instead of N
       if (importResult.notes.length > 0) {
         dispatch(addNotesBatch(importResult.notes));
-        await dispatch(saveNotesToDisk());
+        // skipVersioning: an import has no "previous version" worth archiving,
+        // and snapshotting thousands of notes right after the conversion peak
+        // is a long disk storm for nothing. The source vault is the backup.
+        await dispatch(saveNotesToDisk({ skipVersioning: true }));
       }
 
       setResult(importResult);
@@ -678,7 +707,7 @@ function getSourceDescription(source: ExternalSource): string {
     case 'obsidian':
       return 'Vault Obsidian (.md avec wiki-links et tags)';
     case 'notion':
-      return 'Export Notion (ZIP HTML ou Markdown)';
+      return 'Export Notion (ZIP Markdown & CSV recommandé)';
     case 'evernote':
       return 'Export Evernote (.enex)';
   }
@@ -689,7 +718,7 @@ function getInstructions(source: ExternalSource): string {
     case 'obsidian':
       return 'Sélectionnez le dossier racine de votre vault Obsidian.';
     case 'notion':
-      return 'Dans Notion, allez dans Paramètres → Exporter tout le contenu → Format HTML ou Markdown. Sélectionnez ensuite le fichier ZIP exporté.';
+      return 'Dans Notion : Paramètres → Exporter tout le contenu → Format « Markdown & CSV » (recommandé — meilleure fidélité des liens et des tags). Sélectionnez ensuite le fichier ZIP exporté.';
     case 'evernote':
       return 'Dans Evernote, sélectionnez les notes → Fichier → Exporter (.enex). Sélectionnez ensuite le fichier .enex exporté.';
   }

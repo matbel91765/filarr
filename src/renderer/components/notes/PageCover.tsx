@@ -14,7 +14,7 @@
  *       coverColor    — legacy fallback, treated as raw CSS
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import IconSelector from './pickers/IconSelector';
 import CoverSelector, { type CoverChange } from './pickers/CoverSelector';
@@ -40,13 +40,59 @@ interface PageCoverProps {
   onIconChange: (icon: string | null) => void;
   onCoverChange: (change: CoverChange) => void;
   readOnly?: boolean;
+
+  /**
+   * ── LES TROIS LIBELLÉS, EXTRAITS DES NOTES ────────────────────────────────
+   *
+   * Ce composant ne dessine ni une note ni un dossier : il dessine une
+   * COUVERTURE et une ICÔNE, et ses props étaient déjà primitives. Le seul
+   * reste de couplage était ici — trois chaînes câblées en dur sur l'espace de
+   * noms `notes.*`, qui auraient fait dire « Changer l'icône de la note » à
+   * l'en-tête d'un dossier.
+   *
+   * Ils restent OPTIONNELS et retombent sur les clés d'origine : l'éditeur de
+   * notes n'a rien à changer, et un nouvel appelant ne peut pas se retrouver
+   * sans libellé.
+   */
+  changeCoverLabel?: string;
+  changeIconLabel?: string;
+  addCoverLabel?: string;
+
+  /**
+   * Signale qu'un sélecteur (icône ou couverture) est ouvert.
+   *
+   * Les deux popovers sont rendus DANS ce composant : quiconque démonte
+   * PageCover démonte le geste en cours. L'éditeur de notes replie désormais
+   * son en-tête tout seul au défilement — sans ce signal, un cran de molette
+   * pendant le choix d'une couverture ferait disparaître le sélecteur.
+   *
+   * Optionnel : les appelants qui ne replient rien (en-tête de dossier, notes
+   * autocollantes) n'ont rien à passer.
+   */
+  onPickerOpenChange?: (open: boolean) => void;
+
+  /**
+   * Escamote le BANDEAU en gardant l'icône et le reste.
+   *
+   * C'est le palier intermédiaire de l'éditeur de notes : au défilement la
+   * couverture s'efface avant le titre. Distinct de « pas de couverture » —
+   * la note en a bien une, on ne la montre simplement pas, donc le bouton
+   * « Ajouter une couverture » ne doit surtout pas réapparaître, et le
+   * chevauchement négatif de la puce d'icône doit tomber : sans bandeau sous
+   * elle, il la tirerait hors du conteneur.
+   */
+  coverHidden?: boolean;
 }
 
 /**
  * Resolve the final CSS background string from the three cover sources
  * in priority order. Returns null when the note has no cover.
+ *
+ * Exportée : le tableau (`board/BoardCard`) peint le même bandeau en miniature
+ * et doit résoudre EXACTEMENT la même chose — un aperçu qui diverge de la page
+ * de note n'est pas un aperçu.
  */
-function resolveCoverBackground(
+export function resolveCoverBackground(
   presetId: string | undefined,
   image: string | undefined,
   color: string | undefined
@@ -75,10 +121,29 @@ export const PageCover: React.FC<PageCoverProps> = React.memo(function PageCover
   onIconChange,
   onCoverChange,
   readOnly,
+  changeCoverLabel,
+  changeIconLabel,
+  addCoverLabel,
+  onPickerOpenChange,
+  coverHidden = false,
 }) {
   const { t } = useTranslation();
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showCoverPicker, setShowCoverPicker] = useState(false);
+
+  const pickerOpen = showIconPicker || showCoverPicker;
+  const pickerReportRef = useRef(onPickerOpenChange);
+  pickerReportRef.current = onPickerOpenChange;
+  useEffect(() => {
+    onPickerOpenChange?.(pickerOpen);
+  }, [pickerOpen, onPickerOpenChange]);
+  // Le démontage compte comme une fermeture. Sans cela, replier l'en-tête
+  // pendant qu'un sélecteur est ouvert emporterait le popover avec lui en
+  // laissant l'appelant convaincu qu'un geste est toujours en cours — verrou
+  // armé pour de bon. Effet séparé : un nettoyage posé sur `pickerOpen`
+  // s'exécuterait aussi à chaque changement, et annoncerait « fermé » juste
+  // avant « ouvert ».
+  useEffect(() => () => pickerReportRef.current?.(false), []);
 
   const background = resolveCoverBackground(coverPresetId, coverImage, coverColor);
 
@@ -91,11 +156,15 @@ export const PageCover: React.FC<PageCoverProps> = React.memo(function PageCover
   }, [readOnly]);
 
   const hasCover = !!background;
+  // « Il y a une couverture » et « on la dessine » sont deux choses : la
+  // première décide du bouton d'ajout, la seconde du bandeau et du
+  // chevauchement.
+  const coverShown = hasCover && !coverHidden;
 
   return (
     <>
       {/* Cover banner */}
-      {background && (
+      {coverShown && background && (
         <div
           className={`page-cover__banner ${background.isImage ? 'page-cover__banner--image' : ''}`}
           style={
@@ -108,16 +177,24 @@ export const PageCover: React.FC<PageCoverProps> = React.memo(function PageCover
               : { background: background.css }
           }
           onClick={toggleCoverPicker}
-          title={readOnly ? undefined : t('notes.changeCover', 'Changer la couverture')}
+          title={
+            readOnly
+              ? undefined
+              : (changeCoverLabel ?? t('notes.changeCover', 'Changer la couverture'))
+          }
         />
       )}
 
       {/* Icon + controls row */}
-      <div className={`page-cover__controls ${hasCover ? 'page-cover__controls--with-cover' : ''}`}>
+      <div
+        className={`page-cover__controls ${coverShown ? 'page-cover__controls--with-cover' : ''}`}
+      >
         <button
           className={`page-cover__icon-btn ${icon ? '' : 'page-cover__icon-btn--empty'}`}
           onClick={toggleIconPicker}
-          title={readOnly ? undefined : t('notes.changeIcon', 'Changer l’icône')}
+          title={
+            readOnly ? undefined : (changeIconLabel ?? t('notes.changeIcon', 'Changer l’icône'))
+          }
           disabled={readOnly}
         >
           {icon ? (
@@ -153,7 +230,7 @@ export const PageCover: React.FC<PageCoverProps> = React.memo(function PageCover
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <line x1="3" y1="9" x2="21" y2="9" />
             </svg>
-            <span>{t('notes.addCover', 'Ajouter une couverture')}</span>
+            <span>{addCoverLabel ?? t('notes.addCover', 'Ajouter une couverture')}</span>
           </button>
         )}
       </div>

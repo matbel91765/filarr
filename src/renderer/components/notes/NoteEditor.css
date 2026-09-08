@@ -64,12 +64,41 @@
 
 /* Compact header (collapsed state) */
 
+/* La hauteur, elle, bascule d'un coup : animer l'en-tête demanderait un
+   conteneur écrêté, qui rognerait les deux popovers de couverture ancrés
+   dessus. Le fondu du bandeau compact suffit à ce que le repli se lise comme
+   une transition et non comme un sursaut. */
 .note-editor__header-compact {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 48px;
   min-height: 36px;
+  animation: noteHeaderCompactIn 0.16s ease-out;
+}
+
+/* Palier intermédiaire : le bandeau est parti, le titre reste. On resserre le
+   haut, sinon les 16 px de la zone de titre s'ajouteraient aux 8 px que la
+   rangée d'icône laissait sous un bandeau qui n'est plus là. */
+.note-editor__header--title .note-editor__title-area {
+  padding-top: 8px;
+}
+
+@keyframes noteHeaderCompactIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-editor__header-compact {
+    animation: none;
+  }
 }
 
 .note-editor__header-compact-icon {
@@ -93,13 +122,23 @@
   color: var(--color-text-tertiary, #94a3b8);
   white-space: nowrap;
   margin-left: auto;
-  padding-right: 32px;
 }
 
 /* ---- Title ---- */
 
+/* LA GOUTTIÈRE DU DOCUMENT, NOMMÉE UNE FOIS. Le panneau de note de coffre
+   reproduit cette colonne dans SA feuille (`.vault-note-pane__doc`) : deux
+   nombres à tenir d'accord dans deux fichiers, sans rien pour signaler leur
+   désaccord. Elle est donc déclarée, et les deux la lisent. */
+:root {
+  --note-editor-gutter: 48px;
+}
+
+/* 32 px au-dessus du titre s'ajoutaient aux 24 px deja laisses par la puce
+   d'icone, qui deborde du bandeau : deux respirations empilees pour une seule
+   intention. */
 .note-editor__title-area {
-  padding: 32px 48px 8px;
+  padding: 16px var(--note-editor-gutter) 8px;
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s;
 }
@@ -127,8 +166,10 @@
 
 .note-editor__meta {
   display: flex;
-  gap: 16px;
-  padding-top: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding-top: 6px;
 }
 
 .note-editor__meta-item {
@@ -137,9 +178,91 @@
   opacity: 0.7;
 }
 
+/* ---- Save-state indicator (#38) ---- */
+
+.note-editor__save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  user-select: none;
+  transition: color 0.2s;
+}
+
+.note-editor__save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.note-editor__save-dot--synced {
+  background: #22c55e;
+}
+.note-editor__save-dot--saving {
+  background: #3b82f6;
+  animation: note-editor-save-pulse 1.2s ease-in-out infinite;
+}
+.note-editor__save-dot--pending {
+  background: #f59e0b;
+}
+.note-editor__save-dot--error {
+  background: #ef4444;
+}
+
+.note-editor__save-state--synced {
+  opacity: 0.7;
+}
+.note-editor__save-state--saving {
+  color: var(--color-primary-600, #4682b4);
+}
+/* LES DEUX AVEUX LES PLUS COÛTEUX ÉTAIENT LES MOINS LISIBLES. Ces deux teintes
+   portent « rien ne les enregistrera tout seul » et « ce coffre ne les accepte
+   plus » ; écrites en dur, sombres, à 0,72 rem, elles tombaient à ~3:1 et ~2,3:1
+   sur les six thèmes sombres. Le barreau -700 des jetons ne pouvait pas servir :
+   il est la couleur de TEXTE des pastilles claires et doit rester sombre
+   partout. D'où deux jetons dédiés « sur fond de page », redéfinis par chaque
+   thème sombre — mesurés dans vaultPaneSaveState.vitest.ts. */
+.note-editor__save-state--pending {
+  color: var(--color-warning-on-background);
+}
+.note-editor__save-state--error {
+  color: var(--color-error-on-background);
+}
+
+/* LA TEINTE « JE NE PEUX PAS ÉCRIRE ICI » — le panneau de note de coffre la pose
+   sur un lecteur. Elle vit ici, avec le reste du vocabulaire
+   `.note-editor__save-*`, et non dans la feuille du coffre qui l'employait :
+   une classe déclarée loin de sa famille se perd à la première relecture. Le
+   vert de `--synced` aurait répondu « c'est enregistré » à quelqu'un qui n'a
+   rien à enregistrer. */
+.note-editor__save-dot--idle {
+  background: var(--color-text-tertiary, var(--color-text-secondary));
+}
+
+.note-editor__save-state--idle {
+  opacity: 0.7;
+}
+
+@keyframes note-editor-save-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
 /* ---- Toolbar ---- */
 
 .note-editor__toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -148,6 +271,21 @@
   background: var(--color-background-secondary, var(--color-surface));
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+/* Le wrapper qui centre. Il prend TOUTE la largeur (le bouton de repli est
+   sorti du flux, cf. `.note-editor__toolbar-collapse`) : sans cela le centre
+   optique serait décalé d'une demi-largeur de bouton, soit 16 px, ce qui se
+   voit sur une barre symétrique. `min-width: 0` autorise le retour à la ligne
+   plutôt que le débordement. */
+.note-editor__toolbar-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
 }
 
 .note-editor__toolbar-group {
@@ -195,6 +333,45 @@
   line-height: 1;
 }
 
+/* Hors du flux, sur le modèle de `.note-editor__header-toggle` (:33) : c'est ce
+   qui permet au wrapper de centrer sur la largeur ENTIÈRE. `margin-left: auto`
+   ne conviendrait pas — une marge auto absorbe l'espace libre avant que
+   `justify-content` ne s'applique, et le centrage serait resté inerte.
+   Le bouton loge dans la gouttière de 48 px, il ne recouvre donc rien. */
+.note-editor__toolbar-collapse {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  z-index: 1;
+}
+
+/* Barre repliée : fine poignée en haut de l'éditeur pour la rouvrir */
+.note-editor__toolbar-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary, #94a3b8);
+  cursor: pointer;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.note-editor__toolbar-expand:hover,
+.note-editor__toolbar-expand:focus-visible {
+  opacity: 1;
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
 /* ---- Bubble Menu ---- */
 
 .note-editor__bubble-menu {
@@ -240,6 +417,31 @@
 }
 
 /* ---- Editor Body ---- */
+
+/* Mode sans distraction : la colonne se resserre PAR LE PADDING.
+
+   Surtout pas en plafonnant `--ss-content-max-width` : cette variable pilote
+   `max-width` sur `.ProseMirror`, et DrawingOverlay dimensionne son canevas sur
+   la largeur de CE nœud. Rétrécir le nœud rétrécirait le bitmap, et tout tracé
+   au-delà de la nouvelle largeur disparaîtrait — le canevas est ancré à
+   gauche du wrapper alors que le texte, lui, se recentre. Le padding déplace
+   le texte sans toucher à la boîte que le canevas mesure.
+
+   Aucune écriture disque : le réglage `contentMaxWidth` de l'utilisateur est
+   intact à la sortie du mode. */
+.note-editor--focus .note-editor__body {
+  padding-left: max(48px, calc((100% - 720px) / 2));
+  padding-right: max(48px, calc((100% - 720px) / 2));
+  transition:
+    padding-left 0.2s ease,
+    padding-right 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-editor--focus .note-editor__body {
+    transition: none;
+  }
+}
 
 .note-editor__body {
   padding: 16px 48px 24px;
@@ -444,18 +646,135 @@
   font-size: 0.85em;
 }
 
-/* Dark mode */
-[data-theme='dark'] .note-editor__body .ProseMirror .wiki-link-name--note {
+/* Dark mode — les cinq autres thèmes sombres étaient absents de cette liste,
+   si bien que leurs pastilles gardaient le vert et l'ambre foncés du clair,
+   illisibles sur fond nuit. */
+[data-theme='dark'] .note-editor__body .ProseMirror .wiki-link-name--note,
+[data-theme='space'] .note-editor__body .ProseMirror .wiki-link-name--note,
+[data-theme='aurora'] .note-editor__body .ProseMirror .wiki-link-name--note,
+[data-theme='crepuscule'] .note-editor__body .ProseMirror .wiki-link-name--note,
+[data-theme='foret'] .note-editor__body .ProseMirror .wiki-link-name--note,
+[data-theme='minuit'] .note-editor__body .ProseMirror .wiki-link-name--note {
   color: var(--color-primary-300, #7ec8e3);
   background: rgba(70, 130, 180, 0.15);
 }
-[data-theme='dark'] .note-editor__body .ProseMirror .wiki-link-name--file {
+[data-theme='dark'] .note-editor__body .ProseMirror .wiki-link-name--file,
+[data-theme='space'] .note-editor__body .ProseMirror .wiki-link-name--file,
+[data-theme='aurora'] .note-editor__body .ProseMirror .wiki-link-name--file,
+[data-theme='crepuscule'] .note-editor__body .ProseMirror .wiki-link-name--file,
+[data-theme='foret'] .note-editor__body .ProseMirror .wiki-link-name--file,
+[data-theme='minuit'] .note-editor__body .ProseMirror .wiki-link-name--file {
   color: #6ee7a0;
   background: rgba(22, 163, 74, 0.15);
 }
-[data-theme='dark'] .note-editor__body .ProseMirror .wiki-link-name--folder {
+[data-theme='dark'] .note-editor__body .ProseMirror .wiki-link-name--folder,
+[data-theme='space'] .note-editor__body .ProseMirror .wiki-link-name--folder,
+[data-theme='aurora'] .note-editor__body .ProseMirror .wiki-link-name--folder,
+[data-theme='crepuscule'] .note-editor__body .ProseMirror .wiki-link-name--folder,
+[data-theme='foret'] .note-editor__body .ProseMirror .wiki-link-name--folder,
+[data-theme='minuit'] .note-editor__body .ProseMirror .wiki-link-name--folder {
   color: #fbbf24;
   background: rgba(217, 119, 6, 0.15);
+}
+
+/* ---- Potential links (unlinked mentions of another note's title) ---- */
+
+/* A suggestion, not a link: no chip, no colour change, just a dotted rule
+   that a reader's eye can skip over entirely. */
+.note-editor__body .ProseMirror .potential-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-text-tertiary, rgba(100, 116, 139, 0.55));
+}
+
+.note-editor__body .ProseMirror .potential-link:hover {
+  text-decoration-color: var(--color-primary-500, #4682b4);
+  background: var(--color-primary-50, rgba(70, 130, 180, 0.1));
+  border-radius: var(--radius-sm, 4px);
+}
+
+/* A mention that was JUST wrapped in [[…]]. Fades out on its own after
+   ~1.2 s — it answers "where did that land?", it is not a state. */
+.note-editor__body .ProseMirror .wiki-link--flash {
+  border-radius: var(--radius-sm, 4px);
+  animation: potential-link-flash 1.2s ease-out forwards;
+}
+
+/* A TRANSLUCENT tint, not a solid token: the highlight sits behind live text,
+   and an opaque `--color-primary-200` (purple in the space theme) would cost
+   the reader the very words we are pointing at. */
+@keyframes potential-link-flash {
+  0% {
+    background: rgba(70, 130, 180, 0.38);
+    background: color-mix(in srgb, var(--color-primary-500, #4682b4) 38%, transparent);
+    box-shadow: 0 0 0 2px rgba(70, 130, 180, 0.38);
+  }
+  60% {
+    background: rgba(70, 130, 180, 0.22);
+    background: color-mix(in srgb, var(--color-primary-500, #4682b4) 22%, transparent);
+    box-shadow: 0 0 0 2px rgba(70, 130, 180, 0.22);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+/* Reduced motion still needs the ANSWER, just not the animation: a flat tint
+   for the same duration, removed by the same timer. */
+@media (prefers-reduced-motion: reduce) {
+  .note-editor__body .ProseMirror .wiki-link--flash {
+    animation: none;
+    background: rgba(70, 130, 180, 0.22);
+    background: color-mix(in srgb, var(--color-primary-500, #4682b4) 22%, transparent);
+  }
+}
+
+.potential-link-menu {
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.16));
+}
+
+.potential-link-menu__title {
+  max-width: 120px;
+  padding: 0 6px;
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.potential-link-menu__item {
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-primary-600, #4682b4);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.potential-link-menu__item:hover {
+  background: var(--color-hover-overlay);
+}
+
+.potential-link-menu__item--muted {
+  color: var(--color-text-secondary);
+  font-weight: 500;
 }
 
 /* ---- Lists ---- */
@@ -778,114 +1097,115 @@
 
 /* ---- Syntax Highlighting (lowlight/highlight.js tokens) ---- */
 
+/* Une variable par rôle plutôt qu'une couleur par règle : la palette sombre
+   n'était accrochée qu'à [data-theme='dark'], si bien que minuit, space,
+   aurora, crépuscule et forêt gardaient la palette CLAIRE — du bleu marine sur
+   fond nuit. Un seul bloc à compléter désormais quand un thème sombre arrive. */
+.note-editor__body .ProseMirror pre {
+  --hljs-comment: #6a737d;
+  --hljs-keyword: #d73a49;
+  --hljs-string: #032f62;
+  --hljs-number: #005cc5;
+  --hljs-function: #6f42c1;
+  --hljs-type: #e36209;
+  --hljs-variable: #24292e;
+  --hljs-tag: #22863a;
+  --hljs-attribute: #6f42c1;
+  --hljs-regexp: #032f62;
+  --hljs-meta: #6a737d;
+  --hljs-deletion: #b31d28;
+  --hljs-deletion-bg: #ffeef0;
+  --hljs-addition: #22863a;
+  --hljs-addition-bg: #f0fff4;
+}
+
+[data-theme='dark'] .note-editor__body .ProseMirror pre,
+[data-theme='space'] .note-editor__body .ProseMirror pre,
+[data-theme='aurora'] .note-editor__body .ProseMirror pre,
+[data-theme='crepuscule'] .note-editor__body .ProseMirror pre,
+[data-theme='foret'] .note-editor__body .ProseMirror pre,
+[data-theme='minuit'] .note-editor__body .ProseMirror pre {
+  --hljs-comment: #6b7280;
+  --hljs-keyword: #ff7b72;
+  --hljs-string: #a5d6ff;
+  --hljs-number: #79c0ff;
+  --hljs-function: #d2a8ff;
+  --hljs-type: #ffa657;
+  --hljs-variable: #c9d1d9;
+  --hljs-tag: #7ee787;
+  --hljs-attribute: #d2a8ff;
+  --hljs-regexp: #a5d6ff;
+  --hljs-meta: #8b949e;
+  /* Les fonds de diff clairs (#ffeef0 / #f0fff4) posaient une bande blanche
+     dans le bloc de code : des teintes translucides tiennent sur les deux. */
+  --hljs-deletion: #ffa198;
+  --hljs-deletion-bg: rgba(248, 81, 73, 0.15);
+  --hljs-addition: #7ee787;
+  --hljs-addition-bg: rgba(46, 160, 67, 0.15);
+}
+
 .note-editor__body .ProseMirror pre .hljs-comment,
 .note-editor__body .ProseMirror pre .hljs-quote {
-  color: #6a737d;
+  color: var(--hljs-comment);
   font-style: italic;
 }
 
 .note-editor__body .ProseMirror pre .hljs-keyword,
 .note-editor__body .ProseMirror pre .hljs-selector-tag,
 .note-editor__body .ProseMirror pre .hljs-built_in {
-  color: #d73a49;
+  color: var(--hljs-keyword);
 }
 
 .note-editor__body .ProseMirror pre .hljs-string,
 .note-editor__body .ProseMirror pre .hljs-attr,
 .note-editor__body .ProseMirror pre .hljs-template-variable {
-  color: #032f62;
+  color: var(--hljs-string);
 }
 
 .note-editor__body .ProseMirror pre .hljs-number,
 .note-editor__body .ProseMirror pre .hljs-literal {
-  color: #005cc5;
+  color: var(--hljs-number);
 }
 
 .note-editor__body .ProseMirror pre .hljs-function,
 .note-editor__body .ProseMirror pre .hljs-title {
-  color: #6f42c1;
+  color: var(--hljs-function);
 }
 
 .note-editor__body .ProseMirror pre .hljs-type,
 .note-editor__body .ProseMirror pre .hljs-class .hljs-title {
-  color: #e36209;
+  color: var(--hljs-type);
 }
 
 .note-editor__body .ProseMirror pre .hljs-variable,
 .note-editor__body .ProseMirror pre .hljs-params {
-  color: #24292e;
+  color: var(--hljs-variable);
 }
 
 .note-editor__body .ProseMirror pre .hljs-tag {
-  color: #22863a;
+  color: var(--hljs-tag);
 }
 
 .note-editor__body .ProseMirror pre .hljs-attribute {
-  color: #6f42c1;
+  color: var(--hljs-attribute);
 }
 
 .note-editor__body .ProseMirror pre .hljs-regexp {
-  color: #032f62;
+  color: var(--hljs-regexp);
 }
 
 .note-editor__body .ProseMirror pre .hljs-meta {
-  color: #6a737d;
+  color: var(--hljs-meta);
 }
 
 .note-editor__body .ProseMirror pre .hljs-deletion {
-  background-color: #ffeef0;
-  color: #b31d28;
+  background-color: var(--hljs-deletion-bg);
+  color: var(--hljs-deletion);
 }
 
 .note-editor__body .ProseMirror pre .hljs-addition {
-  background-color: #f0fff4;
-  color: #22863a;
-}
-
-/* Dark mode syntax highlighting */
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-comment,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-quote {
-  color: #6b7280;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-keyword,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-selector-tag,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-built_in {
-  color: #ff7b72;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-string,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-attr,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-template-variable {
-  color: #a5d6ff;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-number,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-literal {
-  color: #79c0ff;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-function,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-title {
-  color: #d2a8ff;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-type,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-class .hljs-title {
-  color: #ffa657;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-variable,
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-params {
-  color: #c9d1d9;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-tag {
-  color: #7ee787;
-}
-
-[data-theme='dark'] .note-editor__body .ProseMirror pre .hljs-attribute {
-  color: #d2a8ff;
+  background-color: var(--hljs-addition-bg);
+  color: var(--hljs-addition);
 }
 
 /* ---- Table ---- */
@@ -1004,19 +1324,93 @@
 
 /* ---- Slash Command Menu ---- */
 
+/* Deux volets : rail des catégories à gauche, commandes à droite. Le menu ne
+   défile PAS lui-même — chaque volet défile seul, sinon le rail disparaîtrait
+   vers le haut dès qu'on descend dans une longue liste. */
 .slash-menu {
   display: flex;
-  flex-direction: column;
-  min-width: 240px;
-  max-width: 320px;
-  max-height: 280px;
-  overflow-y: auto;
+  align-items: stretch;
+  width: 420px;
+  max-width: min(420px, calc(100vw - 32px));
+  /* `inherit` : le conteneur du popover calcule la place REELLEMENT disponible
+     et la pose en pixels (cf. createSuggestionPopup). Une hauteur figee ici
+     redeborderait des que la fenetre est courte. */
+  max-height: inherit;
+  overflow: hidden;
   padding: 6px;
+  gap: 6px;
   background: var(--color-surface, #fff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
   box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.15));
   z-index: 50;
+}
+
+.slash-menu__rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 0 0 132px;
+  overflow-y: auto;
+  padding-right: 6px;
+  border-right: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.slash-menu__rail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.slash-menu__rail-item:hover {
+  background: var(--color-surface-hover, var(--color-selected));
+  color: var(--color-text-primary);
+}
+
+.slash-menu__rail-item.is-active {
+  background: var(--color-selected);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.slash-menu__rail-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slash-menu__rail-count {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+.slash-menu__list {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+/* Une liste vide n'a pas de rail : le menu reprend la largeur du message. */
+.slash-menu--empty {
+  width: auto;
+  min-width: 200px;
 }
 
 .slash-menu__empty {
@@ -1111,6 +1505,54 @@
   opacity: 0.6;
 }
 
+.wiki-link-menu__modes {
+  display: flex;
+  gap: 2px;
+  padding: 6px 6px 4px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.wiki-link-menu__mode {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary, #999);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.wiki-link-menu__mode:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-secondary);
+}
+
+.wiki-link-menu__mode--active {
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.12));
+  color: var(--color-primary-600, #4682b4);
+}
+
+[data-theme='dark'] .wiki-link-menu__modes {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .wiki-link-menu__mode:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .wiki-link-menu__mode--active {
+  background: rgba(135, 206, 235, 0.16);
+  color: var(--color-primary-300, #87ceeb);
+}
+
 .wiki-link-menu__item {
   display: flex;
   align-items: center;
@@ -1157,13 +1599,30 @@
   background: rgba(251, 191, 36, 0.1);
 }
 
-.wiki-link-menu__label {
+.wiki-link-menu__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   flex: 1;
+  min-width: 0;
+}
+
+.wiki-link-menu__label {
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 500;
+}
+
+.wiki-link-menu__path {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  opacity: 0.65;
 }
 
 .wiki-link-menu__badge {
@@ -1205,8 +1664,59 @@
     padding: 24px 16px 8px;
   }
 
+  /* Une seule rangée qui défile horizontalement plutôt que quatre rangées
+     empilées qui mangent la moitié de l'écran (le geste attendu sur mobile).
+     La barre de défilement est masquée : le débordement se découvre au doigt. */
   .note-editor__toolbar {
     padding: 6px 16px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .note-editor__toolbar::-webkit-scrollbar {
+    height: 0;
+  }
+
+  /* Sur une barre qui défile, centrer rendrait le DÉBUT inatteignable et
+     `flex: 1` écraserait le wrapper à la largeur visible au lieu de le laisser
+     déborder. Le bouton de repli revient dans le flux : en absolu il
+     surnagerait au-dessus du contenu qui défile sous lui. */
+  .note-editor__toolbar-main {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .note-editor__toolbar-collapse {
+    position: static;
+    flex-shrink: 0;
+  }
+
+  .note-editor__toolbar-btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .note-editor__toolbar-sep {
+    flex-shrink: 0;
+  }
+
+  /* Le défilement fait de la barre un conteneur de rognage : la palette ancrée
+     en absolu sous son bouton y disparaîtrait entièrement. Ancrée au viewport
+     en feuille basse, elle échappe au rognage sans calcul de coordonnées.
+     Les listes déroulantes voisines sont des <select> natifs — le système les
+     rend hors de la page, elles ne sont pas concernées. */
+  .note-editor__toolbar .note-editor__color-picker {
+    position: fixed;
+    top: auto;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
   }
 
   .note-editor__body {
@@ -1279,7 +1789,7 @@
   border: none;
   border-radius: var(--radius-sm, 4px);
   background: var(--color-primary-600, #4682b4);
-  color: #fff;
+  color: var(--color-text-inverted, #fff);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -2273,7 +2783,9 @@
   padding: 10px 14px;
   border: 1.5px dashed var(--color-border, #e2e8f0);
   border-radius: var(--radius-md, 8px);
-  background: var(--color-surface-secondary, #f8fafc);
+  /* --color-surface-secondary n'existe dans aucun thème : la valeur de repli
+     claire s'appliquait donc partout, y compris sur les thèmes sombres. */
+  background: var(--color-background-secondary, #f8fafc);
 }
 .bookmark-card__link-icon {
   flex-shrink: 0;
@@ -2422,7 +2934,7 @@
   width: 200px;
   flex-shrink: 0;
   overflow: hidden;
-  background: var(--color-surface-secondary, #f1f5f9);
+  background: var(--color-background-secondary, #f1f5f9);
 }
 .bookmark-card__thumb img {
   width: 100%;
@@ -2453,13 +2965,13 @@
   opacity: 1;
 }
 .bookmark-card__edit-btn:hover {
-  background: var(--color-surface-secondary, #f1f5f9);
+  background: var(--color-background-secondary, #f1f5f9);
   color: var(--color-text-secondary, #64748b);
 }
 
 .bookmark-card--error .bookmark-card__link {
   border-color: var(--color-border, #e2e8f0);
-  background: var(--color-surface-secondary, #f8fafc);
+  background: var(--color-background-secondary, #f8fafc);
 }
 
 /* Dark mode */
@@ -2533,6 +3045,83 @@
   width: 10px;
   height: 14px;
   flex-shrink: 0;
+}
+
+/* « + » — insère un bloc sous celui survolé (mêmes réglages que la poignée) */
+.note-editor__insert-handle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--color-text-tertiary, #94a3b8);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s,
+    background 0.12s,
+    color 0.12s;
+  user-select: none;
+  z-index: 10;
+}
+
+.note-editor__insert-handle.is-visible {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.note-editor__insert-handle:hover {
+  opacity: 1 !important;
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.06));
+  color: var(--color-text-secondary);
+}
+
+/* Menu de bloc (clic sur la poignée) */
+.note-editor__block-menu {
+  position: fixed;
+  z-index: 1100;
+  min-width: 190px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-dropdown, 8px);
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0, 0, 0, 0.14));
+}
+
+.note-editor__block-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.note-editor__block-menu-item:hover,
+.note-editor__block-menu-item:focus-visible {
+  background: var(--color-hover-overlay, rgba(0, 0, 0, 0.06));
+}
+
+.note-editor__block-menu-item--danger {
+  color: var(--color-error-500);
+}
+
+.note-editor__block-menu-header {
+  padding: 8px 10px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
 }
 
 /* Drop indicator line */
@@ -2658,7 +3247,9 @@
   transition:
     opacity 0.15s,
     background 0.15s;
-  background: rgba(255, 255, 255, 0.7);
+  /* Un blanc à 70 % en base : la poignée faisait une pastille lumineuse sur
+     tous les thèmes sombres sauf « dark », seul à avoir eu son exception. */
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.7));
 }
 
 .file-embed:hover .file-embed__resize-handle,
@@ -2728,21 +3319,26 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-[data-theme='dark'] .file-embed__resize-handle {
-  background: rgba(0, 0, 0, 0.4);
-}
+/* L'exception sombre de .file-embed__resize-handle a disparu : la base tient
+   maintenant sur --color-surface-hover, qui vaut pour tous les thèmes. */
 
 /* ==================== Transclusion ==================== */
 
 .transclusion {
   margin: 12px 0;
-  padding: 14px 18px;
   border: 1px solid var(--color-border-light, var(--color-border));
   border-left: 3px solid var(--color-primary-400, #87ceeb);
   border-radius: var(--radius-md, 8px);
   background: var(--color-primary-50, rgba(135, 206, 235, 0.04));
-  cursor: pointer;
-  transition: all 0.15s;
+  overflow: hidden;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.transclusion--selected {
+  outline: 2px solid var(--color-primary-400, #87ceeb);
+  outline-offset: 2px;
 }
 
 .transclusion:hover {
@@ -2751,37 +3347,169 @@
 }
 
 .transclusion__header {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  cursor: pointer;
+  color: var(--color-primary-600, #4682b4);
+  font-family: inherit;
+  text-align: left;
 }
 
-.transclusion__icon {
+.transclusion__header:hover {
+  background: rgba(135, 206, 235, 0.06);
+}
+
+.transclusion__header svg {
   flex-shrink: 0;
-  color: var(--color-primary-500, #4682b4);
   opacity: 0.7;
 }
 
 .transclusion__title {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--color-primary-600, #4682b4);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.transclusion__preview {
+.transclusion__subtarget {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  opacity: 0.65;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.transclusion__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--color-text-tertiary, #999);
+  cursor: pointer;
+}
+
+.transclusion__remove:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--color-error-500, #ef4444);
+}
+
+.transclusion__content {
+  padding: 10px 16px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-text-primary);
+}
+
+.transclusion__content > *:first-child {
+  margin-top: 0;
+}
+
+.transclusion__content > *:last-child {
+  margin-bottom: 0;
+}
+
+.transclusion__content--orphan,
+.transclusion__content--deep,
+.transclusion__content--empty {
   font-size: 0.8125rem;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: var(--color-text-tertiary, #999);
+  font-style: italic;
+}
+
+.transclusion__content--nested {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary, #999);
+  font-style: italic;
+  text-align: center;
+  padding: 6px;
 }
 
 [data-theme='dark'] .transclusion {
-  border-color: rgba(255, 255, 255, 0.06);
-  background: rgba(135, 206, 235, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(135, 206, 235, 0.04);
+}
+
+[data-theme='dark'] .transclusion__header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .transclusion__header:hover {
+  background: rgba(135, 206, 235, 0.08);
+}
+
+[data-theme='dark'] .transclusion__subtarget {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .transclusion__remove:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== Block Link Context Menu ==================== */
+
+/* Menus contextuels de l editeur : meme langage visuel, une seule source. */
+.block-link-context-menu,
+.note-image-menu {
+  z-index: 1000;
+  min-width: 220px;
+  padding: 4px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  font-size: 0.8125rem;
+}
+
+.block-link-context-menu__item,
+.note-image-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.block-link-context-menu__item:hover,
+.note-image-menu__item:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+}
+
+.block-link-context-menu__item svg,
+.note-image-menu__item svg {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary, #999);
+}
+
+[data-theme='dark'] .block-link-context-menu,
+[data-theme='dark'] .note-image-menu {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--color-surface, #1a1d29);
+}
+
+[data-theme='dark'] .block-link-context-menu__item:hover,
+[data-theme='dark'] .note-image-menu__item:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ==================== Editor Theme Selector ==================== */
@@ -2794,7 +3522,6 @@
   background: var(--color-background);
   color: var(--color-text-secondary);
   cursor: pointer;
-  margin-left: auto;
   outline: none;
   /* Override global reset appearance:none */
   -webkit-appearance: menulist;
@@ -2981,7 +3708,12 @@
 
 /* ==================== Columns ==================== */
 
-.note-editor__body .ProseMirror .columns {
+/* Prefixe `.ProseMirror` et NON `.note-editor__body .ProseMirror` : les
+   colonnes s'editent aussi dans une note de coffre partage et se relisent dans
+   une version archivee, deux surfaces qui montent l'editeur sans cette classe.
+   Tout ce qui est prefixe par elle y disparait — bordures, et surtout la barre
+   d'outils du bloc, qui s'y affichait en boutons bruts. */
+.ProseMirror .columns {
   margin: 12px 0;
   border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
   border-radius: var(--radius-md, 8px);
@@ -2989,9 +3721,135 @@
   background: var(--color-background-secondary, rgba(0, 0, 0, 0.015));
 }
 
-.note-editor__body .ProseMirror .column {
+/* LA GRILLE VA ICI, ET NULLE PART AILLEURS.
+   `NodeViewContent` (c'est-a-dire `.columns`) n'est PAS le parent des colonnes :
+   TipTap y insere un conteneur `[data-node-view-content-react]` qui porte le
+   contenu reel. Une grille posee sur `.columns` n'a donc qu'UN enfant — ce
+   conteneur —, qui occupe la premiere piste (un quart de la largeur a quatre
+   colonnes) et empile les colonnes dedans. C'est exactement le defaut observe.
+   `minmax(0, 1fr)` et non `1fr` : une piste refuse par defaut de descendre sous
+   la largeur de son contenu, et un mot indivisible faisait deborder le bloc. */
+.ProseMirror .columns > [data-node-view-content-react] {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.ProseMirror .columns--3 > [data-node-view-content-react] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ProseMirror .columns--4 > [data-node-view-content-react] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* L'element de grille est la racine de la vue de noeud (`node-column`, posee
+   par TipTap), pas `.column` qui vit dedans : sans ce relais, les colonnes ne
+   s'etirent plus a la hauteur de la rangee et `min-width` ne redescend pas. */
+.ProseMirror .node-column {
+  display: flex;
+  min-width: 0;
+}
+
+.ProseMirror .node-column > .column {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Barre d'outils du bloc : discrète, révélée au survol ou dès que le curseur
+   entre dans une colonne. Toujours dans le flux (pas d'absolu) pour ne pas
+   recouvrir la première ligne de la première colonne. */
+.ProseMirror .columns-block {
+  margin: 12px 0;
+}
+
+/* La marge appartient au bloc, pas a la grille : sinon les deux s empilent. */
+.ProseMirror .columns-block .columns {
+  margin: 0;
+}
+
+.ProseMirror .columns-block__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.ProseMirror .columns-block:hover .columns-block__toolbar,
+.ProseMirror .columns-block:focus-within .columns-block__toolbar {
+  opacity: 1;
+}
+
+.ProseMirror .columns-block__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.ProseMirror .columns-block__action:hover:not(:disabled) {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+  color: var(--color-text-primary);
+}
+
+.ProseMirror .columns-block__action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ProseMirror .columns-block__action--danger:hover:not(:disabled) {
+  border-color: var(--color-error, #e74c3c);
+  color: var(--color-error, #e74c3c);
+}
+
+/* Le « × » d'une colonne : ancré en haut à droite de SA colonne. */
+.ProseMirror .column {
+  position: relative;
+}
+
+.ProseMirror .column__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-tertiary, #999);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.ProseMirror .column:hover .column__remove,
+.ProseMirror .column:focus-within .column__remove {
+  opacity: 1;
+}
+
+.ProseMirror .column__remove:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.06));
+  color: var(--color-error, #e74c3c);
+}
+
+.ProseMirror .column {
   padding: 4px 8px;
   min-height: 40px;
+  overflow-wrap: anywhere;
   border: 1px dashed var(--color-border-light, rgba(0, 0, 0, 0.12));
   border-radius: var(--radius-sm, 4px);
   transition:
@@ -2999,21 +3857,21 @@
     background 0.15s;
 }
 
-.note-editor__body .ProseMirror .column:focus-within {
+.ProseMirror .column:focus-within {
   border-color: var(--color-primary-400, #87ceeb);
   background: var(--color-primary-50, rgba(135, 206, 235, 0.06));
 }
 
-[data-theme='dark'] .note-editor__body .ProseMirror .columns {
+[data-theme='dark'] .ProseMirror .columns {
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.03);
 }
 
-[data-theme='dark'] .note-editor__body .ProseMirror .column {
+[data-theme='dark'] .ProseMirror .column {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-[data-theme='dark'] .note-editor__body .ProseMirror .column:focus-within {
+[data-theme='dark'] .ProseMirror .column:focus-within {
   border-color: var(--color-primary-400, #87ceeb);
   background: rgba(135, 206, 235, 0.08);
 }
@@ -3128,7 +3986,7 @@
   border: none;
   border-radius: var(--radius-sm, 4px);
   background: var(--color-primary-600, #4682b4);
-  color: white;
+  color: var(--color-text-inverted, #fff);
   font-size: 0.6875rem;
   cursor: pointer;
 }
@@ -3185,6 +4043,23 @@
 }
 
 .inline-date--selected {
+  box-shadow: 0 0 0 2px var(--color-primary-300, #87ceeb);
+}
+
+/* Mention d’une personne — même famille de puce que la date inline. */
+.note-mention {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
+  color: var(--color-primary-700, #36648b);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ProseMirror-selectednode.note-mention {
   box-shadow: 0 0 0 2px var(--color-primary-300, #87ceeb);
 }
 
@@ -3635,6 +4510,36 @@
   font-size: 0.875rem;
 }
 
+/* Menu « Personnes » (mentions) */
+.suggestion-menu__heading {
+  padding: 4px 10px 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.suggestion-menu__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-primary-100, rgba(135, 206, 235, 0.2));
+  color: var(--color-primary-700, #36648b);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  flex: none;
+}
+
+.suggestion-menu__secondary {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+}
+
 .suggestion-menu__emoji {
   flex-shrink: 0;
   font-size: 1.125rem;
@@ -3757,9 +4662,9 @@
 }
 
 .sub-page-block__remove:hover {
-  background: var(--color-danger-50, #fef2f2);
-  border-color: var(--color-danger-300, #fca5a5);
-  color: var(--color-danger-500, #ef4444);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--color-error-500);
+  color: var(--color-error-500);
 }
 
 /* Sub-page dark mode */
@@ -4094,4 +4999,46 @@
 [data-theme='foret'] .note-editor__bubble-menu {
   background: rgba(21, 39, 28, 0.95);
   border-color: rgba(60, 100, 76, 0.5);
+}
+
+/* ==================== Minuit Theme Overrides ==================== */
+/* Minuit n'a pas de fond atmosphérique : les surfaces restent opaques, à la
+   différence des blocs ci-dessus. Seuls les endroits où une valeur claire est
+   codée en dur (ou où l'accent doit se voir) sont repris ici. */
+
+[data-theme='minuit'] .note-editor__body .ProseMirror h1,
+[data-theme='minuit'] .note-editor__body .ProseMirror h2,
+[data-theme='minuit'] .note-editor__body .ProseMirror h3,
+[data-theme='minuit'] .note-editor__body .ProseMirror h4 {
+  color: #ecc177;
+}
+
+[data-theme='minuit'] .note-editor__toolbar {
+  background: #101728;
+  border-color: rgba(70, 90, 135, 0.5);
+}
+
+[data-theme='minuit'] .note-editor__body .ProseMirror pre {
+  background: #0a0f1e;
+  border-color: rgba(70, 90, 135, 0.5);
+}
+
+[data-theme='minuit'] .note-editor__body .ProseMirror code {
+  background: rgba(226, 171, 85, 0.12);
+  color: #ecc177;
+}
+
+[data-theme='minuit'] .link-preview-popover {
+  background: #161e35;
+  border-color: rgba(70, 90, 135, 0.6);
+}
+
+[data-theme='minuit'] .wiki-link-menu {
+  background: #161e35;
+  border-color: rgba(70, 90, 135, 0.6);
+}
+
+[data-theme='minuit'] .note-editor__bubble-menu {
+  background: #161e35;
+  border-color: rgba(70, 90, 135, 0.6);
 }

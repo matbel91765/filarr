@@ -1,0 +1,441 @@
+/**
+ * Dossiers personnalisables — la feuille de style.
+ *
+ * ── LOI Nº1 : UN DOSSIER NON PERSONNALISÉ N'EST PAS TOUCHÉ ──────────────────
+ *
+ * Aucune règle de ce fichier ne s'applique à un dossier au repos : toutes sont
+ * sous `.folder-header`, `.folder-readme`, `.folder-band`, `.folder-block` ou
+ * `.folder-menu`, et `FolderView` ne monte AUCUN de ces éléments tant que le
+ * dossier n'a pas de réglage propre. La seule exception est le bouton du menu,
+ * qui vit dans la barre d'actions déjà existante et n'y ajoute qu'une icône.
+ *
+ * Zéro couleur en dur : le produit a neuf thèmes, une valeur hexadécimale posée
+ * ici serait juste sur l'un d'eux et fausse sur les huit autres. Ce qui doit
+ * rester lisible PAR-DESSUS une couverture arbitraire passe par `color-mix` sur
+ * un jeton de surface — jamais par un voile noir, qui serait juste sur les
+ * thèmes sombres et sale sur les clairs.
+ */
+
+/* ==================== L'en-tête ==================== */
+
+/**
+ * `PageCover` rend un FRAGMENT : sa bannière, sa rangée de commandes et ses
+ * fenêtres surgissantes deviennent des enfants directs de ce conteneur. C'est ce
+ * qui permet de reposer le titre à côté de l'icône sans toucher au composant.
+ */
+.folder-header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: var(--spacing-4);
+}
+
+/**
+ * 160 px, contre 180 sur une note. Un dossier se PARCOURT : chaque pixel pris
+ * ici est un fichier de moins au premier coup d'œil.
+ */
+.folder-header .page-cover__banner {
+  height: 160px;
+  border-radius: var(--radius-card);
+}
+
+/* La rangée de commandes s'aligne sur la marge de la liste, pas sur celle,
+   beaucoup plus large, d'une page de note. */
+.folder-header .page-cover__controls {
+  padding: var(--spacing-2) 0 0;
+}
+
+/**
+ * DEVANT la couverture, et non dessous : l'icône et le titre remontent sur le
+ * bas du bandeau. Posés dessous, ils auraient ajouté leur propre ligne — 260 px
+ * avant le premier fichier, et plus personne ne met de couverture.
+ */
+.folder-header--with-cover .page-cover__controls {
+  margin-top: -56px;
+  position: relative;
+  z-index: 1;
+  padding-left: var(--spacing-3);
+}
+
+.folder-header .page-cover__popover {
+  top: 96px;
+  left: var(--spacing-3);
+}
+
+/**
+ * Le titre est posé en absolu sur la rangée de commandes, donc toujours À CÔTÉ
+ * de l'icône quelle que soit la présence d'une couverture. La pastille de
+ * surface le garde lisible au-dessus de n'importe quelle image.
+ */
+.folder-header__title {
+  position: absolute;
+  left: calc(48px + var(--spacing-6));
+  bottom: var(--spacing-2);
+  margin: 0;
+  padding: 2px var(--spacing-2);
+  max-width: calc(100% - 48px - var(--spacing-8));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.folder-header--with-cover .folder-header__title {
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+}
+
+/**
+ * Sans couverture, la rangée de commandes est la SEULE ligne de l’en-tête, et le
+ * titre (absolu, à droite de l’icône) atterrissait sur « Ajouter une couverture ».
+ * Le bouton passe à droite, le titre garde la place qu’il faut à sa gauche.
+ */
+.folder-header:not(.folder-header--with-cover) .page-cover__add-cover {
+  margin-left: auto;
+}
+
+.folder-header:not(.folder-header--with-cover) .folder-header__title {
+  max-width: calc(100% - 48px - 220px - var(--spacing-8));
+}
+
+/* ==================== La note d'accueil ==================== */
+
+.folder-readme {
+  margin-bottom: var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.folder-readme__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+.folder-readme__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.folder-readme__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-readme__chevron,
+.folder-band__chevron {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.folder-readme__chevron--collapsed,
+.folder-band__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+.folder-readme__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+/* Le focus clavier n'est pas bloqué par l'opacité : `:focus-within` rallume les
+   actions pour qui navigue au clavier, sinon ce serait un piège à focus. */
+.folder-readme:hover .folder-readme__actions,
+.folder-readme__actions:focus-within {
+  opacity: 1;
+}
+
+.folder-readme__action {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 2px var(--spacing-2);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.folder-readme__action:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+/**
+ * La note s'affiche entière tant qu'elle tient dans quatre cents pixels, puis
+ * elle défile chez elle. Un README de trois pages ne doit pas repousser la liste
+ * de fichiers hors de l'écran — c'est la même règle que le bandeau.
+ */
+.folder-readme__body {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0 var(--spacing-3) var(--spacing-3);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+.folder-readme__missing {
+  margin: 0;
+  padding: 0 var(--spacing-3) var(--spacing-3);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* ==================== Le bandeau ==================== */
+
+.folder-band {
+  margin-bottom: var(--spacing-4);
+}
+
+.folder-band__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
+}
+
+.folder-band__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.folder-band__origin {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.folder-band__workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+/**
+ * LA BORNE. Au repos, le bandeau ne prend jamais plus de deux rangées de blocs :
+ * au-delà il défile chez lui, et la liste de fichiers reste visible. C'est ce
+ * qui rend vraie la promesse « au-dessus de la liste, jamais à sa place ».
+ * 2 × 88 px de rangée + 16 px de gouttière + 88 px de seconde rangée = 368.
+ */
+.folder-band__grid {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 368px;
+  overflow-y: auto;
+}
+
+/**
+ * En édition, la borne saute : on ne range pas ce qu'on ne voit pas. Et la
+ * zone de dépôt ne descend jamais sous DEUX rangées (2 × 88 + 16 = 192 px) :
+ * un bandeau vide ou d'une rangée offrait une cible plus petite que le témoin
+ * de dépôt qu'on y glissait.
+ */
+.folder-band--editing .folder-band__grid {
+  max-height: none;
+  min-height: 192px;
+  overflow-y: visible;
+}
+
+/**
+ * LE PANNEAU NE REPOUSSE PAS LA LISTE. La palette de l'accueil peut prendre
+ * `100vh - 200px` : là-bas, rien ne vit sous la grille. Ici, la rangée du
+ * bandeau mesure max(grille, panneau), et un panneau de 700 px face à une
+ * grille de deux rangées laissait un vide de 400 px avant « Dossiers » et
+ * « Fichiers ». Quatre rangées de blocs (4 × 104 px) suffisent : le corps du
+ * panneau défile déjà (`.home-panel__body`), rien n'est perdu.
+ */
+.folder-band--editing .home-panel {
+  max-height: min(calc(100vh - 200px), 416px);
+}
+
+/**
+ * Ce que l'édition doit dire sous sa barre : le bandeau est hérité et
+ * « Terminé » le détachera, ou la grille est rangée en douze colonnes mais
+ * s'affichera en six à cette largeur. Une phrase, pas un bandeau d'alerte.
+ */
+.folder-band__hint {
+  margin: var(--spacing-2) 0 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.folder-band--editing .folder-band__workspace {
+  margin-top: var(--spacing-3);
+}
+
+.folder-band__empty {
+  /* Pleine rangée : l'enveloppe `.grid-surface__empty` fait déjà le placement,
+     mais si cet élément atterrit ailleurs qu'en état vide de la grille il ne
+     doit pas pour autant tomber dans une case d'une colonne. */
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: var(--spacing-4);
+  border: var(--border-width-1) dashed var(--color-border-strong);
+  border-radius: var(--radius-card);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/**
+ * Les affordances d'édition — trame, retrait collectif, anneau de sélection —
+ * sont celles de l'accueil (`homeEdit.css`), scopées là-bas sous
+ * `.home-page--editing`. On les rebranche ici sous `.folder-band--editing` :
+ * même apparence, même signification, une seule définition de chaque effet
+ * n'était pas possible sans changer la portée des règles de l'accueil.
+ */
+.folder-band--editing .grid-surface--editing::before {
+  opacity: 0.06;
+}
+
+.folder-band--editing .home-slot {
+  transform: scale(0.985);
+  cursor: pointer;
+}
+
+.folder-band--editing .home-slot--selected {
+  outline: var(--border-width-2, 2px) solid var(--color-primary-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+
+/* ==================== Les blocs contextuels ==================== */
+
+.folder-block {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.folder-block__empty,
+.folder-block__caption {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.folder-block__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.folder-block__row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-1) var(--spacing-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder-block__row:disabled {
+  cursor: default;
+}
+
+.folder-block__row:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+}
+
+.folder-block__glyph {
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.folder-block__row-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-block__row-meta {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.folder-block__stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.folder-block__figure {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ==================== Le bouton du menu ==================== */
+
+.folder-menu__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  background: transparent;
+}
+
+.folder-menu__button:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+.folder-menu__glyph {
+  width: 18px;
+  height: 18px;
+}
+
+/* ==================== Mouvement réduit ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-readme__chevron,
+  .folder-band__chevron,
+  .folder-readme__actions {
+    transition: none;
+  }
+}

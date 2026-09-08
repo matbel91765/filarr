@@ -155,71 +155,11 @@
   color: var(--color-primary-600, #4682b4);
 }
 
-/* ---- Filter Bar ---- */
-
-.graph-view__filter-bar {
-  position: absolute;
-  /* top/left set via inline style (draggable) */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  z-index: 5;
-  user-select: none;
-  border-radius: var(--radius-md, 8px);
-  padding: 2px;
-}
-
-.graph-view__filter-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background: var(--color-surface, #fff);
-  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
-  color: var(--color-text-secondary);
-}
-
-.graph-view__filter-search:focus-within {
-  border-color: var(--color-primary-400, #87ceeb);
-}
-
-.graph-view__filter-input {
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 0.75rem;
-  color: var(--color-text-primary);
-  width: 120px;
-}
-
-.graph-view__filter-input::placeholder {
-  color: var(--color-text-secondary);
-  opacity: 0.6;
-}
-
-.graph-view__toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: var(--radius-md, 8px);
-  background: var(--color-surface, #fff);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: all 0.15s;
-  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
-}
-
-.graph-view__toggle-btn:hover {
-  border-color: var(--color-primary-300, #87ceeb);
-  color: var(--color-primary-600, #4682b4);
-}
-
-.graph-view__toggle-btn.is-active {
+/* Bouton engrenage (panneau de réglages) : état actif façon toggle.
+ * L'ancienne barre de toggles draggable a été remplacée par le panneau
+ * GraphSettingsPanel — ses styles (.graph-view__filter-*, __toggle-btn)
+ * ont été retirés avec elle. */
+.graph-view__control-btn.is-active {
   background: var(--color-primary-600, #4682b4);
   border-color: var(--color-primary-600, #4682b4);
   color: white;
@@ -463,14 +403,14 @@
   stroke: rgba(135, 206, 235, 0.45);
 }
 
-[data-theme='dark'] .graph-view__filter-search,
-[data-theme='dark'] .graph-view__toggle-btn {
+[data-theme='dark'] .graph-view__control-btn {
   background: rgba(30, 35, 50, 0.9);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-[data-theme='dark'] .graph-view__filter-input {
-  color: var(--color-text-primary, #e2e8f0);
+[data-theme='dark'] .graph-view__control-btn.is-active {
+  background: var(--color-primary-600, #4682b4);
+  border-color: var(--color-primary-600, #4682b4);
 }
 
 [data-theme='dark'] .graph-view__link-status {
@@ -485,4 +425,169 @@
 
 [data-theme='dark'] .graph-view__link-line {
   stroke: rgba(135, 206, 235, 0.6);
+}
+
+/* ==================== Side panel (#22) ==================== */
+
+.graph-view__panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  z-index: 20;
+  overflow: hidden;
+}
+
+.graph-view__panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  flex-shrink: 0;
+}
+.graph-view__panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.graph-view__panel-close {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+.graph-view__panel-close:hover {
+  background: var(--color-surface-secondary, rgba(0, 0, 0, 0.04));
+}
+
+.graph-view__panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-size: 0.82rem;
+}
+
+.graph-view__panel-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 14px;
+}
+.graph-view__panel-stats strong {
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-view__panel-section {
+  margin-top: 14px;
+}
+.graph-view__panel-section h4 {
+  margin: 0 0 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+
+.graph-view__panel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.graph-view__panel-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.18));
+  color: var(--color-primary-600, #4682b4);
+  border-radius: 999px;
+}
+
+.graph-view__panel-meta,
+.graph-view__panel-preview {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.graph-view__panel-subhead {
+  margin: 8px 0 4px;
+  font-size: 0.7rem;
+  color: var(--color-text-tertiary);
+}
+
+.graph-view__panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.graph-view__panel-link {
+  width: 100%;
+  text-align: left;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.graph-view__panel-link:hover {
+  background: var(--color-surface-secondary, rgba(0, 0, 0, 0.04));
+}
+
+.graph-view__panel-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+  flex-shrink: 0;
+}
+.graph-view__panel-primary {
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-primary-500, #4682b4);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.graph-view__panel-primary:hover {
+  background: var(--color-primary-600, #3a6f99);
+}
+
+[data-theme='dark'] .graph-view__panel {
+  background: var(--color-surface, #1e1e2e);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .graph-view__panel-close:hover,
+[data-theme='dark'] .graph-view__panel-link:hover {
+  background: rgba(255, 255, 255, 0.06);
 }

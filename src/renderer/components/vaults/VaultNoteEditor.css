@@ -1,0 +1,555 @@
+/**
+ * VaultNoteEditor (E3-12) — typography for the vault-note editing surface.
+ *
+ * NoteEditor's rules are scoped under `.note-editor__body`, which we deliberately
+ * don't reuse: that scope also carries the personal editor's chrome (toolbar
+ * offsets, drag handles, collab cursors) which has no meaning here. This is the
+ * minimum needed for a ProseMirror document to read correctly inside a modal —
+ * all tokens, no hard-coded colours, so it follows the active theme.
+ */
+
+.vault-note-editor__surface .ProseMirror {
+  outline: none;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.7;
+  min-height: 12rem;
+}
+
+.vault-note-editor__surface .ProseMirror > * + * {
+  margin-top: 0.6em;
+}
+
+.vault-note-editor__surface .ProseMirror h1,
+.vault-note-editor__surface .ProseMirror h2,
+.vault-note-editor__surface .ProseMirror h3,
+.vault-note-editor__surface .ProseMirror h4 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.vault-note-editor__surface .ProseMirror h1 {
+  font-size: 1.5rem;
+}
+.vault-note-editor__surface .ProseMirror h2 {
+  font-size: 1.25rem;
+}
+.vault-note-editor__surface .ProseMirror h3 {
+  font-size: 1.1rem;
+}
+.vault-note-editor__surface .ProseMirror h4 {
+  font-size: 1rem;
+}
+
+.vault-note-editor__surface .ProseMirror ul,
+.vault-note-editor__surface .ProseMirror ol {
+  padding-left: 1.25rem;
+}
+
+.vault-note-editor__surface .ProseMirror blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.vault-note-editor__surface .ProseMirror code {
+  background: var(--color-surface-secondary, var(--color-hover-overlay));
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.1em 0.3em;
+  font-size: 0.9em;
+}
+
+.vault-note-editor__surface .ProseMirror pre {
+  background: var(--color-surface-secondary, var(--color-hover-overlay));
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md, 6px);
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.vault-note-editor__surface .ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.vault-note-editor__surface .ProseMirror th,
+.vault-note-editor__surface .ProseMirror td {
+  border: 1px solid var(--color-border-light);
+  padding: 0.35rem 0.5rem;
+}
+
+/* A viewer (or a save in flight) gets a non-editable surface — make that visible
+   rather than letting keystrokes silently vanish. */
+.vault-note-editor__surface .ProseMirror[contenteditable='false'] {
+  color: var(--color-text-secondary);
+}
+
+/* ── Live room ─────────────────────────────────────────────────────────────
+   Remote carets come from @tiptap/extension-collaboration-caret, which paints
+   inline colours it takes from each member's presence. Only the geometry and
+   the label chrome belong here. */
+
+.vault-note-editor__surface .collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.vault-note-editor__surface .collaboration-carets__label {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  border-radius: var(--radius-sm, 4px) var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #fff;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.vault-collab-presence {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-surface-secondary, var(--color-hover-overlay));
+}
+
+.vault-collab-presence__avatars {
+  display: flex;
+  align-items: center;
+}
+
+.vault-collab-presence__avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: -0.35rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vault-collab-presence__avatar--self {
+  border-color: var(--color-primary, var(--color-text-primary));
+}
+
+/* A reader is DIMMED and dotted: their typing never reaches the vault, and the
+   room has to say so rather than let them believe otherwise. */
+.vault-collab-presence__avatar--reader {
+  opacity: 0.55;
+}
+
+.vault-collab-presence__reader-dot {
+  position: absolute;
+  right: -0.1rem;
+  bottom: -0.1rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+  border: 1px solid var(--color-surface);
+}
+
+/* The peer holding the pen. */
+.vault-collab-presence__avatar--saver {
+  box-shadow: 0 0 0 2px var(--color-success-500, var(--color-primary, #16a34a));
+}
+
+.vault-collab-presence__avatar--overflow {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-light);
+}
+
+.vault-collab-presence__status,
+.vault-collab-presence__saver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.vault-collab-presence__saver {
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+}
+
+.vault-collab-presence__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--color-text-tertiary);
+}
+
+.vault-collab-presence[data-status='synced'] .vault-collab-presence__dot {
+  background: var(--color-success-500, #16a34a);
+}
+
+.vault-collab-presence[data-status='connected'] .vault-collab-presence__dot,
+.vault-collab-presence[data-status='connecting'] .vault-collab-presence__dot {
+  background: var(--color-warning-500, #d97706);
+}
+
+.vault-collab-presence[data-status='offline'] .vault-collab-presence__dot {
+  background: var(--color-text-tertiary);
+}
+
+/* ── Confort phase 3 : « untel ecrit… » + sillage des modifications ───────── */
+
+.vault-collab-presence__typing {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+@keyframes vault-collab-typing-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    box-shadow: 0 0 0 2px currentColor;
+  }
+}
+
+.vault-collab-presence__avatar--typing {
+  animation: vault-collab-typing-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-collab-presence__avatar--typing {
+    animation: none;
+    box-shadow: 0 0 0 2px currentColor;
+  }
+}
+
+/* Le sillage : DECORATION seulement, jamais du contenu. La couleur vient de
+   l'awareness de l'auteur via --recent-edit-color. */
+.collab-recent-edit {
+  background: color-mix(in srgb, var(--recent-edit-color, #888) 14%, transparent);
+  transition: background 1.5s ease;
+  border-radius: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   LE MÊME ÉDITEUR, DANS L'HABILLAGE DE L'ÉDITEUR DE NOTES ORDINAIRE
+   (variant="pane").
+
+   CE QUI A CHANGÉ ICI, ET POURQUOI. Le panneau recevait le CORPS ET LE PIED
+   d'une boîte de dialogue : d'où un fond de modale, des marges de formulaire et
+   un pied « Fermer / Enregistrer » plantés au milieu de l'onglet Notes. Ces
+   règles-là ne bornent plus rien — elles alignent le panneau sur `NoteEditor` :
+   une barre fine en tête, puis le document qui coule dans la page.
+
+   ELLES NE REDÉFINISSENT PAS LA TYPOGRAPHIE DU TITRE. Elle vient des classes
+   `.note-editor__title*`, réutilisées telles quelles : deux échelles pour un
+   même titre, ce serait deux vérités sur ce qu'est un titre de note. Seul le
+   cadrage propre au panneau est écrit ici, en variables de thème.
+   ───────────────────────────────────────────────────────────────────────── */
+.vault-note-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--color-background);
+}
+
+.vault-note-pane--placeholder {
+  padding: var(--spacing-4, 1rem);
+}
+
+/* La barre de tête : le retour, l'état de l'enregistrement, le geste explicite
+   quand il en faut un, la sortie. Elle ne défile PAS — l'état de
+   l'enregistrement doit rester lisible où qu'on soit dans le document. */
+.vault-note-pane__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 0.5rem);
+  flex: 0 0 auto;
+  padding: var(--spacing-2, 0.5rem) var(--spacing-3, 0.75rem);
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.vault-note-pane__bar-spacer {
+  flex: 1 1 auto;
+}
+
+/* Le badge d'état reprend `.note-editor__save-state` ; il n'ajoute qu'un
+   non-retour à la ligne, la barre étant étroite. */
+.vault-note-pane__save-state {
+  white-space: nowrap;
+}
+
+/* L'AVEU « ce brouillon n'est stocké nulle part », sous la barre et hors du
+   défilement : il doit rester lisible où qu'on soit dans le document, puisque
+   ce qu'il empêche est un geste (fermer l'onglet), pas une lecture.
+
+   TEINTES DE JETON, JAMAIS DE VALEURS EN DUR — les douze thèmes du dépôt
+   redéfinissent ces variables, et une couleur figée ici serait illisible sur la
+   moitié d'entre eux. */
+.vault-note-pane__draft-warning {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: var(--spacing-2, 0.5rem) var(--spacing-3, 0.75rem);
+  font-size: var(--font-size-xs, 0.75rem);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-hover, var(--color-surface));
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+
+/* Le document défile d'un seul bloc — titre compris, comme dans une note
+   ordinaire. C'est ce qui remplace la hauteur bornée que `Modal` imposait. */
+.vault-note-pane__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Le titre reprend `.note-editor__title-area` ; on ne corrige que la respiration
+   du haut, la puce d'icône d'une note personnelle n'existant pas ici.
+
+   LE SÉLECTEUR EST DOUBLÉ, ET C'EST LA RÈGLE DU DÉPÔT. En face,
+   `.note-editor__title-area` pose un `padding` RACCOURCI de même spécificité
+   (0,1,0), dans une AUTRE feuille : à égalité, c'est l'ordre d'insertion des
+   modules qui tranche — c'est-à-dire l'ordre des `import` d'un fichier tiers
+   (`NotesView` charge ce panneau avant l'éditeur ordinaire, donc le raccourci
+   gagnait et cette ligne ne servait à rien). Un longhand face à un raccourci ne
+   se départage pas au hasard : on double. */
+.vault-note-pane__title-area.vault-note-pane__title-area {
+  padding-top: var(--spacing-6, 1.5rem);
+}
+
+/* Bandeaux, surface et commentaires sur la même colonne que le titre : la
+   gouttière est celle de `.note-editor__title-area`, et elle est LUE, pas
+   recopiée — deux nombres tenus d'accord à la main dans deux fichiers finissent
+   toujours par diverger sans que rien ne le signale. */
+.vault-note-pane__doc {
+  padding: 0 var(--note-editor-gutter, 48px) var(--spacing-6, 1.5rem);
+}
+
+/* LA SURFACE N'EST PLUS DANS UNE BOÎTE. Le cadre, le fond et la hauteur bornée
+   appartenaient à la fenêtre ; dans la page, ils faisaient lire le texte comme
+   un champ de formulaire. */
+.vault-note-pane__surface {
+  padding-top: var(--spacing-2, 0.5rem);
+}
+
+.vault-note-pane__surface .ProseMirror {
+  font-size: var(--font-size-base, 1rem);
+  min-height: 40vh;
+}
+
+/* Le composeur de commentaire vit avec les commentaires, en bas, et non en
+   ligne de formulaire sous le titre. */
+.vault-note-pane__compose {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2, 0.5rem);
+  padding-top: var(--spacing-2, 0.5rem);
+}
+
+@media (max-width: 768px) {
+  .vault-note-pane__doc {
+    padding: 0 var(--spacing-4, 1rem) var(--spacing-4, 1rem);
+  }
+}
+
+/* ── Arbitrage d'un 409 : le face-à-face de fusion ──────────────────────────
+   Le cadre seul vit ici ; tout le dessin des différences vient de
+   `BlockMergeView.css`, partagé avec l'écran des notes personnelles — les deux
+   montrent la même chose, et deux habillages auraient dérivé. */
+.vault-note-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2, 0.5rem);
+  padding: var(--spacing-3, 0.75rem);
+  border: 1px solid color-mix(in srgb, var(--color-warning-500) 38%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-warning-500) 8%, var(--color-surface));
+}
+
+.vault-note-conflict__lead {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--color-text-primary);
+}
+
+.vault-note-conflict__note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.vault-note-conflict__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacing-2, 0.5rem);
+}
+
+/* L'APERÇU EST UN VRAI DOCUMENT, rendu par la surface de l'éditeur : il est
+   donc borné en hauteur plutôt que d'étirer la fenêtre à la taille de la note. */
+.vault-note-conflict__preview {
+  max-height: 34vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--spacing-2, 0.5rem);
+}
+
+/* ==================== LES REPLIS DU PANNEAU ====================
+ *
+ * -- DEUX DEFAUTS, ET LE SECOND EST LE PLUS GRAVE --
+ *
+ * 1. L'ANCIEN REPLI POSAIT DEUX LIGNES DANS UN COIN. Un message minuscule
+ *    perdu en haut a gauche d'une zone d'ecran entiere se lit comme un reste
+ *    d'affichage, pas comme une explication qu'on nous adresse. Il est
+ *    maintenant centre, borne a une largeur de lecture, et precede d'un glyphe
+ *    qui dit de quoi il retourne avant qu'on ait lu la phrase.
+ *
+ * 2. IL N'OFFRAIT AUCUNE SORTIE. Le retour et la fermeture vivent dans la barre
+ *    de l'editeur, que ces replis ne rendent pas : quelqu'un qui rouvrait
+ *    l'application sur une note de coffre verrouille n'avait plus aucun moyen
+ *    de revenir a ses notes ordinaires -- le panneau restait monte, et chaque
+ *    note cliquee reaffichait le meme texte.
+ *
+ * Une impasse dans un ecran est un defaut plus grave que le message qui
+ * l'accompagne.
+ *
+ * Les trois points qui respirent (`.vault-loading`) sont definis dans
+ * `NotesList.css`, avec l'autre endroit qui les rend -- la section des coffres.
+ * Une seule definition pour une seule idee.
+ */
+
+.vault-note-pane--placeholder {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+}
+
+.vault-stuck {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2, 0.5rem);
+  height: 100%;
+  padding: var(--spacing-6, 1.5rem);
+  text-align: center;
+  /* La largeur de lecture. Une explication qui court sur 1400 px se relit deux
+     fois avant d'etre comprise. */
+  max-width: 46ch;
+  margin-inline: auto;
+}
+
+.vault-stuck__glyph {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--spacing-1, 0.25rem);
+  border-radius: 999px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+.vault-stuck__glyph svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Le cadenas prend l'accent : c'est le seul des replis qui appelle un GESTE, et
+   l'oeil doit y aller avant de lire. */
+.vault-stuck__glyph--lock {
+  background: color-mix(in srgb, var(--color-primary-500) 14%, var(--color-background-tertiary));
+  color: var(--color-primary-700);
+}
+
+.vault-stuck__title {
+  margin: 0;
+  font-size: var(--font-size-base, 1rem);
+  font-weight: 600;
+  line-height: 1.35;
+  text-wrap: balance;
+  color: var(--color-text-primary);
+}
+
+.vault-stuck__body {
+  margin: 0;
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* L'action. PLEINE et non un lien : c'est la seule chose a faire dans cet
+   ecran, et un lien discret au milieu d'un texte gris se cherche. */
+.vault-stuck__action {
+  margin-top: var(--spacing-2, 0.5rem);
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-primary-500);
+  color: var(--color-text-inverted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.vault-stuck__action:hover {
+  background: var(--color-primary-600);
+}
+
+.vault-stuck__action:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* La sortie, discrete mais TOUJOURS la. */
+.vault-stuck__exit {
+  margin-top: var(--spacing-1, 0.25rem);
+  padding: 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.vault-stuck__exit:hover {
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+}
+
+/* Le centrage vertical du repli : la ligne `vault-loading` s'aligne sur son
+   texte, pas sur la ligne de base du bloc. */
+.vault-stuck .vault-loading {
+  justify-content: center;
+}

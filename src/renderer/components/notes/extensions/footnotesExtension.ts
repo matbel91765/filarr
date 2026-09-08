@@ -9,6 +9,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { FootnoteNodeView } from './FootnoteNodeView';
+import { footnoteIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -29,6 +30,11 @@ export const FootnoteExtension = Node.create({
     return {
       content: { default: '' },
     };
+  },
+
+  /** Nœud INLINE : bordé d'espaces, sinon la note souderait les deux mots qui l'entourent. */
+  renderText({ node }) {
+    return footnoteIndexText(node.attrs);
   },
 
   parseHTML() {

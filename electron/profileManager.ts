@@ -25,10 +25,39 @@ interface ProfileMetadata {
   allowPinReset?: boolean;
   /** ISO timestamp of last PIN mutation — used for cross-device PIN sync */
   pinUpdatedAt?: string;
+  /**
+   * ISO timestamp of the last mutation of the profile's PRESENTATION — name,
+   * avatar colour/emoji/image, order. Same last-write-wins clock as
+   * `pinUpdatedAt`, but for everything the picker shows.
+   *
+   * Its absence used to mean these edits never left the device that made them:
+   * `restoreProfileFromCloud` returns immediately on a known id, so a rename on
+   * device A stayed on device A forever. Absent = legacy manifest, and the
+   * merge then keeps the local values untouched — an old device breaks nothing.
+   */
+  metaUpdatedAt?: string;
   createdAt: string;
   lastAccessedAt: string;
   isDefault: boolean;
   order: number;
+  /**
+   * Cloud account bound to this profile. Null/undefined means the profile is
+   * purely local. Populated after successful login and cleared on logout.
+   * Stored in cleartext in the encrypted manifest — it's just a label used
+   * to render badges in the profile picker and prevent FEK mix-ups at login.
+   */
+  cloudAccount?: {
+    email: string;
+    tier: string;
+    /** ISO timestamp of last successful auth */
+    linkedAt: string;
+    /** Strict account type (0059) — reliable pre-activation space signal. */
+    accountType?: 'personal' | 'enterprise';
+  } | null;
+  /** Denormalized hint of the profile's last-known space (source of truth: .space file). */
+  spaceMode?: 'personal' | 'enterprise';
+  /** Denormalized hint of the profile's real (non-personal) orgs, for the picker. */
+  orgs?: Array<{ id: string; name: string; tier: string; role: string; isPersonal: boolean }>;
 }
 
 interface ProfilesManifest {
@@ -275,24 +304,38 @@ class ProfileManager {
       throw new Error('Profile not found');
     }
 
+    // Toute mutation de la PRÉSENTATION avance l'horloge `metaUpdatedAt` — c'est
+    // elle qui décide, à la fusion, quel appareil a raison. Le PIN garde la
+    // sienne (`pinUpdatedAt`) : les deux se déplacent indépendamment, un
+    // changement de nom ne doit pas faire gagner un vieux PIN.
+    let metaChanged = false;
+
     if (updates.name !== undefined) {
       if (updates.name.trim().length === 0 || updates.name.length > 50) {
         throw new Error('Invalid profile name');
       }
       profile.name = updates.name.trim();
+      metaChanged = true;
     }
 
     if (updates.avatarColor !== undefined) {
       profile.avatarColor = updates.avatarColor;
+      metaChanged = true;
     }
 
     if (updates.avatarImage === null) {
       profile.avatarImage = undefined;
+      metaChanged = true;
     } else if (updates.avatarImage !== undefined) {
       // Validate: must be a data URL, max 128KB
       if (updates.avatarImage.startsWith('data:image/') && updates.avatarImage.length <= 128 * 1024) {
         profile.avatarImage = updates.avatarImage;
+        metaChanged = true;
       }
+    }
+
+    if (metaChanged) {
+      profile.metaUpdatedAt = new Date().toISOString();
     }
 
     if (updates.pin === null) {
@@ -402,11 +445,18 @@ class ProfileManager {
   async reorderProfiles(orderedIds: string[]): Promise<void> {
     const manifest = this.getManifest();
     const reordered: ProfileMetadata[] = [];
+    const now = new Date().toISOString();
 
     for (let i = 0; i < orderedIds.length; i++) {
       const profile = manifest.profiles.find(p => p.id === orderedIds[i]);
       if (profile) {
-        profile.order = i;
+        // L'ordre fait partie de la présentation : seul un profil qui BOUGE
+        // réellement avance son horloge, sinon un simple glisser-déposer sans
+        // effet ferait gagner cet appareil sur tous les autres.
+        if (profile.order !== i) {
+          profile.order = i;
+          profile.metaUpdatedAt = now;
+        }
         reordered.push(profile);
       }
     }
@@ -456,10 +506,12 @@ class ProfileManager {
     pinSalt?: string;
     allowPinReset?: boolean;
     pinUpdatedAt?: string;
+    metaUpdatedAt?: string;
   }): Promise<void> {
     const manifest = this.getManifest();
 
-    // Skip if already exists
+    // Skip if already exists — les MISES À JOUR d'un profil connu passent par
+    // `applyCloudMetaUpdate`, qui arbitre à l'horloge au lieu d'écraser.
     if (manifest.profiles.some((p) => p.id === meta.id)) {
       return;
     }
@@ -475,6 +527,7 @@ class ProfileManager {
       pinAttempts: 0,
       allowPinReset: meta.allowPinReset,
       pinUpdatedAt: meta.pinUpdatedAt,
+      metaUpdatedAt: meta.metaUpdatedAt,
       createdAt: meta.createdAt,
       lastAccessedAt: new Date().toISOString(),
       isDefault: meta.isDefault || manifest.profiles.length === 0,
@@ -538,6 +591,177 @@ class ProfileManager {
 
     await this.saveManifest(manifest);
     return true;
+  }
+
+  /**
+   * Fusionne la PRÉSENTATION d'un profil (nom, avatar, ordre) venue du nuage
+   * dans le profil local du même identifiant.
+   *
+   * CE QUE SON ABSENCE COÛTAIT. Renommer un profil sur l'appareil A ne se voyait
+   * nulle part ailleurs, jamais : `restoreProfileFromCloud` sort immédiatement
+   * sur un identifiant déjà connu, et le PIN était le seul champ à disposer d'une
+   * fusion. Deux appareils du même compte affichaient donc durablement deux noms
+   * et deux couleurs pour un seul et même profil.
+   *
+   * ARBITRAGE À L'HORLOGE, calqué sur `applyCloudPinUpdate` : le distant ne gagne
+   * que si son `metaUpdatedAt` est STRICTEMENT plus récent que le nôtre. À
+   * égalité — donc y compris quand c'est notre propre manifeste qui nous revient
+   * — le local reste, et l'écran ne clignote pas.
+   *
+   * LE SILENCE N'EST PAS UNE OPINION : un distant sans horloge (manifeste
+   * antérieur à ce champ) ne peut rien réclamer et ne touche à rien. Un local
+   * sans horloge, lui, n'a rien à opposer : le distant estampillé l'emporte, ce
+   * qui est exactement ce qu'il faut pour un appareil qui vient de rejoindre.
+   *
+   * NE TOUCHE PAS AU PIN, ni au compte lié, ni au dernier accès : chacun a sa
+   * propre horloge ou sa propre autorité locale.
+   *
+   * Rend `true` si le profil local a été modifié.
+   */
+  async applyCloudMetaUpdate(
+    profileId: string,
+    remote: {
+      name?: string;
+      avatarColor?: string;
+      avatarEmoji?: string;
+      avatarImage?: string;
+      order?: number;
+      metaUpdatedAt?: string;
+    }
+  ): Promise<boolean> {
+    const manifest = this.getManifest();
+    const profile = manifest.profiles.find((p) => p.id === profileId);
+    if (!profile) return false;
+
+    // Le distant ne porte aucune horloge — rien d'autoritaire à appliquer.
+    if (!remote.metaUpdatedAt) return false;
+
+    const remoteMs = new Date(remote.metaUpdatedAt).getTime();
+    if (Number.isNaN(remoteMs)) return false;
+
+    // Local strictement plus récent (ou aussi récent) — on garde le local.
+    if (profile.metaUpdatedAt) {
+      const localMs = new Date(profile.metaUpdatedAt).getTime();
+      if (!Number.isNaN(localMs) && localMs >= remoteMs) return false;
+    }
+
+    let changed = false;
+
+    if (remote.name !== undefined && remote.name !== profile.name) {
+      profile.name = remote.name;
+      changed = true;
+    }
+    if (remote.avatarColor !== undefined && remote.avatarColor !== profile.avatarColor) {
+      profile.avatarColor = remote.avatarColor;
+      changed = true;
+    }
+    if (remote.avatarEmoji !== profile.avatarEmoji) {
+      // Retirer l'emoji est une décision comme une autre : `undefined` distant
+      // efface l'emoji local, contrairement aux champs obligatoires ci-dessus
+      // qu'un manifeste ne peut pas ne pas porter.
+      profile.avatarEmoji = remote.avatarEmoji;
+      changed = true;
+    }
+    if (remote.avatarImage !== profile.avatarImage) {
+      profile.avatarImage = remote.avatarImage;
+      changed = true;
+    }
+    if (remote.order !== undefined && remote.order !== profile.order) {
+      profile.order = remote.order;
+      changed = true;
+    }
+    // `isDefault` N'EST PAS SYNCHRONISÉ : c'est « le profil qui s'ouvre sur CET
+    // appareil ». L'adopter depuis le nuage promeut un second profil par défaut
+    // sans jamais rétrograder l'ancien — deux profils par défaut, et un picker
+    // qui ne sait plus lequel ouvrir.
+
+    // L'horloge est reprise même si rien n'a bougé matériellement (mêmes valeurs
+    // des deux côtés) : sans cela, le même manifeste distant serait réexaminé à
+    // chaque cycle, pour rien.
+    if (profile.metaUpdatedAt !== remote.metaUpdatedAt) {
+      profile.metaUpdatedAt = remote.metaUpdatedAt;
+      await this.saveManifest(manifest);
+    } else if (changed) {
+      await this.saveManifest(manifest);
+    }
+
+    return changed;
+  }
+
+  /**
+   * Bind/unbind a cloud account to a profile. Called from authService after
+   * successful login (bind) or logout/account-delete (unbind).
+   */
+  async setCloudAccount(
+    profileId: string,
+    account: { email: string; tier: string; accountType?: 'personal' | 'enterprise' } | null
+  ): Promise<void> {
+    const manifest = this.getManifest();
+    const profile = manifest.profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+    profile.cloudAccount = account
+      ? {
+          email: account.email,
+          tier: account.tier,
+          linkedAt: new Date().toISOString(),
+          accountType: account.accountType,
+        }
+      : null;
+    // Unbinding the cloud account clears the enterprise hints — a local profile
+    // can never be enterprise.
+    if (!account) {
+      profile.spaceMode = 'personal';
+      profile.orgs = [];
+    }
+    await this.saveManifest(manifest);
+  }
+
+  /**
+   * Denormalize the profile's active space onto the manifest so the
+   * pre-activation ProfilePicker can badge/default it. The .space file stays
+   * authoritative; this is only a picker hint.
+   */
+  async setSpaceMode(
+    profileId: string,
+    spaceMode: 'personal' | 'enterprise'
+  ): Promise<void> {
+    const manifest = this.getManifest();
+    const profile = manifest.profiles.find((p) => p.id === profileId);
+    if (!profile || profile.spaceMode === spaceMode) return;
+    profile.spaceMode = spaceMode;
+    await this.saveManifest(manifest);
+  }
+
+  /**
+   * Denormalize the profile's real (non-personal) org list onto the manifest so
+   * the picker knows whether to offer the Enterprise toggle without a network
+   * call. Called whenever the org list is fetched. No-ops if unchanged.
+   */
+  async setOrgsHint(
+    profileId: string,
+    orgs: Array<{ id: string; name: string; tier: string; role: string; isPersonal: boolean }>
+  ): Promise<void> {
+    const manifest = this.getManifest();
+    const profile = manifest.profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+    const next = orgs.filter((o) => !o.isPersonal);
+    if (JSON.stringify(profile.orgs ?? []) === JSON.stringify(next)) return;
+    profile.orgs = next;
+    await this.saveManifest(manifest);
+  }
+
+  /**
+   * True if any profile other than `excludeProfileId` is already bound to
+   * the given email. Used to warn the user before they bind the same cloud
+   * account to a second profile (allowed, but worth flagging).
+   */
+  isCloudAccountBoundElsewhere(email: string, excludeProfileId: string): boolean {
+    const manifest = this.getManifest();
+    return manifest.profiles.some(
+      (p) =>
+        p.id !== excludeProfileId &&
+        p.cloudAccount?.email?.toLowerCase() === email.toLowerCase()
+    );
   }
 
   /**

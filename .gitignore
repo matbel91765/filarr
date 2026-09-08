@@ -8,6 +8,13 @@ dist-electron
 storybook-static
 design-showcase-static
 
+# Cloudflare — état LOCAL de wrangler (D1 en SQLite, R2/KV simulés, caches).
+# `wrangler d1 migrations apply --local` le crée dans infra/cloudflare-worker/ :
+# ce sont des fichiers de base de données, avec les lignes semées pendant les
+# essais. Rien de tout cela n'a sa place dans le dépôt.
+.wrangler/
+infra/cloudflare-worker/.admin-preview/
+
 # Test & coverage artifacts
 coverage
 test-results
@@ -20,17 +27,17 @@ test-results.txt
 
 # OS
 .DS_Store
-Thumbs.db
 
 # Environment (secrets)
 .env
-.env.local
-.env.*.local
+infra/docker/.env
+infra/k8s/secrets.yaml
+secret.key
 
 # IDE / tools
-.claude/
-.vscode/settings.json
-.idea/
+.claude/settings.local.json
+.claude
 
 # Test fixtures
 e2e/fixtures/large-file.zip
+packages/marketing-site/.next

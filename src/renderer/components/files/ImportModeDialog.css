@@ -1,0 +1,109 @@
+/**
+ * ImportModeDialog — cartes d'option Copier / Déplacer-dans-le-coffre.
+ * Tokens uniquement (thèmes clair/sombre/terracotta automatiques).
+ */
+
+.import-mode__summary {
+  margin: 0 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.import-mode__options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-mode__option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.import-mode__option:hover {
+  border-color: var(--color-primary-300);
+  background: var(--color-surface-hover);
+}
+
+.import-mode__option--selected {
+  border-color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 7%, var(--color-surface));
+  box-shadow: 0 0 0 1px var(--color-primary-500);
+}
+
+.import-mode__option--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.import-mode__option--disabled:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.import-mode__option-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+}
+
+.import-mode__option--selected .import-mode__option-icon {
+  color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 13%, transparent);
+}
+
+.import-mode__option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.import-mode__option-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.import-mode__option-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+.import-mode__note {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-background-tertiary);
+}
+
+.import-mode__note--warning {
+  color: var(--color-warning-500);
+  background: color-mix(in srgb, var(--color-warning-500) 12%, transparent);
+}
+
+.import-mode__remember {
+  margin-top: 14px;
+}

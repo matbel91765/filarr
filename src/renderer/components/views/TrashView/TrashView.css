@@ -162,8 +162,9 @@
 }
 
 /* Grouped items */
+/* Le repli est le plafond d'avant : voir `services/platform/pageWidth.ts`. */
 .trash-items-container {
-  max-width: 1200px;
+  max-width: var(--page-max-width, 1200px);
   margin: 0 auto;
 }
 

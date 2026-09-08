@@ -1,0 +1,122 @@
+/* NoteSharedBadge — « une copie est partie dans un coffre ».
+   Trois variantes : `dot` calquée sur .notes-list__orphan-badge (NotesList.css),
+   `chip` sur .notes-list__card-location-item, `full` sur .note-sync-badge--full.
+   Couleurs par TOKENS du thème (colors.css redéfinit --color-primary-500 et
+   les textes par [data-theme]) : clair et sombre suivent sans règle dédiée. */
+
+.note-shared-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 1;
+  color: var(--color-primary-500, #38a3dc);
+  transition:
+    color 0.15s ease,
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+/* Réinitialisation du <button> (variante navigable) : il doit se fondre
+   exactement comme le <span> des états non navigables. */
+button.note-shared-badge {
+  margin: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.note-shared-badge:focus-visible {
+  outline: 2px solid var(--color-primary-500, #38a3dc);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── dot : glyphe seul, dans la marge du badge orphelin ─────────────────── */
+
+.note-shared-badge--dot {
+  opacity: 0.7;
+  margin-right: -2px;
+  padding: 0;
+}
+
+.note-shared-badge--dot.note-shared-badge--navigable:hover {
+  opacity: 1;
+}
+
+/* ── chip : « Coffre <Nom> » dans la rangée d'emplacement de la carte ────── */
+
+.note-shared-badge--chip {
+  gap: 3px;
+  padding: 0;
+  font-size: 0.625rem;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.note-shared-badge--chip .note-shared-badge__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-shared-badge--chip.note-shared-badge--navigable:hover {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── full : icône + libellé, pilule dans l'en-tête de l'éditeur ─────────── */
+
+.note-shared-badge--full {
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.note-shared-badge--full.note-shared-badge--navigable:hover {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.note-shared-badge__text {
+  white-space: nowrap;
+}
+
+.note-shared-badge__more {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+
+/* ── Couleurs par état ──────────────────────────────────────────────────────
+   live : la couleur d'accent — la copie est là.
+   locked / unknown : le texte tertiaire — on ne sait pas encore, on ne crie pas.
+   copyMissing : avertissement — la copie n'est pas dans la liste (corbeille ?).
+   vaultGone : erreur, mais tamisée — le verdict le plus définitif, pas une alarme. */
+
+.note-shared-badge--live {
+  color: var(--color-primary-500, #38a3dc);
+}
+
+.note-shared-badge--locked,
+.note-shared-badge--unknown {
+  color: var(--color-text-tertiary, #8b98ac);
+}
+
+.note-shared-badge--copyMissing {
+  color: var(--color-warning-500, #f59e0b);
+}
+
+.note-shared-badge--vaultGone {
+  color: color-mix(
+    in srgb,
+    var(--color-error-500, #ef4444) 75%,
+    var(--color-text-tertiary, #8b98ac)
+  );
+}

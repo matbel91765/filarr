@@ -1,0 +1,19 @@
+/**
+ * LA LARGEUR DES PAGES — trois lignes, et c'est tout le mécanisme.
+ *
+ * Voir `services/platform/pageWidth.ts` pour le pourquoi. En résumé :
+ *
+ *   · Chaque page écrit `max-width: var(--page-max-width, <son plafond>)`.
+ *   · Cette variable n'est définie QUE ci-dessous, dans le mode « pleine
+ *     largeur ». Partout ailleurs elle n'existe pas, le repli s'applique, et
+ *     chaque page garde le plafond qu'elle avait avant ce chantier.
+ *
+ * ⚠ NE PAS DÉFINIR `--page-max-width` SUR `:root` NU. Lui donner une valeur par
+ * défaut ferait de cette feuille l'autorité sur la largeur de toutes les pages,
+ * et le premier plafond qu'on voudrait garder différent (960 px des Rappels)
+ * demanderait aussitôt une exception. L'absence est le défaut.
+ */
+
+[data-page-width='full'] {
+  --page-max-width: none;
+}

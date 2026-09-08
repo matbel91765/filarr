@@ -13,6 +13,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button/Button';
 import { ImagePreview } from './ImagePreview';
 import { PDFPreview } from './PDFPreview';
@@ -20,7 +21,25 @@ import { TextPreview } from './TextPreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { VideoPreview } from './VideoPreview';
 import { AudioPreview } from './AudioPreview';
+import { DocxPreview } from './DocxPreview';
+import { CsvPreview } from './CsvPreview';
+import { HtmlPreview } from './HtmlPreview';
+import FdocPreview from './FdocPreview';
+import { SpreadsheetPreview } from './SpreadsheetPreview';
+import { RasterImagePreview } from './RasterImagePreview';
+import { EpubPreview } from './EpubPreview';
+import { ArchivePreview } from './ArchivePreview';
+import { IcsPreview } from './IcsPreview';
+import { FontPreview } from './FontPreview';
+import { EmailPreview } from './EmailPreview';
+import { Model3DPreview } from './Model3DPreview';
+import { BinaryInfoPreview } from './BinaryInfoPreview';
 import { readFile } from '../../../services/core/fileService';
+import { getCurrentStorageMode } from '../../../services/core/storageAdapter';
+import {
+  indexBufferContent,
+  isBufferExtractable,
+} from '../../../services/search/documentTextExtractor';
 import {
   isProtected,
   isUnlockedForSession,
@@ -29,8 +48,10 @@ import {
 import { PasswordUnlockModal } from '../files/PasswordUnlockModal';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
 import type { FileItem } from '../../../types';
+import { MAX_PREVIEW_FILE_SIZE, MAX_ARCHIVE_PREVIEW_SIZE } from '../../../constants/limits';
 import './FilePreviewPanel.css';
 
+import * as profileStorage from '../../../services/core/profileStorage';
 // Storage keys for preview preferences
 const STORAGE_KEY_PREVIEW_WIDTH = 'filarr_preview_panel_width';
 const STORAGE_KEY_PREVIEW_SPLIT_MODE = 'filarr_preview_split_mode';
@@ -44,6 +65,45 @@ const MAX_PANEL_WIDTH = 800;
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'ico'];
 const PDF_EXTENSIONS = ['pdf'];
 const MARKDOWN_EXTENSIONS = ['md', 'mdx', 'markdown'];
+const DOCX_EXTENSIONS = ['docx'];
+// Le format NATIF de Filarr. Il n'avait aucune entree ici : le seul document
+// que ce produit possede etait le seul a repondre « Apercu non disponible ».
+const FDOC_EXTENSIONS = ['fdoc'];
+const CSV_EXTENSIONS = ['csv', 'tsv'];
+// .html/.htm get a dedicated rendered/source viewer (see HtmlPreview); they are
+// intentionally NOT in TEXT_EXTENSIONS so they don't fall through to raw source.
+const HTML_EXTENSIONS = ['html', 'htm'];
+const SPREADSHEET_EXTENSIONS = ['xlsx', 'xls', 'ods'];
+// HEIC/HEIF/TIFF are decoded to PNG first (RasterImagePreview) then shown like
+// any image — they can't be handed straight to <img>.
+const RASTER_IMAGE_EXTENSIONS = ['heic', 'heif', 'tif', 'tiff'];
+const EPUB_EXTENSIONS = ['epub'];
+// 7z/rar are decoded by hand-written pure-JS parsers (src/utils/archive) —
+// the renderer CSP forbids WASM, so wasm-based extractors are off the table.
+const ARCHIVE_EXTENSIONS = ['zip', 'gz', 'tgz', 'tar', '7z', 'rar'];
+const ICS_EXTENSIONS = ['ics'];
+const FONT_EXTENSIONS = ['ttf', 'otf', 'woff', 'woff2'];
+const EMAIL_EXTENSIONS = ['eml'];
+const MODEL3D_EXTENSIONS = ['glb', 'gltf'];
+// Executables / opaque binaries: shown as an info card (never run, never even
+// downloaded — see BinaryInfoPreview). Scripts (.bat/.sh) stay in TEXT_EXTENSIONS.
+const EXECUTABLE_EXTENSIONS = [
+  'exe',
+  'msi',
+  'dll',
+  'dmg',
+  'pkg',
+  'app',
+  'dylib',
+  'deb',
+  'rpm',
+  'appimage',
+  'so',
+  'apk',
+  'iso',
+  'img',
+  'bin',
+];
 const TEXT_EXTENSIONS = [
   'txt',
   'json',
@@ -53,7 +113,6 @@ const TEXT_EXTENSIONS = [
   'tsx',
   'css',
   'scss',
-  'html',
   'xml',
   'yaml',
   'yml',
@@ -82,7 +141,27 @@ const TEXT_EXTENSIONS = [
 const VIDEO_EXTENSIONS = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
 const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a', 'wma'];
 
-type PreviewType = 'image' | 'pdf' | 'markdown' | 'text' | 'video' | 'audio' | 'unsupported';
+export type PreviewType =
+  | 'image'
+  | 'pdf'
+  | 'markdown'
+  | 'docx'
+  | 'fdoc'
+  | 'csv'
+  | 'html'
+  | 'spreadsheet'
+  | 'rasterimage'
+  | 'epub'
+  | 'archive'
+  | 'ics'
+  | 'font'
+  | 'email'
+  | 'model3d'
+  | 'binary'
+  | 'text'
+  | 'video'
+  | 'audio'
+  | 'unsupported';
 
 export interface FilePreviewPanelProps {
   /** File to preview */
@@ -271,20 +350,93 @@ const LockIcon: React.FC = () => (
 );
 
 /**
- * Get the preview type based on file extension
+ * Get the preview type based on file extension.
+ *
+ * Exporté : l'adaptateur bufferisé des COFFRES (BufferPreview) route avec la
+ * même table — dupliquer ces listes, c'est garantir qu'elles divergent.
  */
-const getPreviewType = (fileName: string): PreviewType => {
+export const getPreviewType = (fileName: string): PreviewType => {
   const extension = fileName.split('.').pop()?.toLowerCase() || '';
 
   if (IMAGE_EXTENSIONS.includes(extension)) return 'image';
   if (PDF_EXTENSIONS.includes(extension)) return 'pdf';
   if (MARKDOWN_EXTENSIONS.includes(extension)) return 'markdown';
+  if (FDOC_EXTENSIONS.includes(extension)) return 'fdoc';
+  if (DOCX_EXTENSIONS.includes(extension)) return 'docx';
+  if (CSV_EXTENSIONS.includes(extension)) return 'csv';
+  if (HTML_EXTENSIONS.includes(extension)) return 'html';
+  if (SPREADSHEET_EXTENSIONS.includes(extension)) return 'spreadsheet';
+  if (RASTER_IMAGE_EXTENSIONS.includes(extension)) return 'rasterimage';
+  if (EPUB_EXTENSIONS.includes(extension)) return 'epub';
+  if (ARCHIVE_EXTENSIONS.includes(extension)) return 'archive';
+  if (ICS_EXTENSIONS.includes(extension)) return 'ics';
+  if (FONT_EXTENSIONS.includes(extension)) return 'font';
+  if (EMAIL_EXTENSIONS.includes(extension)) return 'email';
+  if (MODEL3D_EXTENSIONS.includes(extension)) return 'model3d';
+  if (EXECUTABLE_EXTENSIONS.includes(extension)) return 'binary';
   if (TEXT_EXTENSIONS.includes(extension)) return 'text';
   if (VIDEO_EXTENSIONS.includes(extension)) return 'video';
   if (AUDIO_EXTENSIONS.includes(extension)) return 'audio';
 
   return 'unsupported';
 };
+
+/**
+ * Whether the current file can be served by ranged reads from the main process
+ * (the filarr-stream:// protocol for media, or the stream:readRange IPC for
+ * PDF/ZIP windowing). Both decrypt V3 containers chunk-by-chunk with the
+ * machine key OR the session FEK (createDecryptStreamAuto), so:
+ *  - 'local'  : files always live on disk — always windowable.
+ *  - 'hybrid' : only when the blob is present locally AND is a V3 container
+ *               (probed async via hybrid:fileExists + hybrid:isV3Blob) — a
+ *               cloud-only or legacy small hybrid blob is NOT streamable.
+ *  - 'cloud'/'byos'/pending : no local plaintext-capable path → buffered read.
+ * 'pending' means the async hybrid probe has not resolved yet.
+ */
+type WindowMode = 'pending' | 'none' | 'local' | 'hybrid';
+
+interface WindowingDecision {
+  /** Video/audio served straight from disk via a filarr-stream:// URL (any size). */
+  streamedMedia: boolean;
+  /** PDF opened by pdf.js range transport — only viewed pages are fetched. */
+  windowedPdf: boolean;
+  /** ZIP listed via ranged central-directory reads — never fully downloaded. */
+  windowedZip: boolean;
+}
+
+/**
+ * Decides which windowed/streamed path (if any) a file takes. Media streams at
+ * any size in local/hybrid (matches the shipped local-media behaviour, extended
+ * to synced hybrid V3 blobs). PDF/ZIP window only ABOVE their buffered ceiling,
+ * so everything that already previews keeps the proven whole-buffer path and
+ * the new ranged path is engaged strictly to lift the old too-large cap.
+ */
+const decideWindowing = (
+  previewType: PreviewType,
+  extension: string,
+  size: number,
+  windowMode: WindowMode
+): WindowingDecision => {
+  const canWindow = windowMode === 'local' || windowMode === 'hybrid';
+  const isMedia = previewType === 'video' || previewType === 'audio';
+  return {
+    streamedMedia: canWindow && isMedia,
+    windowedPdf: canWindow && previewType === 'pdf' && size > MAX_PREVIEW_FILE_SIZE,
+    windowedZip:
+      canWindow &&
+      previewType === 'archive' &&
+      extension === 'zip' &&
+      size > MAX_ARCHIVE_PREVIEW_SIZE,
+  };
+};
+
+/**
+ * Build the filarr-stream:// URL for a vault media file.
+ * Shape contract (shared with the main-process protocol handler):
+ * filarr-stream://media/<folderId>/<encodeURIComponent(fileName)>
+ */
+const buildStreamUrl = (folderId: string, fileName: string): string =>
+  `filarr-stream://media/${folderId}/${encodeURIComponent(fileName)}`;
 
 /**
  * Format file size for display
@@ -353,7 +505,12 @@ const getMimeType = (fileName: string): string => {
     tsx: 'text/tsx',
     css: 'text/css',
     html: 'text/html',
+    htm: 'text/html',
     xml: 'text/xml',
+    // Documents / data
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    csv: 'text/csv',
+    tsv: 'text/tab-separated-values',
   };
 
   return mimeTypes[extension] || 'application/octet-stream';
@@ -373,12 +530,25 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   siblingFiles,
   onNavigate,
 }) => {
+  const { t } = useTranslation();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [downloadPercent, setDownloadPercent] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Whether this file can be served by ranged reads (see WindowMode). Keyed by
+  // the file id it was resolved FOR: any other id reads as 'pending', so a file
+  // switch never lets the load effect / render trust the previous file's mode
+  // (the storage mode is global, but the hybrid probe is per-file). The
+  // buffered load effect waits for a resolved mode so a huge streamable/
+  // windowable file is never read whole by mistake.
+  const [windowState, setWindowState] = useState<{ fileId: string | null; mode: WindowMode }>({
+    fileId: null,
+    mode: 'pending',
+  });
+  const windowMode: WindowMode =
+    file && windowState.fileId === file.id ? windowState.mode : 'pending';
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(
     null
   );
@@ -387,7 +557,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   // Resizable panel state
   const [panelWidth, setPanelWidth] = useState<number>(() => {
     if (initialWidth) return initialWidth;
-    const stored = localStorage.getItem(STORAGE_KEY_PREVIEW_WIDTH);
+    const stored = profileStorage.getItemWithLegacyFallback(STORAGE_KEY_PREVIEW_WIDTH);
     return stored ? parseInt(stored, 10) : DEFAULT_PANEL_WIDTH;
   });
   const [isResizing, setIsResizing] = useState(false);
@@ -417,6 +587,65 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     setImageDimensions(null);
   }, [file?.id]);
 
+  // Resolve whether this file can be served by ranged reads (streaming media /
+  // windowed PDF & ZIP). Local mode is always windowable; hybrid needs an async
+  // probe (present locally AND a V3 blob); cloud/BYOS never are. The resolved
+  // mode is stamped with the file id (see windowState) so a stale previous-file
+  // mode is never trusted — a switched-to file reads 'pending' until re-probed.
+  useEffect(() => {
+    let cancelled = false;
+    if (!file || !folderId || !isOpen || isFileLocked) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const fileId = file.id;
+    const fileName = file.name;
+    const mode = getCurrentStorageMode();
+    if (mode === 'local') {
+      setWindowState({ fileId, mode: 'local' });
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (mode !== 'hybrid') {
+      // cloud / byos: no local plaintext-capable path.
+      setWindowState({ fileId, mode: 'none' });
+      return () => {
+        cancelled = true;
+      };
+    }
+    // Hybrid: a blob is streamable only if it is already on this device AND is
+    // a V3 container (legacy small hybrid blobs are renderer-AES-GCM, which the
+    // main-process stream path cannot range-decrypt).
+    (async () => {
+      try {
+        const exists = await window.electron.ipcRenderer.invoke(
+          'hybrid:fileExists',
+          folderId,
+          fileName
+        );
+        if (cancelled) return;
+        if (!exists) {
+          setWindowState({ fileId, mode: 'none' });
+          return;
+        }
+        const isV3 = await window.electron.ipcRenderer.invoke(
+          'hybrid:isV3Blob',
+          folderId,
+          fileName
+        );
+        if (cancelled) return;
+        setWindowState({ fileId, mode: isV3 ? 'hybrid' : 'none' });
+      } catch {
+        if (!cancelled) setWindowState({ fileId, mode: 'none' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [file, folderId, isOpen, isFileLocked]);
+
   // Load file data when panel opens (only if not locked)
   useEffect(() => {
     const loadFileData = async () => {
@@ -424,7 +653,29 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
       if (isFileLocked) return;
 
       const previewType = getPreviewType(file.name);
-      if (previewType === 'unsupported') return;
+      // 'binary' renders from metadata alone — never fetch the (possibly huge) bytes.
+      if (previewType === 'unsupported' || previewType === 'binary') return;
+      // Wait for the ranged-capability probe: buffering a file that will instead
+      // stream or window would waste RAM and could exceed the buffered decrypt
+      // cap. 'pending' resolves within a tick (local/cloud) or two IPC calls
+      // (hybrid).
+      if (windowMode === 'pending') return;
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const { streamedMedia, windowedPdf, windowedZip } = decideWindowing(
+        previewType,
+        ext,
+        file.size,
+        windowMode
+      );
+      // Streamed media (filarr-stream://) and windowed PDF/ZIP (stream:readRange)
+      // read their bytes on demand — the whole file never enters renderer memory.
+      if (streamedMedia || windowedPdf || windowedZip) return;
+      // Fichiers trop volumineux pour un apercu en memoire : le main process
+      // refuse de decrypter les V3 au-dela du plafond en un seul buffer — ne pas
+      // essayer (la carte « trop volumineux » prend le relais).
+      const bufferCap =
+        previewType === 'archive' ? MAX_ARCHIVE_PREVIEW_SIZE : MAX_PREVIEW_FILE_SIZE;
+      if (file.size > bufferCap) return;
 
       setIsLoading(true);
       setDownloadPercent(0);
@@ -436,6 +687,11 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         });
         setDownloadPercent(100);
         setFileData(data.buffer as ArrayBuffer);
+        // Now that we hold the decrypted bytes, index text-bearing documents
+        // (Word/CSV/text) for full-text search — best-effort, non-blocking.
+        if (isBufferExtractable(file.name)) {
+          void indexBufferContent(file.id, file.name, data.buffer as ArrayBuffer);
+        }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : 'Unknown error';
         console.error('[FilePreviewPanel] Error loading file:', err);
@@ -446,7 +702,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     };
 
     loadFileData();
-  }, [file, folderId, isOpen, isFileLocked]);
+  }, [file, folderId, isOpen, isFileLocked, windowMode]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -547,7 +803,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     const handleMouseUp = () => {
       setIsResizing(false);
       // Save width to localStorage
-      localStorage.setItem(STORAGE_KEY_PREVIEW_WIDTH, panelWidth.toString());
+      profileStorage.setItem(STORAGE_KEY_PREVIEW_WIDTH, panelWidth.toString());
       if (onResize) {
         onResize(panelWidth);
       }
@@ -572,6 +828,19 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   const previewType = getPreviewType(file.name);
   const mimeType = getMimeType(file.name);
   const extension = file.name.split('.').pop()?.toLowerCase() || '';
+
+  // Which ranged/streamed path (if any) this file takes, given the resolved
+  // capability. Used both to build the media stream URL and to exempt these
+  // types from the buffered too-large gate.
+  const windowing = decideWindowing(previewType, extension, file.size, windowMode);
+
+  // Streaming (filarr-stream://) pour la video/l'audio : l'URL n'est jamais
+  // construite pour un fichier verrouille — le deverrouillage par mot de passe
+  // reste un prealable strict a tout rendu du media.
+  const streamUrl =
+    !isFileLocked && folderId && windowing.streamedMedia
+      ? buildStreamUrl(folderId, file.name)
+      : undefined;
 
   const panelClasses = clsx(
     'file-preview-panel',
@@ -606,6 +875,58 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           {hint && <p className="file-preview-panel__locked-hint">Indice : {hint}</p>}
           <Button variant="primary" size="sm" onClick={() => setShowUnlockModal(true)}>
             Deverrouiller
+          </Button>
+        </div>
+      );
+    }
+
+    // The ranged-capability probe hasn't resolved yet: show the loading state
+    // rather than briefly buffering / flashing the too-large card (resolves in
+    // one tick for local/cloud, two IPC calls for hybrid).
+    if (windowMode === 'pending' && previewType !== 'binary' && previewType !== 'unsupported') {
+      return (
+        <div className="file-preview-panel__loading">
+          <div className="file-preview-panel__spinner" />
+          <span>Chargement de l'apercu...</span>
+        </div>
+      );
+    }
+
+    // Trop volumineux pour un apercu en memoire (la carte 'binary' et le type
+    // 'unsupported' n'ont jamais besoin des octets — ils gardent leur rendu).
+    // Les types fenetres (video/audio en streaming, gros PDF/ZIP en lecture par
+    // plage) echappent au plafond : leurs octets sont lus a la demande, jamais
+    // charges en entier en memoire.
+    const usesWindowing = windowing.streamedMedia || windowing.windowedPdf || windowing.windowedZip;
+    const bufferCap = previewType === 'archive' ? MAX_ARCHIVE_PREVIEW_SIZE : MAX_PREVIEW_FILE_SIZE;
+    if (
+      file.size > bufferCap &&
+      previewType !== 'binary' &&
+      previewType !== 'unsupported' &&
+      !usesWindowing
+    ) {
+      // These types WOULD stream/window if the file were available locally —
+      // point the user at the storage mode that lifts the size limit.
+      const isWindowableType =
+        previewType === 'video' || previewType === 'audio' || previewType === 'pdf';
+      return (
+        <div className="file-preview-panel__unsupported">
+          <FileIcon />
+          <h3>{t('file.previewTooLargeTitle', 'Apercu indisponible')}</h3>
+          <p>
+            {t('file.previewTooLarge', 'Fichier trop volumineux pour un apercu - telechargez-le')}
+          </p>
+          {isWindowableType && (
+            <p>
+              {t(
+                'file.previewTooLargeMediaHint',
+                'Les videos, fichiers audio et grands PDF se lisent sans limite de taille lorsque le fichier est disponible sur cet appareil (mode local, ou fichier hybride deja synchronise).'
+              )}
+            </p>
+          )}
+          <p className="file-preview-panel__unsupported-extension">{formatFileSize(file.size)}</p>
+          <Button variant="primary" size="sm" onClick={handleDownload}>
+            {t('file.download', 'Télécharger')}
           </Button>
         </div>
       );
@@ -655,10 +976,83 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         ) : null;
 
       case 'pdf':
+        // Large PDFs (local/hybrid V3) open by ranged reads: pdf.js fetches only
+        // the pages it renders, so the whole file never enters renderer memory.
+        if (windowing.windowedPdf && folderId) {
+          return <PDFPreview windowed folderId={folderId} fileName={file.name} />;
+        }
         return fileData ? <PDFPreview data={fileData} fileName={file.name} /> : null;
 
       case 'markdown':
         return fileData ? <MarkdownPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'docx':
+        return fileData ? <DocxPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'csv':
+        return fileData ? (
+          <CsvPreview data={fileData} fileName={file.name} extension={extension} />
+        ) : null;
+
+      case 'fdoc':
+        return fileData ? <FdocPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'html':
+        return fileData ? <HtmlPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'spreadsheet':
+        return fileData ? (
+          <SpreadsheetPreview data={fileData} fileName={file.name} extension={extension} />
+        ) : null;
+
+      case 'rasterimage':
+        return fileData ? (
+          <RasterImagePreview
+            data={fileData}
+            fileName={file.name}
+            extension={extension}
+            mimeType={mimeType}
+            onLoad={handleImageLoad}
+          />
+        ) : null;
+
+      case 'epub':
+        return fileData ? <EpubPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'archive':
+        // Large ZIPs (local/hybrid V3) list their central directory via ranged
+        // reads — never fully downloaded or inflated. tar/tgz/7z/rar and small
+        // ZIPs keep the richer in-RAM parser (previews every entry type).
+        if (windowing.windowedZip && folderId) {
+          return (
+            <ArchivePreview
+              windowed
+              folderId={folderId}
+              fileName={file.name}
+              extension={extension}
+            />
+          );
+        }
+        return fileData ? (
+          <ArchivePreview data={fileData} fileName={file.name} extension={extension} />
+        ) : null;
+
+      case 'ics':
+        return fileData ? <IcsPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'font':
+        return fileData ? <FontPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'email':
+        return fileData ? <EmailPreview data={fileData} fileName={file.name} /> : null;
+
+      case 'model3d':
+        return fileData ? (
+          <Model3DPreview data={fileData} fileName={file.name} extension={extension} />
+        ) : null;
+
+      case 'binary':
+        return <BinaryInfoPreview fileName={file.name} size={file.size} extension={extension} />;
 
       case 'text':
         return fileData ? (
@@ -666,11 +1060,17 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         ) : null;
 
       case 'video':
+        if (streamUrl) {
+          return <VideoPreview streamUrl={streamUrl} fileName={file.name} mimeType={mimeType} />;
+        }
         return fileData ? (
           <VideoPreview data={fileData} fileName={file.name} mimeType={mimeType} />
         ) : null;
 
       case 'audio':
+        if (streamUrl) {
+          return <AudioPreview streamUrl={streamUrl} fileName={file.name} mimeType={mimeType} />;
+        }
         return fileData ? (
           <AudioPreview data={fileData} fileName={file.name} mimeType={mimeType} />
         ) : null;
@@ -701,7 +1101,11 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
       )}
 
       {/* Header */}
-      <div className="file-preview-panel__header">
+      {/* En plein écran le bandeau se cale sur le bord haut du viewport : il
+          PREND la bande native, sinon ses cinq boutons de droite (dont Fermer)
+          naissent sous les boutons de fenêtre de l'OS. Adossé — panneau
+          latéral, vue scindée — il n'y touche pas, donc aucune réserve. */}
+      <div className={`file-preview-panel__header${isFullscreen ? ' chrome-safe-bar' : ''}`}>
         <div className="file-preview-panel__header-left">
           <h3 className="file-preview-panel__title" title={file.name}>
             {file.name}

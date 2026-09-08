@@ -740,6 +740,11 @@ export const DrawingOverlay: React.FC<DrawingOverlayProps> = React.memo(function
     });
     const proseMirror = editorBody.querySelector('.ProseMirror') as HTMLElement;
     observer.observe(proseMirror || editorBody);
+    // Le WRAPPER aussi : la hauteur du canevas retient `editorBody.clientHeight`
+    // (voir `updateCanvasSize`), et depuis que l'en-tête se replie au
+    // défilement cette hauteur change SANS que `.ProseMirror` ne bouge — la
+    // surface dessinable serait restée périmée d'un repli à l'autre.
+    if (proseMirror && proseMirror !== editorBody) observer.observe(editorBody);
     return () => {
       cancelAnimationFrame(rafId);
       observer.disconnect();

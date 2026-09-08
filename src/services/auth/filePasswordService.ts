@@ -11,12 +11,53 @@
  * - Password strength evaluation
  */
 
+import { isWebPlatform } from '../platform/isWebPlatform';
+
+/**
+ * bcrypt lives in the MAIN process (Node) : the renderer reaches it over IPC.
+ *
+ * On app.filarr.com `window.electron.ipcRenderer` is the web dispatcher, which
+ * has no handler for `crypto:hashPassword` / `crypto:verifyPassword` and THROWS.
+ * Testing the bridge alone therefore chose the dead branch on the web and
+ * shadowed the browser fallback written for exactly that case: no password
+ * could be set or checked on a file there. The web must take the fallback.
+ */
+function hasNativeBcrypt(): boolean {
+  return !!window.electron?.ipcRenderer && !isWebPlatform();
+}
+
+/**
+ * Same cost factor as the main-process handler (electron/main.ts,
+ * `crypto:hashPassword`): a hash produced here verifies there, and vice versa.
+ */
+const BCRYPT_COST = 12;
+
+/**
+ * bcrypt IN THE BROWSER — `bcryptjs` is pure JavaScript and already a
+ * dependency (main uses it). Loaded lazily: only a password gesture pays the
+ * ~30 KB, never the first paint.
+ *
+ * WHY NOT KEEP PBKDF2 FOR NEW HASHES. A `$pbkdf2$` hash is readable by nobody
+ * but this fallback: main's `crypto:verifyPassword` is bcrypt-only, so a
+ * password set on the web could never be checked on the desktop. bcrypt on both
+ * sides makes the hashes one format. `$pbkdf2$` stays accepted on READ for the
+ * hashes the old fallback produced.
+ */
+async function browserBcrypt() {
+  return (await import('bcryptjs')).default;
+}
+
 // Password hashing via IPC to main process (bcrypt runs in Node, not renderer)
 async function hashPassword(password: string): Promise<string> {
-  if (window.electron?.ipcRenderer) {
+  if (hasNativeBcrypt()) {
     return window.electron.ipcRenderer.invoke('crypto:hashPassword', password);
   }
-  // Fallback: PBKDF2 via Web Crypto (for dev/browser mode)
+  // Fallback: bcrypt in the browser (same format and cost as main)
+  if (isWebPlatform()) {
+    const bcrypt = await browserBcrypt();
+    return bcrypt.hash(password, BCRYPT_COST);
+  }
+  // Legacy fallback: PBKDF2 via Web Crypto (no bridge at all, e.g. a bare dev page)
   const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const keyMaterial = await crypto.subtle.importKey(
@@ -58,10 +99,16 @@ function timingSafeStringEqual(a: string, b: string): boolean {
 }
 
 async function comparePassword(password: string, hash: string): Promise<boolean> {
-  if (window.electron?.ipcRenderer) {
+  if (hasNativeBcrypt()) {
     return window.electron.ipcRenderer.invoke('crypto:verifyPassword', password, hash);
   }
-  // Fallback: PBKDF2 via Web Crypto
+  // bcrypt hashes — set on the desktop (`$2a$`/`$2b$`/`$2y$`) or by the web
+  // fallback above — verify in the browser too.
+  if (/^\$2[aby]\$/.test(hash)) {
+    const bcrypt = await browserBcrypt();
+    return bcrypt.compare(password, hash);
+  }
+  // Legacy fallback: PBKDF2 via Web Crypto
   if (hash.startsWith('$pbkdf2$')) {
     const parts = hash.split('$');
     const saltHex = parts[2];

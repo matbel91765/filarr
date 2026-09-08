@@ -98,16 +98,16 @@
 }
 
 /* Dark mode */
-[data-theme="dark"] .input-wrapper--default {
+[data-theme='dark'] .input-wrapper--default {
   background-color: var(--color-surface);
   border-color: var(--color-border);
 }
 
-[data-theme="dark"] .input-wrapper--filled {
+[data-theme='dark'] .input-wrapper--filled {
   background-color: var(--color-background-tertiary);
 }
 
-[data-theme="dark"] .input-wrapper--disabled {
+[data-theme='dark'] .input-wrapper--disabled {
   background-color: var(--color-background-secondary);
 }
 
@@ -127,6 +127,26 @@
 
 .input::placeholder {
   color: var(--color-text-tertiary);
+}
+
+/* ── Multiligne (Textarea) ───────────────────────────────────────────────────
+   Le conteneur d'un champ d'une ligne centre son contenu verticalement, ce qui
+   pousserait un texte de quatre lignes au milieu de sa propre boîte. Ici le
+   contenu part du HAUT et la boîte grandit avec lui. Tout le reste — fond,
+   bordure, focus, état d'erreur, désactivé — est celui de `Input`, non redéfini,
+   pour qu'une retouche de la palette des champs suive sans qu'on y pense. */
+.input-wrapper--textarea {
+  align-items: stretch;
+}
+
+.input--textarea {
+  resize: vertical;
+  min-height: 4.5rem;
+  line-height: var(--line-height-normal, 1.5);
+  /* Une liste d'identifiants se lit mieux alignée : les fautes de frappe s'y
+     voient, ce qui est exactement l'usage de ce champ dans la console d'org. */
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: var(--font-size-sm);
 }
 
 .input:disabled {
@@ -167,28 +187,28 @@
   transition: background-color 5000s ease-in-out 0s;
 }
 
-[data-theme="dark"] .input:-webkit-autofill,
-[data-theme="dark"] .input:-webkit-autofill:hover,
-[data-theme="dark"] .input:-webkit-autofill:focus {
+[data-theme='dark'] .input:-webkit-autofill,
+[data-theme='dark'] .input:-webkit-autofill:hover,
+[data-theme='dark'] .input:-webkit-autofill:focus {
   -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
 }
 
 /* Number input - remove spinner */
-.input[type="number"]::-webkit-inner-spin-button,
-.input[type="number"]::-webkit-outer-spin-button {
+.input[type='number']::-webkit-inner-spin-button,
+.input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-.input[type="number"] {
+.input[type='number'] {
   -moz-appearance: textfield;
 }
 
 /* Search input - remove X button in Chrome */
-.input[type="search"]::-webkit-search-decoration,
-.input[type="search"]::-webkit-search-cancel-button,
-.input[type="search"]::-webkit-search-results-button,
-.input[type="search"]::-webkit-search-results-decoration {
+.input[type='search']::-webkit-search-decoration,
+.input[type='search']::-webkit-search-cancel-button,
+.input[type='search']::-webkit-search-results-button,
+.input[type='search']::-webkit-search-results-decoration {
   -webkit-appearance: none;
 }
 

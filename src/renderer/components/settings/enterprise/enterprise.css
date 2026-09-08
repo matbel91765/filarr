@@ -1,0 +1,1105 @@
+/**
+ * Enterprise admin console — shared visual language (E1 / E3 / E7).
+ *
+ * Tokens only, never raw hex. Badge/callout fills use color-mix() over `transparent`
+ * so a single rule renders correctly on ALL 12 themes (light, dark, space, aurora, …):
+ * the tint shows the theme background through it instead of a fixed light panel.
+ */
+
+/* ── Console shell ─────────────────────────────────────────────────────────── */
+.ent-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.ent-pagehead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  flex-wrap: wrap;
+}
+.ent-pagehead__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ent-pagehead__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.ent-pagehead__subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+.ent-pagehead__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+/* ── Section panel ─────────────────────────────────────────────────────────── */
+.ent-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.ent-section__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4) var(--spacing-5);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.ent-section__icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-600);
+}
+.ent-section__icon svg {
+  width: 18px;
+  height: 18px;
+}
+.ent-section__head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ent-section__title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.ent-section__desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0;
+  line-height: var(--line-height-normal);
+}
+.ent-section__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-shrink: 0;
+}
+.ent-section__body {
+  padding: var(--spacing-5);
+}
+.ent-section__body--flush {
+  padding: 0;
+}
+
+/* ── Toolbar (filters / actions row) ───────────────────────────────────────── */
+.ent-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-4);
+}
+.ent-toolbar__spacer {
+  flex: 1 1 auto;
+}
+.ent-toolbar__field {
+  min-width: 200px;
+}
+
+/* ── Status badges ─────────────────────────────────────────────────────────── */
+.ent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.ent-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+  flex-shrink: 0;
+}
+.ent-badge svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ent-badge--neutral {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+}
+/* Le TEXTE d'une pastille est posé sur une teinte translucide, donc sur le fond
+   de la page : c'est le jeton `-on-background` qu'il lui faut, pas le barreau
+   brut de la palette. Succès et info employaient encore -600 (#059669, #2563eb)
+   et tombaient à ~2,4:1 sur les thèmes sombres, quand avertissement et erreur
+   avaient déjà leur pendant relevé. Les quatre suivent maintenant la même règle. */
+.ent-badge--info {
+  background: color-mix(in srgb, var(--color-info-500) 13%, transparent);
+  color: var(--color-info-on-background);
+  border-color: color-mix(in srgb, var(--color-info-500) 28%, transparent);
+}
+.ent-badge--success {
+  background: color-mix(in srgb, var(--color-success-500) 14%, transparent);
+  color: var(--color-success-on-background);
+  border-color: color-mix(in srgb, var(--color-success-500) 30%, transparent);
+}
+.ent-badge--warning {
+  background: color-mix(in srgb, var(--color-warning-500) 16%, transparent);
+  color: var(--color-warning-on-background);
+  border-color: color-mix(in srgb, var(--color-warning-500) 32%, transparent);
+}
+.ent-badge--error {
+  background: color-mix(in srgb, var(--color-error-500) 13%, transparent);
+  color: var(--color-error-600);
+  border-color: color-mix(in srgb, var(--color-error-500) 30%, transparent);
+}
+.ent-badge--brand {
+  background: color-mix(in srgb, var(--color-primary-500) 16%, transparent);
+  color: var(--color-primary-700);
+  border-color: color-mix(in srgb, var(--color-primary-500) 32%, transparent);
+}
+
+/* ── Callout (security note / danger / info banner) ────────────────────────── */
+.ent-callout {
+  display: flex;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
+}
+.ent-callout__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ent-callout__icon svg {
+  width: 16px;
+  height: 16px;
+}
+.ent-callout--info {
+  background: color-mix(in srgb, var(--color-info-500) 9%, transparent);
+  border-color: color-mix(in srgb, var(--color-info-500) 22%, transparent);
+}
+.ent-callout--info .ent-callout__icon {
+  color: var(--color-info-600);
+}
+.ent-callout--success {
+  background: color-mix(in srgb, var(--color-success-500) 9%, transparent);
+  border-color: color-mix(in srgb, var(--color-success-500) 24%, transparent);
+}
+.ent-callout--success .ent-callout__icon {
+  color: var(--color-success-600);
+}
+/* L'ambre : un état VOULU et réversible (un coffre gelé), pas un incident. Mêmes
+   proportions que les trois autres, sur le jeton `warning` déjà utilisé par les
+   pastilles — un ton de plus, pas une palette de plus. */
+.ent-callout--warning {
+  background: color-mix(in srgb, var(--color-warning-500) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning-500) 28%, transparent);
+}
+.ent-callout--warning .ent-callout__icon {
+  color: var(--color-warning-600);
+}
+.ent-callout--danger {
+  background: color-mix(in srgb, var(--color-error-500) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-error-500) 24%, transparent);
+}
+.ent-callout--danger .ent-callout__icon {
+  color: var(--color-error-600);
+}
+
+/* ── Monospace data cell + copy-to-clipboard id ────────────────────────────── */
+.ent-mono {
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+.ent-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  font-family: var(--font-family-mono);
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  padding: 1px 5px;
+  margin-left: -5px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ent-copy:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+.ent-copy__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ent-copy__icon {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: var(--transition-fast);
+}
+.ent-copy:hover .ent-copy__icon,
+.ent-copy:focus-visible .ent-copy__icon {
+  opacity: 0.7;
+}
+.ent-copy__icon svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+/* ── Time cell (relative + absolute on hover) ──────────────────────────────── */
+.ent-time {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* ── Danger zone ───────────────────────────────────────────────────────────── */
+.ent-danger {
+  border: 1px solid color-mix(in srgb, var(--color-error-500) 30%, transparent);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  background: color-mix(in srgb, var(--color-error-500) 5%, transparent);
+}
+.ent-danger__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-error-600);
+  margin: 0 0 2px;
+}
+.ent-danger__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--spacing-3);
+  line-height: var(--line-height-normal);
+}
+
+/* ── Key / value description list ──────────────────────────────────────────── */
+.ent-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--spacing-2) var(--spacing-5);
+  align-items: baseline;
+}
+.ent-kv__key {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.ent-kv__val {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* ── Inline empty / hint text ──────────────────────────────────────────────── */
+.ent-hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* Tables embedded in a flush section body keep a tidy inner gutter. */
+.ent-section__body--flush .table-container {
+  padding: var(--spacing-2) var(--spacing-2) var(--spacing-3);
+}
+
+/* ── Monitoring dashboard ──────────────────────────────────────────────────── */
+
+/* Tabs */
+/* LA BARRE PASSE À LA LIGNE, ELLE NE DÉFILE PLUS.
+
+   Douze onglets ne tiennent pas dans la largeur. Les faire défiler posait un
+   choix perdant des deux côtés : la glissière native est une barre de 12px
+   qui double la hauteur de la bande pour n'apprendre à personne ce qu'elle
+   cache, et la masquer derrière une ombre de bord rend les derniers onglets
+   introuvables — sur un bureau, rien ne se balaie du doigt.
+
+   En passant à la ligne, tout est visible d'un coup et il n'y a plus de
+   glissière du tout. Le trait du bas se pose sous la DERNIÈRE rangée, et
+   l'onglet actif garde son soulignement dans la sienne. */
+.ent-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2px;
+  row-gap: var(--spacing-1);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-5);
+}
+.ent-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-fast);
+}
+.ent-tab:hover {
+  color: var(--color-text-secondary);
+}
+.ent-tab--active {
+  color: var(--color-primary-600);
+  border-bottom-color: var(--color-primary-500);
+}
+.ent-tab svg {
+  width: 15px;
+  height: 15px;
+}
+/* ══ Guide de mise en place ══════════════════════════════════════════════════
+   Une liste ordonnée dont chaque entrée porte son propre état. La colonne de
+   pastilles est FIXE (28px) pour que les textes s'alignent quel que soit le
+   numéro, et le trait vertical qui relie les étapes dit qu'elles se suivent —
+   c'est précisément le propos : l'ordre n'est pas décoratif, il est la matière
+   du guide. */
+.ent-steps {
+  list-style: none;
+  margin: var(--spacing-4) 0 0;
+  padding: 0;
+}
+.ent-step {
+  position: relative;
+  display: flex;
+  gap: var(--spacing-3);
+  padding: 0 0 var(--spacing-5) 0;
+}
+/* Le trait de liaison : posé sur tous sauf le dernier, sinon il pendrait dans le
+   vide sous la dernière étape. */
+.ent-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 30px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--color-border);
+}
+.ent-step__mark {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-tertiary);
+}
+.ent-step__mark svg {
+  width: 14px;
+  height: 14px;
+}
+.ent-step__mark--done {
+  border-color: var(--color-success-500, var(--color-primary-500));
+  color: var(--color-success-600, var(--color-primary-600));
+}
+.ent-step__mark--todo {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-600);
+}
+/* Une étape hors d'atteinte s'efface sans disparaître : on doit voir qu'elle
+   existe et qu'elle viendra, pas croire qu'elle manque. */
+.ent-step--blocked .ent-step__mark {
+  opacity: 0.6;
+}
+.ent-step--blocked .ent-step__body {
+  opacity: 0.72;
+}
+.ent-step__body {
+  min-width: 0;
+  flex: 1;
+}
+.ent-step__head {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+.ent-step__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.ent-step__text {
+  margin: 4px 0 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+/* Un avertissement porte une conséquence irréversible : il se distingue par un
+   filet, jamais par une couleur d'alerte — ce n'est pas une erreur, c'est une
+   chose à savoir avant d'agir. */
+.ent-step__warning {
+  margin: var(--spacing-2) 0 0;
+  padding-left: var(--spacing-3);
+  border-left: 2px solid var(--color-warning-400, var(--color-border));
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.ent-step__action {
+  margin-top: var(--spacing-2);
+}
+
+/* Bascule administrateur / membre, dans l'en-tête de la section. */
+.ent-segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--radius-md);
+  background: var(--color-background-tertiary);
+}
+.ent-segmented__btn {
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ent-segmented__btn:hover {
+  color: var(--color-text-primary);
+}
+.ent-segmented__btn--active {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-xs, 0 1px 2px rgb(0 0 0 / 0.06));
+}
+
+/* La réponse à la question de confiance, en pied de guide. */
+.ent-guide__footer {
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+.ent-guide__footerTitle {
+  margin: 0 0 var(--spacing-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.ent-guide__footerText {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ── Pastille « bientôt » d'un onglet ────────────────────────────────────────
+   Une fonction pas encore livrée se MONTRE, marquée, au lieu de disparaître :
+   un administrateur qui cherche « où est le SSO » et ne trouve rien conclut à
+   son absence définitive et écrit au support. Volontairement discrète — c'est
+   une note de bas de page sur l'onglet, pas une réclame. */
+.ent-tab__soon {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+/* ── Choix exclusif décrit (mode d'extensions) ───────────────────────────────
+   Un bouton radio du design system, plus une phrase sous son étiquette. Ces
+   trois modes n'ont pas les mêmes conséquences pour les membres et l'étiquette
+   seule ne les dit pas ; l'indentation aligne la description sur le texte du
+   bouton, jamais sur son cercle. */
+.ent-choice {
+  padding: var(--spacing-1) 0;
+}
+.ent-choice__desc {
+  margin: 2px 0 0 26px;
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+/* ── Liste déroulante de la console ──────────────────────────────────────────
+   Le produit n'a pas de composant de liste déroulante pour un choix simple : le
+   Dropdown du design system est un menu d'actions, pas un champ de formulaire.
+   On habille donc le select natif avec les MÊMES jetons que les champs de
+   saisie — sans quoi il garderait les couleurs du système et trancherait sur
+   les thèmes sombres, qui sont précisément ceux que l'utilisateur a choisis
+   pour être sombres. */
+.ent-select {
+  min-width: 200px;
+  padding: var(--spacing-1) var(--spacing-2);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  transition: var(--transition-color);
+}
+.ent-select:hover:not(:disabled) {
+  border-color: var(--color-border-strong, var(--color-primary-400));
+}
+.ent-select:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 1px;
+}
+.ent-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ent-tab__count {
+  font-size: var(--font-size-xs);
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+/* Stat cards */
+.ent-statgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--spacing-3);
+}
+.ent-stat {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+}
+.ent-stat__label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--spacing-3);
+}
+.ent-stat__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-600);
+  flex-shrink: 0;
+}
+.ent-stat__icon svg {
+  width: 15px;
+  height: 15px;
+}
+.ent-stat__value {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ent-stat__sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin-top: 3px;
+}
+
+/* Cards (charts) */
+.ent-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4) var(--spacing-5) var(--spacing-5);
+}
+.ent-card__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 2px;
+}
+.ent-card__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--spacing-4);
+}
+
+/* Bar list (events by type, role distribution) */
+.ent-barlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+.ent-barlist__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px var(--spacing-3);
+  align-items: center;
+}
+.ent-barlist__label {
+  font-family: var(--font-family-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ent-barlist__count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.ent-barlist__track {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  overflow: hidden;
+}
+.ent-barlist__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-500);
+}
+
+/* Dashboard grid */
+.ent-grid-2 {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: var(--spacing-4);
+}
+/* CE SEUIL EST CELUI DES CONSOLES SANS MESURE, ET IL NE NOUS APPARTIENT PAS.
+   La requête média ne connaît QUE la fenêtre : elle sert de repli aux consoles
+   qui n'ont pas de `ResizeObserver` (`OrgDashboard`, les écrans admin). Les
+   écrans qui, eux, mesurent leur conteneur posent une classe de bande (voir plus
+   bas), et c'est elle qui gagne — sur eux, ce seuil-ci ne décide de rien.
+
+   ON A ESSAYÉ DE L'ALIGNER SUR 839 (= BREAKPOINT_COMPACT - 1) pour n'avoir qu'un
+   chiffre : c'était une RÉGRESSION pour les non-migrées, qui gardaient leur
+   grille à deux colonnes entre 840 et 899 px de fenêtre alors qu'elle se repliait
+   avant. Un repli aveugle a le droit d'être plus prudent que la bande mesurée ;
+   il n'a pas le droit de laisser un trou en dessous d'elle. */
+@media (max-width: 900px) {
+  .ent-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* SVG bar chart */
+.ent-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.ent-chart-bar {
+  fill: var(--color-primary-500);
+  opacity: 0.85;
+  transition: opacity var(--transition-fast);
+}
+.ent-chart-bar:hover {
+  opacity: 1;
+}
+.ent-chart-axis {
+  fill: var(--color-text-tertiary);
+  font-size: 9px;
+  font-family: var(--font-family-base);
+}
+.ent-chart-grid {
+  stroke: var(--color-border-light);
+  stroke-width: 1;
+}
+
+/* ── Les trois bandes, MESURÉES SUR LE CONTENEUR (F28) ─────────────────────
+
+   Une requête média répond sur la FENÊTRE. Or une console vit à côté d'une barre
+   latérale rétractable, dans une fenêtre parfois scindée, et sa colonne est
+   plafonnée (`max-width`) : la fenêtre peut être large de 1600 px pendant que la
+   page n'en a que 700. Les classes ci-dessous sont posées par l'hôte à partir
+   d'un `ResizeObserver` (`useContainerBreakpoint`), et décrivent la place
+   RÉELLE. Elles ne remplacent pas la requête média — elles la corrigent là où
+   quelqu'un a pris la peine de mesurer.
+
+   compact  (< 840)  : une colonne, des cartes à la place des tableaux, et rien
+                       qui puisse pousser le corps horizontalement ;
+   medium   (< 1200) : une colonne, mais les tableaux tiennent encore ;
+   wide     (>= 1200): la grille à deux colonnes, telle qu'elle a été dessinée. */
+.ent-console--band-compact .ent-grid-2,
+.ent-console--band-medium .ent-grid-2 {
+  grid-template-columns: 1fr;
+}
+
+/* Une console étroite respire moins : les marges intérieures des cartes et de la
+   page mangeraient sinon le tiers de la largeur utile sur un téléphone. */
+.ent-console--band-compact .ent-section__body {
+  padding: var(--spacing-4) var(--spacing-3);
+}
+/* Les champs de barre d'outils (recherche, filtres, export du fil) prennent
+   toute la largeur : à 200 px de plancher, deux d'entre eux ne tiennent pas côte
+   à côte dans une page de 290 px — ils s'empilent déjà, mais à moitié vides. */
+.ent-console--band-compact .ent-toolbar__field {
+  min-width: 100%;
+}
+.ent-console--band-compact .ent-statgrid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--spacing-2);
+}
+/* La liste clé/valeur EMPILE : deux colonnes dont la première est en
+   `max-content` (« Identifiant du coffre ») ne laissent plus rien à la seconde,
+   et c'est la valeur — un identifiant copiable — qui déborde. */
+.ent-console--band-compact .ent-kv {
+  grid-template-columns: 1fr;
+  gap: 2px var(--spacing-2);
+}
+.ent-console--band-compact .ent-kv__val {
+  margin-bottom: var(--spacing-2);
+}
+/* Une ligne d'actions qui ne tient pas s'EMPILE au lieu de pousser : c'est le
+   motif partagé par la ligne d'invitation, les fiches d'accès et les rangées
+   d'invitation, qui alignent tous un champ, un menu et un bouton. */
+.ent-console--band-compact .ent-stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ent-console--band-compact .ent-stack > * {
+  min-width: 0;
+}
+
+/* ── La barre d'onglets qui défile, avec son ombre de bord ──────────────────
+
+   `.ent-tabs` défilait déjà horizontalement, sans jamais le DIRE : sur six
+   onglets dans 360 px, les deux derniers étaient simplement invisibles, et rien
+   à l'écran ne suggérait qu'il y avait quelque chose à faire glisser.
+
+   L'ombre est PUREMENT CSS, par le vieux tour des quatre dégradés : deux voiles
+   opaques attachés au CONTENU (`local`) masquent l'ombre quand on est en butée,
+   deux ombres attachées à la BOÎTE (`scroll`) restent visibles tant qu'il y a
+   quelque chose au-delà. Aucun écouteur de défilement, donc rien à synchroniser
+   — et rien qui puisse rester allumé après un redimensionnement.
+
+   ELLE EST DERRIÈRE UN MODIFICATEUR, ET C'EST LE VOILE QUI L'EXIGE. Les deux
+   voiles sont OPAQUES : ils doivent être peints de la couleur exacte du fond sur
+   lequel la barre est posée. Posée sur `.ent-tabs` tout court, la règle
+   s'appliquait à toutes les consoles avec `--color-background` codé en dur —
+   partout où une barre d'onglets vit sur une surface (`--color-surface`), les
+   deux voiles se seraient vus comme deux bandes de la mauvaise couleur, sur des
+   écrans qui n'avaient rien demandé. L'hôte demande donc l'ombre (classe) et
+   peut dire sur quoi il la pose (`--ent-tabs-veil`) ; le défaut est le fond de
+   page, le seul cas qu'on connaisse sans demander. */
+
+/* ── Une ligne de tableau rendue en CARTE (bande compacte) ─────────────────
+
+   Un tableau de six colonnes ne se replie pas : il POUSSE. En dessous de 840, la
+   page ne le monte pas du tout — le cacher en CSS le laisserait mesurer, donc
+   déborder — et rend une carte par ligne, avec les MÊMES gestes derrière un
+   menu « ⋯ ». */
+.ent-rowcards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  margin: 0;
+  list-style: none;
+}
+.ent-rowcard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  min-width: 0;
+}
+.ent-rowcard__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ent-rowcard__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+.ent-rowcard__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+.ent-rowcard--highlight {
+  box-shadow: 0 0 0 1px var(--color-primary-500);
+}
+
+/* ── Bandeau d'état + panneau de chiffres (planches « Facturation »/« Poste ») ─
+   Le bandeau est l'en-tête VIVANT d'un écran : il dit dans quel état on est et
+   quel geste le change. Il ne remplace pas `.ent-callout`, qui reste la remarque
+   posée DANS un contenu ; il en partage les tons pour rester de la même famille,
+   avec la pastille d'icône en plus — c'est elle qui lui donne son poids de titre.
+   ---------------------------------------------------------------------------- */
+.ent-band {
+  display: flex;
+  gap: var(--spacing-4);
+  align-items: flex-start;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.ent-band__icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-elevated, var(--color-surface));
+  border: 1px solid var(--color-border);
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+}
+.ent-band__icon svg {
+  width: 24px;
+  height: 24px;
+}
+.ent-band__body {
+  flex: 1;
+  min-width: 0;
+}
+.ent-band__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+.ent-band__text {
+  margin: var(--spacing-1) 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+.ent-band__text strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+.ent-band__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+.ent-band--success {
+  background: color-mix(in srgb, var(--color-success-500) 9%, transparent);
+  border-color: color-mix(in srgb, var(--color-success-500) 24%, transparent);
+}
+.ent-band--success .ent-band__icon {
+  color: var(--color-success-600);
+}
+.ent-band--info {
+  background: color-mix(in srgb, var(--color-info-500) 9%, transparent);
+  border-color: color-mix(in srgb, var(--color-info-500) 22%, transparent);
+}
+.ent-band--info .ent-band__icon {
+  color: var(--color-info-600);
+}
+.ent-band--warning {
+  background: color-mix(in srgb, var(--color-warning-500) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning-500) 28%, transparent);
+}
+.ent-band--warning .ent-band__icon {
+  color: var(--color-warning-600);
+}
+.ent-band--danger {
+  background: color-mix(in srgb, var(--color-error-500) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-error-500) 24%, transparent);
+}
+.ent-band--danger .ent-band__icon {
+  color: var(--color-error-600);
+}
+
+/* Les chiffres d'UN MÊME SUJET se lisent ensemble : le panneau les tient, et les
+   tuiles y perdent leur propre cadre pour ne pas empiler deux bordures. C'est ce
+   qui distingue les quatre chiffres d'un abonnement — un seul sujet — des
+   statistiques indépendantes de la vue d'ensemble, qui gardent leurs cartes. */
+.ent-statpanel {
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+}
+.ent-statpanel .ent-statgrid {
+  gap: var(--spacing-4);
+}
+.ent-statpanel .ent-stat {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+}
+.ent-statpanel .ent-stat__label {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-1);
+}
+.ent-statpanel .ent-stat__value {
+  font-size: var(--font-size-lg);
+}
+
+/* ── Ligne de réglage + intertitre (planche « Poste de travail ») ─────────────
+   Un réglage se lit en trois temps : son nom, la portée de ce nom (la pastille),
+   et ce qu'il change (la description). Le contrôle se tient à droite, loin du
+   texte, pour qu'on ne l'actionne pas avant de l'avoir lu.
+
+   LA MESURE EST LE DÉTAIL QUI FAIT TOUT. Sans `max-width`, la description court
+   sur toute la largeur de la console — quatre-vingts caractères et plus par
+   ligne, l'œil perd le début de la suivante. La planche la borne à 560px ; c'est
+   elle, et non les couleurs, qui séparait la maquette du rendu.
+   ---------------------------------------------------------------------------- */
+.ent-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-2) 0;
+}
+.ent-row__main {
+  min-width: 0;
+}
+.ent-row__label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+.ent-row__desc {
+  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  max-width: 560px;
+}
+.ent-row__control {
+  flex-shrink: 0;
+}
+.ent-subhead {
+  margin: var(--spacing-5) 0 var(--spacing-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+/* Même mesure pour la description d'un choix : c'est le même genre de phrase. */
+.ent-choice__desc {
+  max-width: 560px;
+}
+
+/* Champ libre d'un écran de réglages : nom, ce qu'il fait, le contrôle, puis le
+   compte-rendu. Même mesure que `.ent-row__desc` — c'est la même phrase, posée
+   au-dessus du contrôle plutôt qu'à côté. */
+.ent-field {
+  margin-top: var(--spacing-3);
+}
+.ent-field__label {
+  margin-bottom: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+.ent-field__desc {
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  max-width: 560px;
+}
+.ent-field__hint {
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.ent-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) 0;
+}
+.ent-actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+/* Une jauge de deux pixels sous un chiffre : « combien » ET « jusqu'où ». Un
+   plafond seul ne dit pas s'il est loin ; un usage seul ne dit pas s'il est
+   grave. Le ton bascule à 85 % — avant que la première écriture soit refusée. */
+.ent-meter {
+  height: 3px;
+  margin-top: var(--spacing-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-text-tertiary) 22%, transparent);
+  overflow: hidden;
+}
+.ent-meter__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary-500);
+  transition: width var(--transition-base, 200ms);
+}
+.ent-meter--warn .ent-meter__fill {
+  background: var(--color-warning-500);
+}
+.ent-meter--full .ent-meter__fill {
+  background: var(--color-error-500);
+}

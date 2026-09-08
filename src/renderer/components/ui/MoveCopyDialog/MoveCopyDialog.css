@@ -10,7 +10,7 @@
 
 .move-copy-dialog__info {
   font-size: 14px;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 .move-copy-dialog__search {
@@ -20,17 +20,85 @@
 .move-copy-dialog__tree {
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px;
-  background-color: var(--bg-secondary, #f9f9f9);
+  background-color: var(--color-background-secondary);
 }
 
 .move-copy-dialog__empty {
   padding: 32px;
   text-align: center;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
   font-size: 14px;
+}
+
+.move-copy-dialog__recent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.move-copy-dialog__recent-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.move-copy-dialog__recent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.move-copy-dialog__chip {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.move-copy-dialog__chip:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.move-copy-dialog__chip--selected {
+  background-color: var(--color-primary-500);
+  border-color: var(--color-primary-500);
+  color: var(--color-text-inverted);
+}
+
+.move-copy-dialog__create {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.move-copy-dialog__create-hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.move-copy-dialog__create-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.move-copy-dialog__create-row .input-container {
+  flex: 1;
 }
 
 .move-copy-dialog__rename {
@@ -42,7 +110,7 @@
 .move-copy-dialog__rename-label {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary, #333);
+  color: var(--color-text-primary);
 }
 
 /* Folder Tree Item */
@@ -61,22 +129,30 @@
 }
 
 .folder-tree-item__content:hover:not(.folder-tree-item__content--disabled) {
-  background-color: var(--bg-hover, #f0f0f0);
+  background-color: var(--color-surface-hover);
 }
 
 .folder-tree-item__content--selected {
-  background-color: var(--primary-color, #007bff);
-  color: white;
+  background-color: var(--color-primary-500);
+  color: var(--color-text-inverted);
 }
 
 .folder-tree-item__content--selected .folder-tree-item__icon svg {
-  color: white;
-  stroke: white;
+  color: var(--color-text-inverted);
+  stroke: var(--color-text-inverted);
 }
 
 .folder-tree-item__content--disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Racine virtuelle : mise en tête d'arbre et détachée des vrais dossiers */
+.folder-tree-item__content--root {
+  font-weight: 600;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 6px 6px 0 0;
 }
 
 .folder-tree-item__expand {
@@ -103,7 +179,7 @@
 .folder-tree-item__icon svg {
   width: 20px;
   height: 20px;
-  color: var(--text-secondary, #666);
+  color: var(--color-text-secondary);
 }
 
 .folder-tree-item__name {

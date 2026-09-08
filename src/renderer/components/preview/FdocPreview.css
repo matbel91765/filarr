@@ -1,0 +1,135 @@
+/**
+ * FdocPreview — la « page » d'un document Filarr, en lecture.
+ *
+ * Elle reprend l'esprit de la page de l'éditeur (largeur lisible, respiration)
+ * sans en copier la feuille : celle-ci vit dans le greffon vendorisé, et la
+ * dupliquer ici ferait diverger les deux au premier ajustement.
+ */
+
+.fdoc-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+}
+
+.fdoc-preview__meta {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background-secondary);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.fdoc-preview__page {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--spacing-6) var(--spacing-5);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  line-height: 1.65;
+  /* La lecture seule reste SÉLECTIONNABLE : copier un extrait sans ouvrir
+     l'éditeur est la moitié de l'intérêt d'un aperçu. */
+  user-select: text;
+}
+
+.fdoc-preview__page h1,
+.fdoc-preview__page h2,
+.fdoc-preview__page h3 {
+  margin: 1.4em 0 0.5em;
+  line-height: 1.25;
+}
+
+.fdoc-preview__page h1 {
+  font-size: 1.6em;
+}
+.fdoc-preview__page h2 {
+  font-size: 1.3em;
+}
+.fdoc-preview__page h3 {
+  font-size: 1.1em;
+}
+
+.fdoc-preview__page p {
+  margin: 0 0 0.85em;
+}
+
+.fdoc-preview__page ul,
+.fdoc-preview__page ol {
+  margin: 0 0 0.85em;
+  padding-left: 1.4em;
+}
+
+.fdoc-preview__page blockquote {
+  margin: 0 0 0.85em;
+  padding-left: var(--spacing-4);
+  border-left: 3px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+
+.fdoc-preview__page pre {
+  margin: 0 0 0.85em;
+  padding: var(--spacing-3);
+  overflow-x: auto;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background-secondary);
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+}
+
+.fdoc-preview__page code {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: var(--color-background-secondary);
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: 0.9em;
+}
+
+.fdoc-preview__page pre code {
+  padding: 0;
+  background: none;
+}
+
+.fdoc-preview__page hr {
+  margin: 1.5em 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Une image d'un document reçu peut être immense : la contraindre évite qu'un
+   aperçu fasse défiler l'écran horizontalement. */
+.fdoc-preview__page img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.fdoc-preview__page table {
+  width: 100%;
+  margin: 0 0 0.85em;
+  border-collapse: collapse;
+}
+
+.fdoc-preview__page th,
+.fdoc-preview__page td {
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.fdoc-preview__page th {
+  background: var(--color-background-secondary);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.fdoc-preview__empty {
+  padding: var(--spacing-6);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}

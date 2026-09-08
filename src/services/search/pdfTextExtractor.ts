@@ -9,6 +9,9 @@
 
 import * as pdfjsLib from 'pdfjs-dist';
 import searchService from './searchService';
+// Shared worker setup (blob URL, CSP-safe, offline). Background extraction can
+// run before <PDFPreview> ever mounts, so import it here too.
+import { pdfWorkerReady } from '../../utils/pdfWorker';
 
 // Max pages to extract per PDF (avoids blocking on huge PDFs)
 const MAX_PAGES = 50;
@@ -21,6 +24,7 @@ const MAX_CONTENT_LENGTH = 100_000;
  * @returns Concatenated text content from all pages
  */
 export async function extractPdfText(pdfSource: string | ArrayBuffer): Promise<string> {
+  await pdfWorkerReady;
   const loadingTask = pdfjsLib.getDocument(
     typeof pdfSource === 'string' ? pdfSource : { data: pdfSource }
   );
@@ -39,9 +43,7 @@ export async function extractPdfText(pdfSource: string | ArrayBuffer): Promise<s
   }
 
   const fullText = pageTexts.join('\n').trim();
-  return fullText.length > MAX_CONTENT_LENGTH
-    ? fullText.slice(0, MAX_CONTENT_LENGTH)
-    : fullText;
+  return fullText.length > MAX_CONTENT_LENGTH ? fullText.slice(0, MAX_CONTENT_LENGTH) : fullText;
 }
 
 /**

@@ -27,11 +27,16 @@ export const MathNodeView: React.FC<MathNodeViewProps> = ({ node, updateAttribut
   useEffect(() => {
     if (!editing && previewRef.current && latex) {
       try {
+        // 'htmlAndMathml' emits the MathML layer KaTeX otherwise suppresses,
+        // giving screen readers accessible math instead of styled spans.
         katex.render(latex, previewRef.current, {
           displayMode: isBlock,
           throwOnError: false,
-          output: 'html',
+          output: 'htmlAndMathml',
         });
+        // Expose the source as an accessible label + role for AT.
+        previewRef.current.setAttribute('role', 'math');
+        previewRef.current.setAttribute('aria-label', latex);
       } catch {
         previewRef.current.textContent = latex;
       }
@@ -63,7 +68,10 @@ export const MathNodeView: React.FC<MathNodeViewProps> = ({ node, updateAttribut
 
   if (editing) {
     return (
-      <NodeViewWrapper as={isBlock ? 'div' : 'span'} className={`math-node math-node--editing ${isBlock ? 'math-node--block' : 'math-node--inline'}`}>
+      <NodeViewWrapper
+        as={isBlock ? 'div' : 'span'}
+        className={`math-node math-node--editing ${isBlock ? 'math-node--block' : 'math-node--inline'}`}
+      >
         <textarea
           ref={inputRef}
           className="math-node__input"

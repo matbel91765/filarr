@@ -2,12 +2,37 @@
  * Layout Styles
  */
 
+/*
+ * LE PADDING DE `.layout` NE SE DÉCLARE QUE DANS CE FICHIER.
+ *
+ * Il porte DEUX réserves qui s'additionnent : celle de l'écran (encoche, barre
+ * système — web mobile) et celle du mode d'affichage des barres (rail à
+ * gauche, bande native en mode « aucune barre »). Elles vivaient dans deux
+ * fichiers, en padding directs, et se sont écrasées :
+ * `[data-platform='web'] .layout` (reset.css) pèse (0,2,0), `.layout--header-side`
+ * pèse (0,1,0) — sur app.filarr.com le décalage du rail retombait donc à zéro
+ * SANS UN MOT, et le rail (position:fixed, 56 px) se posait SUR la page.
+ *
+ * La réserve d'écran arrive désormais en VARIABLES (`--layout-safe-*`, posées
+ * par reset.css, nulles partout ailleurs) et c'est ici, et ici seulement,
+ * qu'elles deviennent du padding. Deux règles de ce fichier ne peuvent plus se
+ * disputer une réserve : elles ont la même spécificité, la plus tardive gagne,
+ * et elles sont sous les yeux l'une de l'autre. `check-window-chrome` (règle 4)
+ * échoue si un autre fichier repose un padding sur `.layout`.
+ */
+
+/* 100dvh suit la barre d'URL mobile ; 100vh reste juste avant comme repli
+   pour les moteurs qui ignorent dvh. */
 .layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--color-background);
   overflow: hidden;
+  padding-top: var(--layout-safe-top, 0px);
+  padding-left: var(--layout-safe-left, 0px);
+  padding-right: var(--layout-safe-right, 0px);
 }
 
 .layout__body {
@@ -16,6 +41,360 @@
   position: relative;
   overflow: hidden;
   min-height: 0;
+  padding-bottom: var(--layout-safe-bottom, 0px);
+}
+
+/* ===== Barre supérieure ===== */
+
+.layout__header-slot {
+  flex-shrink: 0;
+}
+
+/* Le tiroir latéral s'ancre sous --spacing-layout-header-height. Dans tous les
+   modes où la barre supérieure ne tient plus une ligne du flux, cette réserve
+   de 64 px n'a plus de barre en face : elle laissait un vide en haut du
+   tiroir. On la remet à zéro pour le tiroir ET son fond assombri d'un coup. */
+.layout--header-out-of-flow {
+  --spacing-layout-header-height: 0px;
+}
+
+/* ===== Mode « au survol » ===== */
+
+/* La barre sort du flux (le contenu occupe toute la hauteur) et se replie
+   au-dessus du bord haut. On ne pose position:relative que dans ce mode pour
+   ne pas déplacer les ancrages absolus des autres.
+
+   Elle se déplie SOUS la barre d'onglets et non par-dessus : les onglets
+   occupent déjà la bande haute dans ce mode, une barre qui les recouvrirait
+   leur volerait tous les clics. --layout-autohide-top vaut donc la hauteur de
+   la barre d'onglets (h-9 = 2.25rem) plus sa bordure basse.
+
+   Le déclenchement, lui, est en JS (cf. Layout.tsx) : aucune bande de survol
+   collée au bord haut ne peut s'armer, les 40 premiers pixels appartenant à la
+   fenêtre (bordure de redimensionnement + zone de déplacement). */
+.layout--header-autohide {
+  position: relative;
+  --layout-autohide-top: calc(2.25rem + 1px);
+}
+
+.layout__header-slot--auto {
+  position: absolute;
+  top: var(--layout-autohide-top);
+  left: 0;
+  right: 0;
+  z-index: var(--z-index-sticky);
+  /* Repliée : entièrement hors de l'écran, onglets compris — un simple
+     -100% laisserait dépasser la barre sur toute la hauteur des onglets. */
+  transform: translateY(calc(-100% - var(--layout-autohide-top)));
+  transition: var(--transition-transform);
+}
+
+.layout__header-slot--auto.layout__header-slot--peek,
+.layout__header-slot--auto:hover,
+.layout__header-slot--auto:focus-within {
+  transform: translateY(0);
+}
+
+/* Dépliée, la barre commence SOUS la bande des contrôles natifs (40 px) :
+   leur réserve de 140 px n'y est plus qu'un trou au bout de la barre, et
+   c'est la barre d'onglets qui la tient déjà pour eux. */
+.layout__header-slot--auto .header__inner {
+  padding-right: 1rem;
+}
+
+/* ===== Mode « flottante » ===== */
+
+/* La barre reste dans le flux (rien n'est recouvert) mais se dessine en
+   pilule détachée, centrée, avec de l'air autour. Sa largeur est bornée à
+   100vw - 320px : elle s'arrête donc au moins 160 px avant le bord droit et ne
+   passe JAMAIS sous les contrôles natifs de la fenêtre (140 px en haut à
+   droite). L'espace nu qui l'entoure reste, lui, une poignée de déplacement. */
+.layout--header-floating {
+  --layout-floating-gap: 8px;
+  /* La largeur de la pilule, en UN seul endroit : l'étagère ci-dessous doit
+     s'écarter d'exactement autant, et deux copies de « 880 / 320 » finiraient
+     par diverger. */
+  --layout-floating-pill: min(880px, calc(100vw - 320px));
+  /* Le créneau mesure 52 px de pilule + 2 px de bordures + 2 × la marge. */
+  --layout-floating-band: calc(54px + 2 * var(--layout-floating-gap));
+  /* Le tiroir latéral s'ancre dessous, sans chevaucher la pilule. Grandeur
+     DISTINCTE de la bande : celle-ci sert aussi d'ancrage au tiroir et
+     d'autres modes la remettent à zéro — l'étagère ne doit pas en dépendre. */
+  --spacing-layout-header-height: var(--layout-floating-band);
+  /* Le trou laissé à la pilule : sa largeur, plus le fossé de chaque côté.
+     `max()` tient les fenêtres plus étroites que 320 px, où la largeur de
+     pilule devient négative. */
+  --layout-floating-notch: calc(
+    max(0px, var(--layout-floating-pill)) + 2 * var(--layout-floating-gap)
+  );
+  /* Le rayon des deux anses : la MOITIÉ de la hauteur de bande. C'est ce qui
+     rend le fossé constant — voir l'étagère plus bas. */
+  --layout-floating-cove: calc(var(--layout-floating-band) / 2);
+}
+
+.layout__header-slot--floating {
+  display: flex;
+  justify-content: center;
+  padding: var(--layout-floating-gap) 16px;
+  /* Repère des deux moitiés d'étagère. */
+  position: relative;
+}
+
+.layout__header-slot--floating > header {
+  /* `relative` et non `static` : il s'agit toujours d'annuler le `sticky` de
+     la barre, mais l'étagère est faite de pseudo-éléments POSITIONNÉS, qui se
+     peindraient par-dessus un en-tête resté hors du flux de superposition. */
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: var(--layout-floating-pill);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+  background-color: var(--color-surface);
+}
+
+/*
+ * L'ÉTAGÈRE — la surface de la page monte jusqu'au bord haut, et s'écarte en
+ * courbe autour de la pilule.
+ *
+ * Sans elle, la pilule flotte sur le fond de l'application et la bande haute
+ * est un vide. Ici la surface (--color-surface, la MÊME que celle de la barre
+ * d'onglets juste dessous, avec laquelle elle est donc continue) occupe toute
+ * la bande, sauf un trou taillé pour la pilule.
+ *
+ * ── POURQUOI LE FOSSÉ EST CONSTANT, SANS UN SEUL NOMBRE À ACCORDER ─────────
+ * Chaque moitié d'étagère est un rectangle dans lequel un DISQUE est évidé,
+ * centré sur son bord intérieur, à mi-hauteur, de rayon la demi-hauteur de
+ * bande. Le disque touche donc exactement le haut et le bas de la bande : il
+ * n'en retire qu'un demi-disque, et le bord de l'étagère épouse une extrémité
+ * de pilule.
+ *
+ * Ce demi-disque a le MÊME CENTRE que l'extrémité arrondie de la pilule
+ * (rayon 27 px, soit la demi-hauteur de la pilule) — décalage horizontal du
+ * trou = un fossé, décalage du rayon = un fossé. Deux cercles concentriques de
+ * rayons 35 et 27 : le fossé vaut 8 px sur la droite ET dans toute la courbe,
+ * par construction. Changer la marge ou la hauteur de la pilule ne dérègle
+ * rien, il n'y a aucune constante à retoucher.
+ */
+.layout__header-slot--floating::before,
+.layout__header-slot--floating::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  background-color: var(--color-surface);
+  /* Décor pur. La bande nue reste la poignée de déplacement de la fenêtre, et
+     aucun clic ne doit se perdre dans une surface qui ne fait rien. */
+  pointer-events: none;
+}
+
+/* Moitié gauche : elle court du bord jusqu'à une anse au-delà du bord du trou,
+   et le demi-disque évidé lui rend sa courbe. */
+.layout__header-slot--floating::before {
+  left: 0;
+  right: calc(50% + var(--layout-floating-notch) / 2 - var(--layout-floating-cove));
+  -webkit-mask-image: radial-gradient(
+    circle var(--layout-floating-cove) at 100% 50%,
+    transparent 99%,
+    #000 100%
+  );
+  mask-image: radial-gradient(
+    circle var(--layout-floating-cove) at 100% 50%,
+    transparent 99%,
+    #000 100%
+  );
+}
+
+.layout__header-slot--floating::after {
+  right: 0;
+  left: calc(50% + var(--layout-floating-notch) / 2 - var(--layout-floating-cove));
+  -webkit-mask-image: radial-gradient(
+    circle var(--layout-floating-cove) at 0 50%,
+    transparent 99%,
+    #000 100%
+  );
+  mask-image: radial-gradient(
+    circle var(--layout-floating-cove) at 0 50%,
+    transparent 99%,
+    #000 100%
+  );
+}
+
+.layout__header-slot--floating .header__inner {
+  height: 52px;
+  /* La pilule n'atteint pas les contrôles natifs : la réserve de 140 px du
+     mode bandeau serait ici un trou au milieu de la barre. */
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.layout__header-slot--floating .header__search input {
+  height: 40px;
+}
+
+/* La pilule est bornée en largeur : le logo suffit à l'identifier, et les
+   ~70 px rendus par le nom reviennent à la recherche. */
+.layout__header-slot--floating .header__brand-name {
+  display: none;
+}
+
+/* ===== Mode « aucune barre » ===== */
+
+/*
+ * Quand ni le bandeau ni les onglets ne sont rendus, plus AUCUN element ne
+ * reserve la bande native : le contenu commence a y=0 et ses controles de
+ * coin haut-droit tombent sous les boutons de fenetre de l'OS. C'est la
+ * disposition la plus depouillee, donc la plus exposee.
+ *
+ * La reserve se pose sur la racine du layout — elle decale tout d'un bloc,
+ * exactement comme le fait une barre dans les autres modes.
+ */
+.layout--no-chrome {
+  padding-top: calc(var(--layout-safe-top, 0px) + var(--chrome-inset-top));
+}
+
+/* ===== Mode « rail » ===== */
+
+/* La barre se replie en colonne sur le bord gauche, toute la hauteur. Le rail
+   est en position:fixed et le décalage est posé en padding sur .layout : tout
+   le reste (bandeaux, corps, onglets) glisse à droite d'un bloc. La bande
+   haute revient donc à la barre d'onglets, qui garde sa réserve de 140 px et
+   sa poignée de déplacement. */
+.layout--header-side {
+  --layout-rail-width: 56px;
+  /* Le bord DROIT du rail dans le viewport. La réserve d'écran s'AJOUTE à sa
+     largeur : le rail commence après l'encoche, il ne la mange pas. Tout ce
+     qui doit se poser « après le rail » (le corps, le tiroir, le panneau de
+     recherche) lit cette seule grandeur. */
+  --layout-rail-edge: calc(var(--layout-safe-left, 0px) + var(--layout-rail-width));
+  padding-left: var(--layout-rail-edge);
+}
+
+.layout__header-slot--side {
+  /* chrome:aware — la réserve est portée par .header__inner ci-dessous, pas
+     ici : un padding sur le slot laisserait une encoche de 40 px dans le fond
+     du rail et dans son filet de séparation. */
+  position: fixed;
+  top: 0;
+  left: var(--layout-safe-left, 0px);
+  bottom: 0;
+  width: var(--layout-rail-width);
+  /* AU-DESSUS du tiroir, et pas seulement sous lui : fermé, le tiroir est
+     décalé de -100% depuis le bord du rail, donc son bord droit retombe
+     EXACTEMENT sur les 56 px du rail et le masquait entièrement. Ouvert, il
+     commence après le rail : aucun recouvrement dans les deux cas. */
+  z-index: calc(var(--z-index-sidebar) + 1);
+}
+
+.layout__header-slot--side > header {
+  position: static;
+  height: 100%;
+  border-bottom: none;
+  border-right: 1px solid var(--color-border);
+}
+
+.layout__header-slot--side .header__inner {
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+  padding-left: 0;
+  padding-right: 0;
+  padding-bottom: 8px;
+  /* Les feux macOS tombent sur le HAUT du rail : ils occupent x 12-66, le rail
+     fait 56 px de large. Il faut donc descendre son premier bouton — mais
+     SEULEMENT là où l'OS peint à gauche. `min()` rend 0 dès que la réserve
+     gauche est nulle (Windows, Linux, navigateur : les boutons y sont à
+     droite, le rail ne les rencontre jamais) et la hauteur de bande entière
+     dès qu'elle ne l'est pas. Aucune branche de plateforme, aucun JS. */
+  padding-top: max(8px, min(var(--chrome-inset-top), calc(var(--chrome-inset-left) * 999)));
+}
+
+.layout__header-slot--side .header__left,
+.layout__header-slot--side .header__actions {
+  flex-direction: column;
+}
+
+/* Les actions tiennent le bas du rail par LEUR propre marge : si c'était le
+   vide sous la recherche qui les poussait, elles remonteraient d'un bond
+   chaque fois que le champ quitte le flux pour s'ouvrir en panneau. */
+.layout__header-slot--side .header__actions {
+  margin-top: auto;
+}
+
+.layout__header-slot--side .header__brand {
+  justify-content: center;
+}
+
+/* Le nom de l'application ne tient pas dans 56 px : le logo suffit. */
+.layout__header-slot--side .header__brand-name {
+  display: none;
+}
+
+/* Recherche repliée en pastille ronde ; la loupe reste centrée et le champ
+   garde le focus clavier (il n'est jamais retiré du DOM). */
+.layout__header-slot--side .header__search {
+  flex: 0 0 auto;
+  width: 40px;
+  margin: 0 auto;
+}
+
+.layout__header-slot--side .header__search input {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.layout__header-slot--side .header__search .header__search-icon {
+  left: 10px;
+}
+
+/* Repliée, la pastille ne montre QUE la loupe : ni le marque-place ni un
+   texte déjà saisi ne doivent transparaître dessous, et la croix d'effacement
+   n'a pas la place. Le champ ne reste jamais dans cet état avec le focus — il
+   s'ouvre en panneau dès qu'il le prend. */
+.layout__header-slot--side .header__search:not(.header__search--expanded) input,
+.layout__header-slot--side .header__search:not(.header__search--expanded) input::placeholder {
+  color: transparent;
+}
+
+.layout__header-slot--side .header__search:not(.header__search--expanded) button {
+  display: none;
+}
+
+/* Dépliée : un panneau posé à droite du rail. La classe est portée par React
+   (et non :focus-within) pour que le panneau survive au blur du champ, le
+   temps qu'un clic sur un résultat aboutisse. */
+.layout__header-slot--side .header__search--expanded {
+  position: fixed;
+  top: 48px;
+  left: calc(var(--layout-rail-edge) + 12px);
+  width: min(460px, calc(100vw - var(--layout-rail-edge) - 32px));
+  z-index: var(--z-index-sidebar);
+}
+
+.layout__header-slot--side .header__search--expanded input {
+  width: 100%;
+  height: 44px;
+  padding-left: 44px;
+  padding-right: 44px;
+}
+
+.layout__header-slot--side .header__search--expanded .header__search-icon {
+  left: 16px;
+}
+
+.layout__header-slot--side .header__divider {
+  width: 32px;
+  height: 1px;
+  margin: 4px auto;
+}
+
+/* Le tiroir latéral est en position:fixed : il ignore le padding de .layout
+   et se poserait SUR le rail. */
+.layout--header-side .layout__sidebar--railed {
+  left: var(--layout-rail-edge);
 }
 
 .layout__content {
@@ -142,6 +521,25 @@
   border-color: transparent;
 }
 
+/* ===== Theme: Minuit — scrollbar lisible sur le bleu nuit ===== */
+
+/* color-scheme est posé ici et pas dans le bloc de tokens : global.css
+   déclare `:root { color-scheme: light }` APRÈS l'@import des tokens, et à
+   spécificité égale c'est lui qui gagnerait. La propriété est héritée, donc
+   la poser sur .layout suffit à thémer les contrôles natifs de l'app. */
+[data-theme='minuit'] .layout {
+  color-scheme: dark;
+}
+
+[data-theme='minuit'] .layout__content::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-600);
+  border-color: var(--color-background);
+}
+
+[data-theme='minuit'] .layout__content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-500);
+}
+
 /* ===== Theme: Sky — propagate blue tint everywhere ===== */
 
 [data-theme='sky'] .layout {
@@ -158,6 +556,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .layout__content {
+    transition: none;
+  }
+
+  .layout__header-slot--auto {
     transition: none;
   }
 }

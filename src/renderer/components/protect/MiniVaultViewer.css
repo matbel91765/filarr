@@ -1,0 +1,151 @@
+/**
+ * MiniVaultViewer — mini-coffre navigable d'un conteneur .filarr dossier.
+ * Tokens uniquement (thèmes clair/sombre/terracotta automatiques).
+ */
+
+.mini-vault__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.mini-vault__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary-500) 30%, transparent);
+}
+
+.mini-vault__meta-item {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.mini-vault__meta-item--path {
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.mini-vault__readonly {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-background-tertiary);
+  border-left: 3px solid color-mix(in srgb, var(--color-warning-500) 60%, transparent);
+}
+
+.mini-vault__empty {
+  margin: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.mini-vault__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mini-vault__list--root {
+  max-height: min(48vh, 460px);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.mini-vault__node {
+  min-width: 0;
+}
+
+.mini-vault__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--color-text-primary);
+  transition: background-color 0.12s ease;
+}
+
+.mini-vault__row:hover {
+  background: var(--color-surface-hover);
+}
+
+.mini-vault__row--dir {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.mini-vault__chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.mini-vault__chevron--open {
+  transform: rotate(90deg);
+}
+
+.mini-vault__row-icon {
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.mini-vault__row--dir .mini-vault__row-icon {
+  color: var(--color-primary-500);
+}
+
+.mini-vault__row-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-vault__row-meta {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Masquées par opacité (PAS display:none) : les boutons restent dans l'ordre
+   de tabulation — :focus-within les révèle au clavier. */
+.mini-vault__row-actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.mini-vault__row--file:hover .mini-vault__row-actions,
+.mini-vault__row--file:focus-within .mini-vault__row-actions {
+  opacity: 1;
+}

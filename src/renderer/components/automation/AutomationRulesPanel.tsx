@@ -869,6 +869,7 @@ export const AutomationRulesPanel: React.FC<AutomationRulesPanelProps> = ({ clas
       {contextMenuPosition && contextMenuRuleId && (
         <>
           <div
+          // chrome:free — voile de rejet uniforme : tout point referme.
             className="fixed inset-0 z-[999]"
             onClick={closeContextMenu}
           />

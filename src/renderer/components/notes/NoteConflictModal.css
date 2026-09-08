@@ -1,0 +1,213 @@
+/**
+ * Résolution de conflit — habillage.
+ *
+ * TOUTES les teintes sont MÉLANGÉES à une couleur de texte ou de surface du
+ * thème courant (`color-mix`), jamais figées en clair/sombre : l'application
+ * compte onze thèmes, et un bloc `[data-theme='dark']` en raterait neuf.
+ * Le côté « le mien » emprunte le vert de la réussite, le côté « le leur » le
+ * bleu de l'information — deux familles distinctes à l'œil, mais la case
+ * choisie porte AUSSI un contour et un libellé, car la couleur seule ne dit
+ * rien à qui ne la voit pas.
+ */
+
+.note-conflict__empty,
+.note-conflict__noText {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.note-conflict__intro {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0 0 16px;
+}
+
+.note-conflict__footnote {
+  margin: 0 0 12px;
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Liste des conflits ───────────────────────────────────────────────────── */
+
+.note-conflict__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-conflict__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-light);
+  border-left: 3px solid color-mix(in srgb, var(--color-warning-500) 70%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.note-conflict__row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-conflict__row-title {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-conflict__row-meta,
+.note-conflict__row-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+}
+
+.note-conflict__flag {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  border-radius: var(--radius-full, 999px);
+  color: color-mix(in srgb, var(--color-warning-500) 55%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-warning-500) 18%, transparent);
+}
+
+.note-conflict__flag--calm {
+  color: color-mix(in srgb, var(--color-success-500) 55%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-success-500) 16%, transparent);
+}
+
+/* ── En-tête des deux versions ────────────────────────────────────────────── */
+
+.note-conflict__versions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.note-conflict__version {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-background-secondary);
+  min-width: 0;
+}
+
+.note-conflict__version-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.note-conflict__version-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin: 2px 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+}
+
+/* ── Barre d'outils ───────────────────────────────────────────────────────── */
+
+.note-conflict__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.note-conflict__toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Copie orpheline ──────────────────────────────────────────────────────── */
+
+.note-conflict__orphan {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 10px 12px;
+}
+
+.note-conflict__orphan-title {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.note-conflict__orphan-text {
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── Pied ─────────────────────────────────────────────────────────────────── */
+
+.modal-footer.note-conflict__footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.note-conflict__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
+.note-conflict__count {
+  margin-right: auto;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+.note-conflict__warning {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-error-500) 45%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-error-500) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error-500) 40%, transparent);
+  border-radius: var(--radius-md);
+}
+
+/* Sur un écran étroit, les deux colonnes se rangent l'une sous l'autre plutôt
+   que de rétrécir jusqu'à l'illisible. */
+@media (max-width: 720px) {
+  .note-conflict__versions {
+    grid-template-columns: 1fr;
+  }
+}

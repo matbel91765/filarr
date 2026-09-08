@@ -5,16 +5,24 @@
  * de stockage pour les opérations de persistance.
  */
 
-import storageAdapter from './storageAdapter';
+import storageAdapter, { createStorageAdapter, getCurrentStorageMode } from './storageAdapter';
 import { generateUniqueId } from '../../utils/idGenerator';
 import errorService from '../platform/errorService';
-import { encryptFileContent, hasHybridKey } from '../auth/hybridCrypto';
-import type { Folder, FileItem, FileCreateData, DownloadResult, Item } from '../../types';
+import { getConfig } from '../../config';
+import { hasHybridKey } from '../auth/hybridCrypto';
+import type {
+  Folder,
+  FileItem,
+  FileCreateData,
+  DownloadResult,
+  Item,
+  VaultShortcutRef,
+} from '../../types';
 import {
   MAX_FILE_SIZE,
   MAX_FILES_BATCH,
+  NON_LOCAL_MAX_FILE_SIZE,
   FILE_ERRORS,
-  isExtensionAllowed,
   formatBytes,
 } from '../../constants/limits';
 
@@ -22,11 +30,23 @@ import {
 const _activeWatchers = new Set<string>();
 
 /**
- * Sets up a listener for file-changed events in hybrid mode.
- * When the user edits a file in an external app, this re-encrypts
- * the modified content locally and queues an upload to cloud.
+ * Écouter les modifications faites DANS UNE APPLICATION EXTERNE.
+ *
+ * ── CE QUE ÇA RÉPARE ───────────────────────────────────────────────────────
+ * Ce guetteur n'était branché QUE sur le mode hybride. En nuage pur,
+ * `openFile` invoquait `openVaultFile` sans l'installer : le processus
+ * principal émettait bien `file-changed`, et PERSONNE n'écoutait. Les
+ * modifications faites dans Word étaient perdues, en silence, alors que le
+ * même geste fonctionnait dans les deux autres modes.
+ *
+ * Il réimplémentait aussi une écriture hybride à la main — et oubliait au
+ * passage d'avertir la synchronisation, donc le fichier re-chiffré ne
+ * remontait pas. On passe désormais par `storageAdapter.saveEncryptedFile`,
+ * qui EST le chemin d'écriture du produit : il connaît le mode de stockage
+ * (local, hybride, nuage), chiffre en conséquence, et notifie la synchro.
+ * Un seul chemin d'écriture, une seule chose à maintenir juste.
  */
-function setupHybridFileWatcher(folderId: string, fileName: string): void {
+function setupExternalEditWatcher(folderId: string, fileName: string): void {
   const watchKey = `${folderId}/${fileName}`;
   if (_activeWatchers.has(watchKey)) return;
   _activeWatchers.add(watchKey);
@@ -61,11 +81,6 @@ function setupHybridFileWatcher(folderId: string, fileName: string): void {
       return;
     }
 
-    if (!hasHybridKey()) {
-      console.warn('[Hybrid Watcher] No hybrid key available — cannot re-encrypt');
-      return;
-    }
-
     try {
       // Read the modified temp file (returns number[] from main process)
       const modifiedContent: number[] | Uint8Array | null =
@@ -82,25 +97,12 @@ function setupHybridFileWatcher(folderId: string, fileName: string): void {
               Array.isArray(modifiedContent) ? modifiedContent : Object.values(modifiedContent)
             );
 
-      console.log(
-        '[Hybrid Watcher] Re-encrypting modified file:',
-        fileName,
-        'size:',
-        contentArray.byteLength
-      );
+      // LE chemin d'écriture du produit — celui-là même qu'emprunte l'éditeur.
+      // Il chiffre selon le mode de stockage et notifie la synchronisation ;
+      // la version artisanale d'avant ne faisait ni l'un ni l'autre en nuage.
+      await storageAdapter.saveEncryptedFile(folderId, fileName, contentArray as unknown as Buffer);
 
-      // Re-encrypt with FEK
-      const encrypted = await encryptFileContent(contentArray.buffer as ArrayBuffer);
-
-      // Write back to local storage
-      await window.electron.ipcRenderer.invoke(
-        'hybrid:writeRawBlob',
-        folderId,
-        fileName,
-        encrypted
-      );
-
-      console.log('[Hybrid Watcher] Successfully re-encrypted file locally:', fileName);
+      console.log('[Watcher externe] Modification reprise dans le coffre :', fileName);
     } catch (error) {
       console.error('[Hybrid] Error re-encrypting modified file:', error);
     }
@@ -119,6 +121,24 @@ function setupHybridFileWatcher(folderId: string, fileName: string): void {
 }
 
 /**
+ * Résout le chemin OS réel d'un objet File (drag & drop ou file picker).
+ * Electron 41 a supprimé File.path — le preload expose webUtils.getPathForFile.
+ * @param file - Objet File du DOM
+ * @returns Le chemin OS, ou null hors Electron / si le fichier n'a pas de
+ *          chemin réel (ex: fichier synthétique)
+ */
+export const getOsFilePath = (file: File): string | null => {
+  try {
+    const getPath = window.electron?.getPathForFile;
+    if (!getPath) return null;
+    const osPath = getPath(file);
+    return osPath && osPath.length > 0 ? osPath : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Validates a file before upload
  * @param file - File to validate
  * @throws Error if file is invalid
@@ -128,16 +148,16 @@ export const validateFile = (file: FileCreateData): void => {
     throw errorService.createValidationError('Le nom du fichier est requis');
   }
 
-  // Check file extension
-  if (!isExtensionAllowed(file.name)) {
-    throw errorService.createValidationError(`${FILE_ERRORS.BLOCKED_EXTENSION}: ${file.name}`);
-  }
+  // No extension blocklist: Filarr is end-to-end encrypted so the server never
+  // sees the content, and any client-side block can be bypassed by renaming.
+  // Executable warnings are surfaced separately by the UI via
+  // isExtensionExecutable() — informational, not blocking.
 
   // Check file size
   const fileSize = file.size || (file.content ? file.content.length : 0);
   if (fileSize > MAX_FILE_SIZE) {
     throw errorService.createValidationError(
-      `${FILE_ERRORS.TOO_LARGE}. File size: ${formatBytes(fileSize)}, Maximum: ${formatBytes(MAX_FILE_SIZE)}`
+      `${FILE_ERRORS.TOO_LARGE} — taille du fichier : ${formatBytes(fileSize)}, maximum : ${formatBytes(MAX_FILE_SIZE)}`
     );
   }
 };
@@ -170,6 +190,20 @@ export const addFileToFolder = async (folderId: string, file: FileCreateData): P
   // Validate file before processing
   validateFile(file);
 
+  // Non-local modes (cloud/BYOS) buffer the whole file in renderer memory —
+  // refuse oversized content before it goes any further. Exception : le mode
+  // HYBRIDE avec un chemin OS résoluble passe par l'import V3 en streaming
+  // (hybrid:saveFromPath — chiffré dans le main avec la FEK de session, le
+  // contenu ne transite jamais par le renderer).
+  const effectiveSize = file.size ?? (file.content ? file.content.length : 0);
+  const storageMode = getCurrentStorageMode();
+  const hybridStreaming = storageMode === 'hybrid' && !!file.sourcePath && !file.content;
+  if (storageMode !== 'local' && !hybridStreaming && effectiveSize > NON_LOCAL_MAX_FILE_SIZE) {
+    throw errorService.createValidationError(
+      'Les fichiers de plus de 500 Mo nécessitent le mode de stockage local pour le moment.'
+    );
+  }
+
   // Préparer le fichier avec un ID unique et d'autres métadonnées
   const newFile: FileItem = {
     id: file.id || generateUniqueId(),
@@ -181,16 +215,28 @@ export const addFileToFolder = async (folderId: string, file: FileCreateData): P
   };
 
   try {
-    // Si le fichier a un contenu, le sauvegarder séparément
-    if (file.content) {
+    if (file.sourcePath && !file.content) {
+      // Import V3 en streaming : le main process chiffre directement depuis
+      // le chemin OS — le contenu ne transite jamais par le renderer.
+      await storageAdapter.saveEncryptedFileFromPath(folderId, file.name, file.sourcePath);
+    } else if (file.content) {
+      // Si le fichier a un contenu, le sauvegarder séparément
       await storageAdapter.saveEncryptedFile(folderId, file.name, file.content);
     }
 
     // Ajouter les métadonnées du fichier au dossier
     return await storageAdapter.addItemToFolder(folderId, newFile);
   } catch (error) {
+    // Les erreurs IPC d'Electron préfixent le message d'origine ("Error
+    // invoking remote method '...': Error: ...") — le retirer pour faire
+    // remonter la raison réelle (déjà en français côté main, ex. le refus
+    // > 5 Go du flux V3) jusqu'au toast.
+    const rawMessage = error instanceof Error ? error.message : '';
+    const detail = rawMessage.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
     throw errorService.createFileSystemError(
-      `Impossible d'ajouter le fichier au dossier ${folderId}`,
+      detail
+        ? `Impossible d'ajouter le fichier « ${file.name} » : ${detail}`
+        : `Impossible d'ajouter le fichier au dossier ${folderId}`,
       error as Error,
       { folderId, fileName: file.name }
     );
@@ -218,18 +264,33 @@ export const readFile = async (
   try {
     let fileData: Buffer;
 
-    if (decrypt && window.electron?.ipcRenderer) {
+    const config = getConfig();
+    const isHybrid =
+      config.storageMode === 'hybrid' || (config.useCloudStorage && config.storageMode !== 'cloud');
+
+    if (isHybrid) {
+      // Hybrid mode: storageAdapter handles local-first + cloud fallback
+      fileData = await storageAdapter.readEncryptedFile(folderId, fileName, onProgress);
+    } else if (config.useCloudStorage) {
+      // Pure cloud mode (legacy): fetch directly from API
+      const cloudAdapter = createStorageAdapter('cloud');
+      fileData = await cloudAdapter.readEncryptedFile(folderId, fileName, onProgress);
+    } else if (decrypt && window.electron?.ipcRenderer) {
+      // Electron local mode: use IPC handler that decrypts the file locally
       fileData = await window.electron.ipcRenderer.invoke(
         'readEncryptedFileForCopy',
         folderId,
         fileName
       );
     } else {
+      // Fallback: use default storage adapter
       fileData = await storageAdapter.readEncryptedFile(folderId, fileName, onProgress);
     }
 
     return fileData;
   } catch (error) {
+    // Only log non-ENOENT errors at error level; ENOENT is expected when
+    // files haven't been synced locally yet (e.g. thumbnails in cloud mode)
     const isNotFound =
       error instanceof Error &&
       (error.message.includes('ENOENT') || error.message.includes('not found'));
@@ -262,6 +323,14 @@ export const deleteFile = async (
   }
 
   try {
+    const config = getConfig();
+
+    if (config.useCloudStorage) {
+      // Cloud mode: delete via API through storageAdapter
+      return await storageAdapter.removeItemFromFolder(folderId, itemId);
+    }
+
+    // Local mode: use Electron IPC
     // Récupérer le dossier pour vérifier si l'item existe et obtenir son nom
     const folder: any = await storageAdapter.getFolder(folderId);
 
@@ -371,7 +440,24 @@ export const openFile = async (
   }
 
   try {
-    if (window.electron?.ipcRenderer) {
+    const config = getConfig();
+    const isHybrid =
+      config.storageMode === 'hybrid' || (config.useCloudStorage && config.storageMode !== 'cloud');
+
+    console.log(
+      '[openFile] mode:',
+      config.storageMode,
+      'useCloud:',
+      config.useCloudStorage,
+      'isHybrid:',
+      isHybrid,
+      'hasKey:',
+      hasHybridKey()
+    );
+
+    if (window.electron?.ipcRenderer && !config.useCloudStorage) {
+      // Pure local mode: use openEncryptedFile IPC (has chokidar watcher for edits)
+      console.log('[openFile] Using pure local mode (openEncryptedFile IPC)');
       return await window.electron.ipcRenderer.invoke(
         'openEncryptedFile',
         folderId,
@@ -380,8 +466,50 @@ export const openFile = async (
       );
     }
 
-    // Browser fallback: read via storage adapter, open via blob URL
-    const data = await storageAdapter.readEncryptedFile(folderId, fileName, onProgress);
+    if (isHybrid && window.electron?.ipcRenderer) {
+      // Hybrid mode: read from local (decrypted by HybridStorage),
+      // use openVaultFile to write temp + open with system app.
+      // Then listen for file-changed events to re-encrypt + re-upload.
+      console.log('[openFile] Using hybrid mode for:', folderId, fileName);
+      const data = await storageAdapter.readEncryptedFile(folderId, fileName, onProgress);
+
+      if (shouldOpen) {
+        const tempPath = await window.electron.ipcRenderer.invoke(
+          'openVaultFile',
+          fileName,
+          new Uint8Array(data)
+        );
+
+        // Set up edit-and-save-back listener for hybrid mode
+        setupExternalEditWatcher(folderId, fileName);
+
+        return tempPath;
+      }
+
+      // Not opening — just return the data as a blob URL
+      const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
+      return URL.createObjectURL(blob);
+    }
+
+    // Pure cloud mode (legacy): download from API, open via Electron shell
+    const adapter = config.useCloudStorage ? createStorageAdapter('cloud') : storageAdapter;
+    const data = await adapter.readEncryptedFile(folderId, fileName, onProgress);
+
+    if (window.electron?.ipcRenderer && shouldOpen) {
+      const tempPath = await window.electron.ipcRenderer.invoke(
+        'openVaultFile',
+        fileName,
+        new Uint8Array(data)
+      );
+      // CE BRANCHEMENT MANQUAIT. Le principal émet bien `file-changed` en
+      // nuage pur — personne ne l'écoutait, et les modifications faites dans
+      // l'application externe étaient perdues sans un mot, alors que le même
+      // geste fonctionnait en local et en hybride.
+      setupExternalEditWatcher(folderId, fileName);
+      return tempPath;
+    }
+
+    // Browser fallback: open via blob URL
     const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     if (shouldOpen) {
@@ -415,6 +543,10 @@ export const downloadFile = async (
   }
 
   try {
+    const config = getConfig();
+    const isHybrid =
+      config.storageMode === 'hybrid' || (config.useCloudStorage && config.storageMode !== 'cloud');
+
     // Récupérer l'élément pour vérifier s'il est protégé
     const item = await storageAdapter.getItem(itemId);
 
@@ -422,6 +554,21 @@ export const downloadFile = async (
       throw errorService.createAuthenticationError('Mot de passe requis pour ce fichier protégé');
     }
 
+    if (isHybrid || config.useCloudStorage) {
+      // Hybrid/cloud mode: read via adapter (hybrid reads local-first), then save via dialog
+      const data = await storageAdapter.readEncryptedFile(folderId, item.name);
+
+      const savePath = await window.electron.ipcRenderer.invoke('showSaveDialog', {
+        defaultPath: item.name,
+      });
+      if (!savePath) {
+        return { success: false, canceled: true };
+      }
+      await window.electron.ipcRenderer.invoke('writeRawFile', savePath, new Uint8Array(data));
+      return { success: true, path: savePath };
+    }
+
+    // Local/Electron mode: use IPC
     const savePath = await window.electron.ipcRenderer.invoke('showSaveDialog', {
       defaultPath: item.name,
     });
@@ -518,6 +665,34 @@ export const updateFileMetadata = async (
       `Impossible de mettre à jour les métadonnées du fichier ${itemId}`,
       error as Error,
       { folderId, itemId, updatedData }
+    );
+  }
+};
+
+/**
+ * Transforme un fichier en RACCOURCI vers un coffre (ses octets viennent
+ * d'être déposés là-bas) : l'espace personnel n'en garde que la fiche.
+ * @returns Le dossier mis à jour, la fiche-raccourci parmi ses items
+ */
+export const convertFileToVaultShortcut = async (
+  folderId: string,
+  fileId: string,
+  ref: VaultShortcutRef
+): Promise<Folder> => {
+  if (!folderId || !fileId) {
+    throw errorService.createValidationError('ID de dossier et ID de fichier requis');
+  }
+  if (!ref?.vaultId || !ref?.itemId || !ref?.movedAt) {
+    throw errorService.createValidationError('Référence de coffre incomplète');
+  }
+
+  try {
+    return await storageAdapter.convertFileToVaultShortcut(folderId, fileId, ref);
+  } catch (error) {
+    throw errorService.createFileSystemError(
+      `Impossible de transformer le fichier ${fileId} en raccourci vers le coffre`,
+      error as Error,
+      { folderId, fileId, vaultId: ref.vaultId, itemId: ref.itemId }
     );
   }
 };

@@ -25,6 +25,9 @@
 }
 
 .file-preview-panel--fullscreen {
+  /* chrome:aware — la réserve est portée par le bandeau, qui prend la bande
+     (`chrome-safe-bar` posé conditionnellement, FilePreviewPanel.tsx). Elle ne
+     peut pas vivre ici : un padding sur le panneau décalerait aussi le contenu. */
   position: fixed;
   top: 0;
   left: 0;
@@ -73,8 +76,8 @@
   background-color: var(--color-primary-100);
 }
 
-[data-theme="dark"] .file-preview-panel__resize-handle:hover,
-[data-theme="dark"] .file-preview-panel--resizing .file-preview-panel__resize-handle {
+[data-theme='dark'] .file-preview-panel__resize-handle:hover,
+[data-theme='dark'] .file-preview-panel--resizing .file-preview-panel__resize-handle {
   background-color: rgba(135, 206, 235, 0.2);
 }
 
@@ -95,7 +98,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-3) var(--spacing-4);
+  /* Longhands, JAMAIS le raccourci : `.chrome-safe-bar` pose padding-left et
+     padding-right, et un `padding` raccourci — déclaré plus tard dans le
+     bundle — les réinitialiserait en silence. Voir styles/chrome.css. */
+  --chrome-bar-pad: var(--spacing-4);
+  padding-top: var(--spacing-3);
+  padding-bottom: var(--spacing-3);
+  padding-left: var(--spacing-4);
+  padding-right: var(--spacing-4);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-background-secondary);
   min-height: 56px;
@@ -128,7 +138,7 @@
   color: var(--color-primary-600) !important;
 }
 
-[data-theme="dark"] .file-preview-panel__btn--active {
+[data-theme='dark'] .file-preview-panel__btn--active {
   background-color: rgba(135, 206, 235, 0.2) !important;
   color: var(--color-primary-300) !important;
 }
@@ -341,10 +351,14 @@
     linear-gradient(45deg, transparent 75%, var(--color-neutral-200) 75%),
     linear-gradient(-45deg, transparent 75%, var(--color-neutral-200) 75%);
   background-size: 16px 16px;
-  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0px;
 }
 
-[data-theme="dark"] .image-preview__container {
+[data-theme='dark'] .image-preview__container {
   background-image:
     linear-gradient(45deg, var(--color-neutral-700) 25%, transparent 25%),
     linear-gradient(-45deg, var(--color-neutral-700) 25%, transparent 25%),
@@ -370,12 +384,18 @@
 }
 
 .image-preview--fullscreen {
+  /* chrome:aware — ce plein écran est un overlay DOM, pas le plein écran natif :
+     ImagePreview porte son propre état, déclenché aussi depuis le panneau
+     adossé et depuis QuickLook. La barre d'outils doit donc descendre sous les
+     boutons de fenêtre, qu'aucun padding d'ancêtre ne peut lui donner (un
+     `position: fixed` échappe au padding de ses ancêtres). */
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 9999;
+  padding-top: var(--chrome-inset-top);
   background-color: var(--color-neutral-900);
 }
 
@@ -384,8 +404,10 @@
   border-color: transparent;
 }
 
+/* Le plein écran pose son propre fond noir : la valeur doit être claire quel
+   que soit le thème, pas un barreau de l'échelle neutre (sombre en Minuit). */
 .image-preview--fullscreen .image-preview__zoom-value {
-  color: var(--color-neutral-300);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .image-preview--fullscreen .image-preview__container {
@@ -402,7 +424,7 @@
   color: var(--color-primary-600) !important;
 }
 
-[data-theme="dark"] .image-preview__btn--active {
+[data-theme='dark'] .image-preview__btn--active {
   background-color: rgba(135, 206, 235, 0.2) !important;
   color: var(--color-primary-300) !important;
 }
@@ -576,7 +598,7 @@
   border-color: var(--color-primary-500);
 }
 
-[data-theme="dark"] .pdf-preview__thumbnail--active {
+[data-theme='dark'] .pdf-preview__thumbnail--active {
   background-color: rgba(135, 206, 235, 0.2);
   border-color: var(--color-primary-400);
 }
@@ -599,7 +621,7 @@
   font-weight: var(--font-weight-medium);
 }
 
-[data-theme="dark"] .pdf-preview__thumbnail--active .pdf-preview__thumbnail-label {
+[data-theme='dark'] .pdf-preview__thumbnail--active .pdf-preview__thumbnail-label {
   color: var(--color-primary-300);
 }
 
@@ -608,12 +630,12 @@
   color: var(--color-primary-600) !important;
 }
 
-[data-theme="dark"] .pdf-preview__btn--active {
+[data-theme='dark'] .pdf-preview__btn--active {
   background-color: rgba(135, 206, 235, 0.2) !important;
   color: var(--color-primary-300) !important;
 }
 
-[data-theme="dark"] .pdf-preview__container {
+[data-theme='dark'] .pdf-preview__container {
   background-color: var(--color-neutral-800);
 }
 
@@ -706,7 +728,7 @@
   text-transform: uppercase;
 }
 
-[data-theme="dark"] .text-preview__language-badge {
+[data-theme='dark'] .text-preview__language-badge {
   background-color: rgba(135, 206, 235, 0.2);
   color: var(--color-primary-300);
 }
@@ -721,7 +743,7 @@
   color: var(--color-primary-600) !important;
 }
 
-[data-theme="dark"] .text-preview__btn--active {
+[data-theme='dark'] .text-preview__btn--active {
   background-color: rgba(135, 206, 235, 0.2) !important;
   color: var(--color-primary-300) !important;
 }
@@ -813,7 +835,7 @@
   background-color: var(--color-warning-100);
 }
 
-[data-theme="dark"] .text-preview__line--search-result {
+[data-theme='dark'] .text-preview__line--search-result {
   background-color: rgba(245, 158, 11, 0.2);
 }
 
@@ -839,9 +861,9 @@
   color: #d73a49;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-keyword,
-[data-theme="dark"] .text-preview__code .hljs-selector-tag,
-[data-theme="dark"] .text-preview__code .hljs-built_in {
+[data-theme='dark'] .text-preview__code .hljs-keyword,
+[data-theme='dark'] .text-preview__code .hljs-selector-tag,
+[data-theme='dark'] .text-preview__code .hljs-built_in {
   color: #f97583;
 }
 
@@ -850,8 +872,8 @@
   color: #032f62;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-string,
-[data-theme="dark"] .text-preview__code .hljs-attr {
+[data-theme='dark'] .text-preview__code .hljs-string,
+[data-theme='dark'] .text-preview__code .hljs-attr {
   color: #9ecbff;
 }
 
@@ -860,8 +882,8 @@
   color: #005cc5;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-number,
-[data-theme="dark"] .text-preview__code .hljs-literal {
+[data-theme='dark'] .text-preview__code .hljs-number,
+[data-theme='dark'] .text-preview__code .hljs-literal {
   color: #79b8ff;
 }
 
@@ -870,8 +892,8 @@
   color: #6f42c1;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-function,
-[data-theme="dark"] .text-preview__code .hljs-title {
+[data-theme='dark'] .text-preview__code .hljs-function,
+[data-theme='dark'] .text-preview__code .hljs-title {
   color: #b392f0;
 }
 
@@ -880,8 +902,8 @@
   color: #22863a;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-type,
-[data-theme="dark"] .text-preview__code .hljs-class {
+[data-theme='dark'] .text-preview__code .hljs-type,
+[data-theme='dark'] .text-preview__code .hljs-class {
   color: #85e89d;
 }
 
@@ -890,8 +912,8 @@
   color: #e36209;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-variable,
-[data-theme="dark"] .text-preview__code .hljs-template-variable {
+[data-theme='dark'] .text-preview__code .hljs-variable,
+[data-theme='dark'] .text-preview__code .hljs-template-variable {
   color: #ffab70;
 }
 
@@ -899,7 +921,7 @@
   color: #22863a;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-tag {
+[data-theme='dark'] .text-preview__code .hljs-tag {
   color: #85e89d;
 }
 
@@ -907,7 +929,7 @@
   color: #22863a;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-name {
+[data-theme='dark'] .text-preview__code .hljs-name {
   color: #85e89d;
 }
 
@@ -915,7 +937,7 @@
   color: #6f42c1;
 }
 
-[data-theme="dark"] .text-preview__code .hljs-attribute {
+[data-theme='dark'] .text-preview__code .hljs-attribute {
   color: #b392f0;
 }
 
@@ -933,12 +955,14 @@
 }
 
 .video-preview--fullscreen {
+  /* chrome:aware — même raison que .image-preview--fullscreen ci-dessus. */
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   z-index: 1000;
+  padding-top: var(--chrome-inset-top);
 }
 
 .video-preview__container {
@@ -1018,7 +1042,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease, background-color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .video-preview__play-button:hover {
@@ -1348,7 +1374,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .audio-preview__play-btn:hover:not(:disabled) {
@@ -1429,7 +1457,11 @@
   }
 
   .file-preview-panel__header {
-    padding: var(--spacing-2) var(--spacing-3);
+    --chrome-bar-pad: var(--spacing-3);
+    padding-top: var(--spacing-2);
+    padding-bottom: var(--spacing-2);
+    padding-left: var(--spacing-3);
+    padding-right: var(--spacing-3);
     min-height: 48px;
   }
 
@@ -1563,13 +1595,13 @@
   color: var(--color-warning-700);
 }
 
-[data-theme="dark"] .file-preview-panel__locked-icon {
+[data-theme='dark'] .file-preview-panel__locked-icon {
   background-color: var(--color-neutral-800);
   border-color: var(--color-neutral-600);
   color: var(--color-neutral-400);
 }
 
-[data-theme="dark"] .file-preview-panel__locked-hint {
+[data-theme='dark'] .file-preview-panel__locked-hint {
   background-color: rgba(245, 158, 11, 0.1);
   border-color: rgba(245, 158, 11, 0.3);
   color: #fbbf24;

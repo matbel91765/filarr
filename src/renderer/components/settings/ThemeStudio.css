@@ -1,0 +1,473 @@
+/**
+ * L'ATELIER DE THÈME.
+ *
+ * ── DEUX ESPACES DE COULEUR DANS LE MÊME ÉCRAN ──────────────────────────────
+ *
+ * Le panneau de gauche vit dans le thème COURANT ; l'aperçu de droite vit dans
+ * le thème EN COURS DE COMPOSITION. Les deux lisent les mêmes noms de variables.
+ *
+ * C'est pour cela que toutes les règles de l'aperçu sont préfixées `tsp-` et
+ * qu'AUCUNE règle du panneau ne descend dans l'aperçu par un sélecteur large :
+ * une seule règle qui traverserait la frontière peindrait un morceau du thème
+ * composé avec les couleurs du thème courant, et l'aperçu cesserait de dire la
+ * vérité — sans que rien ne le signale.
+ */
+
+.theme-studio {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .theme-studio {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ==================== Le panneau ==================== */
+
+.theme-studio__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.theme-studio__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.theme-studio__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.theme-studio__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+/* ---------- Points de départ ---------- */
+
+.theme-studio__starters {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+
+.theme-studio__starter {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 2px solid;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.theme-studio__starter:hover {
+  transform: translateY(-2px);
+}
+
+.theme-studio__starter.is-current {
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+/* La pastille d'accent, dans le coin : elle dit la SECONDE couleur du couple,
+   celle qu'on ne verrait pas si la vignette n'était qu'un aplat de fond. */
+.theme-studio__starter span {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+/* ---------- Les trois couleurs ---------- */
+
+.theme-studio__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background-secondary);
+}
+
+.theme-studio__row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.theme-studio__row-text strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.theme-studio__row-text span {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.theme-studio__row code {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.theme-studio__swatch {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-strong);
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.theme-studio__swatch-auto {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+}
+
+.theme-studio__readability {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.theme-studio__readability.is-limited {
+  color: var(--color-warning-on-background);
+}
+
+.theme-studio__error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-error-on-background);
+}
+
+/* ---------- Le décor ---------- */
+
+.theme-studio__file {
+  display: none;
+}
+
+.theme-studio__backdrop-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.theme-studio__sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.theme-studio__sliders label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-studio__sliders span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.theme-studio__sliders em {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+}
+
+.theme-studio__sliders input[type='range'] {
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  border-radius: 999px;
+  background: var(--color-border-strong);
+  cursor: pointer;
+}
+
+.theme-studio__sliders input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-primary-400);
+  border: 2px solid var(--color-background);
+  cursor: pointer;
+}
+
+.theme-studio__sliders input[type='range']:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+}
+
+/* ==================== L'aperçu ==================== */
+
+.theme-studio__preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-strong);
+  /* ⚠ Ce fond vient du thème COMPOSÉ : `--color-background` est redéfini sur
+     cet élément par les jetons posés en style en ligne. C'est toute l'astuce
+     de l'aperçu, et c'est pour cela qu'il ne peut pas mentir. */
+  background: var(--color-background);
+  min-height: 340px;
+}
+
+.theme-studio__preview-backdrop {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+}
+
+.theme-studio__preview-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+
+/* ---------- La colonne ---------- */
+
+.tsp-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border-light);
+}
+
+.tsp-rail__item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.tsp-rail__item.is-active {
+  background: var(--color-selected);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ---------- Le corps ---------- */
+
+.tsp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.tsp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tsp-head h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.tsp-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tsp-btn--primary {
+  background: var(--color-primary-500);
+  color: var(--color-text-inverted);
+}
+
+.tsp-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.tsp-card__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.tsp-card__body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-primary);
+}
+
+.tsp-card__meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.tsp-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.tsp-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tsp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+}
+
+.tsp-tile strong {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.tsp-tile span {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* La tuile « éteinte » : elle est là pour montrer que le texte désactivé reste
+   DISTINCT du texte actif sans devenir invisible — c'est le seul jeton qu'on
+   ne pousse volontairement qu'à 3:1. */
+.tsp-tile--muted strong,
+.tsp-tile--muted span {
+  color: var(--color-text-disabled);
+}
+
+/* ---------- Le décor vivant ---------- */
+
+.theme-studio__living {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.theme-studio__living-btn {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.theme-studio__living-btn:hover {
+  background: var(--color-hover-overlay);
+}
+
+.theme-studio__living-btn.is-current {
+  border-color: var(--color-primary-400);
+  background: var(--color-selected);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ⚠ LE DÉCOR VIVANT DE L'APERÇU DOIT RESTER DANS L'APERÇU.
+ *
+ * `.filarr-living` est en `position: fixed` — c'est ce qu'il faut sur la page,
+ * et c'est une catastrophe dans un aperçu : la lueur se peindrait sur tout
+ * l'écran, par-dessus les paramètres eux-mêmes. Les sélecteurs sont DOUBLÉS
+ * pour battre la spécificité de la règle d'origine sans recourir à
+ * `!important`. */
+.theme-studio__preview .theme-studio__preview-living.theme-studio__preview-living {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+/* ---------- Ce que le thème emporte ---------- */
+
+.theme-studio__carry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-studio__carry-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.theme-studio__carry-row:hover {
+  background: var(--color-hover-overlay);
+}
+
+/* La valeur ACTUELLE, à droite : la case dit « inclure », et ce qui suit dit
+   QUOI. Sans elle, on coche « couleur d'accentuation » sans savoir laquelle
+   on est en train de figer. */
+.theme-studio__carry-row code {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

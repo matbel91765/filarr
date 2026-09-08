@@ -1,0 +1,3845 @@
+/* ==================== Inline Database (bloc BDD dans les notes) ====================
+   Base commune posée par la fondation ; les agents table/board
+   complètent .inline-db__table / .inline-db__board / .inline-db__card. */
+
+.inline-db {
+  margin: 16px 0;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+}
+.inline-db--selected {
+  box-shadow: 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+
+/* ---- Header : titre + bascule de vue + nouvelle ligne ---- */
+.inline-db__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+
+.inline-db__title {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  padding: 4px 6px;
+  border-radius: 4px;
+  outline: none;
+}
+.inline-db__title::placeholder {
+  color: var(--color-text-tertiary);
+}
+.inline-db__title:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__title:focus {
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-focus-ring, var(--color-primary-500));
+}
+
+.inline-db__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---- Sélecteur de source du bloc (pilote le ⚡ de chaque ligne) ---- */
+.inline-db__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.inline-db__source-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+.inline-db__source-select {
+  max-width: 120px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.inline-db__source-select:hover {
+  color: var(--color-text-primary);
+}
+.inline-db__source-select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+
+/* ---- Segmented control discret Table/Board ---- */
+.inline-db__view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 5px;
+  background: var(--color-background-secondary);
+}
+.inline-db__view-btn {
+  border: none;
+  background: transparent;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__view-btn:hover {
+  color: var(--color-text-primary);
+}
+.inline-db__view-btn--active {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: 0 0 0 1px var(--color-border-light, var(--color-border));
+}
+
+.inline-db__new-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background 80ms ease-in,
+    color 80ms ease-in;
+  white-space: nowrap;
+}
+.inline-db__new-row-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* ---- Barre des vues enregistrées : onglets + filtres/tri ---- */
+.inline-db__viewbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+}
+.inline-db__viewtabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.inline-db__viewtab-wrap {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.inline-db__viewtab-wrap:hover,
+.inline-db__viewtab-wrap:focus-within {
+  background: var(--color-hover-overlay);
+}
+.inline-db__viewtab-wrap--active {
+  background: var(--color-background-secondary);
+}
+.inline-db__viewtab {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+  padding: 4px 6px 4px 8px;
+  border-radius: 5px 0 0 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__viewtab-wrap--active .inline-db__viewtab {
+  color: var(--color-text-primary);
+}
+.inline-db__viewtab-menu {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 4px 6px 4px 2px;
+  border-radius: 0 5px 5px 0;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  /* Discret au repos, révélé au survol/focus ou sur l'onglet actif */
+  opacity: 0;
+  transition: opacity 80ms ease-in;
+}
+.inline-db__viewtab-wrap:hover .inline-db__viewtab-menu,
+.inline-db__viewtab-wrap:focus-within .inline-db__viewtab-menu,
+.inline-db__viewtab-wrap--active .inline-db__viewtab-menu {
+  opacity: 1;
+}
+.inline-db__viewtab-menu:hover {
+  color: var(--color-text-primary);
+}
+.inline-db__viewtab-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 5px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+.inline-db__viewtab-add:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.inline-db__viewbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.inline-db__hidden-count {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.inline-db__tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__tool-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__tool-btn--on {
+  color: var(--color-primary-500);
+}
+.inline-db__tool-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+  color: var(--color-primary-500);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Menu d'un onglet de vue */
+.inline-db__viewmenu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* 240 px : quatre dispositions sur deux rangees y tiennent sans deborder.
+     A 210 px, « Calendar » et « Gallery » sortaient du popover. */
+  width: 240px;
+  padding: 10px;
+}
+/* Une GRILLE et non une ligne : ajouter une disposition ne doit plus pousser
+   les autres hors du cadre. Deux par rangee, quel qu'en soit le nombre. */
+.inline-db__viewmenu-types {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.inline-db__viewmenu-type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  background: transparent;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__viewmenu-type:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__viewmenu-type--active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--color-primary-500) 16%, transparent);
+  color: var(--color-primary-500);
+}
+.inline-db__viewmenu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__viewmenu-item:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__viewmenu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.inline-db__viewmenu-item--danger:hover:not(:disabled) {
+  color: var(--color-error-500, var(--color-folder-red));
+}
+
+/* Popovers Filtres / Trier */
+.inline-db__viewpanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 330px;
+  padding: 10px;
+}
+.inline-db__viewpanel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inline-db__viewpanel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.inline-db__viewpanel-empty,
+.inline-db__viewpanel-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-tertiary);
+}
+.inline-db__filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.inline-db__filter-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.inline-db__filter-join {
+  flex-shrink: 0;
+  width: 36px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+.inline-db__filter-select,
+.inline-db__filter-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 3px 5px;
+}
+.inline-db__filter-select {
+  cursor: pointer;
+}
+/* Terme de comparaison d'une date : bouton qui ouvre le calendrier maison,
+   habillé comme le champ qu'il remplace pour garder la ligne alignée */
+.inline-db__filter-date {
+  cursor: pointer;
+  text-align: left;
+  line-height: 1.4;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.inline-db__filter-date:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__filter-date-hint {
+  color: var(--color-text-tertiary);
+}
+.inline-db__filter-select:focus-visible,
+.inline-db__filter-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+/* Opérateur sans terme de comparaison : la place reste réservée (colonnes alignées) */
+.inline-db__filter-novalue {
+  flex: 1;
+  min-width: 0;
+}
+.inline-db__viewpanel-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+.inline-db__viewpanel-add:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__viewpanel-add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- Vue table ---- */
+.inline-db__table-wrap {
+  position: relative;
+  /* Filet de séparation propre à la table : plus fin que la bordure du bloc, et
+     tenu par un color-mix pour rester discret sur les dix thèmes */
+  --inline-db-grid-line: color-mix(
+    in srgb,
+    var(--color-border-light, var(--color-border)) 65%,
+    transparent
+  );
+}
+.inline-db__table {
+  overflow: auto;
+  /* Passé cette hauteur la table défile POUR ELLE-MÊME — c'est ce qui donne
+     son sens à l'en-tête collant (sans cela, rien ne défile jamais ici) */
+  max-height: 70vh;
+}
+/* Pendant un glissé de poignée : le curseur ne doit pas sauter d'une cellule
+   à l'autre, et rien ne doit se sélectionner */
+.inline-db__table--resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+.inline-db__table-el {
+  width: 100%;
+  /* Les largeurs viennent du <colgroup> : sans mise en page fixe, le contenu
+     reprendrait la main au premier mot un peu long */
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+/* Colonnes de service : poignée de ligne, actions, puis remplissage.
+   La dernière n'a AUCUNE largeur : elle avale la place restante, ce qui laisse
+   aux colonnes réglées exactement celle qu'on leur a donnée. */
+.inline-db__gcol-grip {
+  width: 30px;
+}
+.inline-db__gcol-add {
+  width: 44px;
+}
+
+.inline-db__col-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  padding: 0;
+  /* Le fond est posé DEUX fois : certains thèmes ont une surface translucide,
+     et un en-tête collant doit cacher les lignes qui défilent dessous */
+  background-color: var(--color-surface);
+  background-image: linear-gradient(var(--color-surface), var(--color-surface));
+  /* Filet du bas en ombre : sur une table en bordures fusionnées, une bordure
+     de cellule collante ne suit pas le défilement */
+  box-shadow: inset 0 -1px 0 var(--color-border-light, var(--color-border));
+  border-right: 1px solid var(--inline-db-grid-line);
+  white-space: nowrap;
+}
+.inline-db__col-header:last-child {
+  border-right: none;
+}
+/* ---- Poignée de redimensionnement (bord droit de l'en-tête) ----
+   L'en-tête est déjà positionné (sticky) : la poignée s'y ancre sans qu'on ait
+   à lui ajouter un position: relative qui casserait le collage. */
+.inline-db__col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+}
+.inline-db__col-resizer::after {
+  content: '';
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  right: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 80ms ease-in;
+}
+.inline-db__col-resizer:hover::after,
+.inline-db__col-resizer:focus-visible::after,
+.inline-db__col-header--resizing .inline-db__col-resizer::after {
+  background: var(--color-primary-500);
+}
+.inline-db__col-resizer:focus-visible {
+  outline: none;
+}
+.inline-db__col-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__col-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__col-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+.inline-db__col-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.inline-db__add-col {
+  vertical-align: middle;
+}
+/* Affordance visible au repos (le width:100% en cellule compressée donnait un
+   bouton de 16×12 px invisible — taille fixe + bordure réellement contrastée) */
+.inline-db__add-col-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  padding: 0;
+  border: 1px dashed color-mix(in srgb, var(--color-text-tertiary) 60%, transparent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.inline-db__add-col-btn:hover {
+  background: var(--color-hover-overlay);
+  border-style: solid;
+  color: var(--color-text-primary);
+}
+
+.inline-db__cell {
+  padding: 6px 10px;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--inline-db-grid-line);
+  border-right: 1px solid var(--inline-db-grid-line);
+  vertical-align: top;
+  /* Mise en page fixe : ce qui dépasse la largeur réglée est rogné, jamais
+     poussé dans la colonne d'à côté */
+  overflow: hidden;
+}
+.inline-db__cell:last-child {
+  border-right: none;
+}
+.inline-db__table-el tr:last-child .inline-db__cell {
+  border-bottom: none;
+}
+/* Lignes alternées : un voile tiré du texte, donc juste dans les dix thèmes
+   (3 % suffisent à guider l'œil sans faire rayure) */
+.inline-db__table-el tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-text-primary) 3%, transparent);
+}
+.inline-db__table-el tbody tr:hover {
+  background: var(--color-hover-overlay);
+}
+/* Cellule visée par le clavier : anneau à l'intérieur, sans bouger la grille */
+.inline-db__cell:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+
+/* ---- Colonne de poignée : numéro de ligne au repos, prise au survol ---- */
+.inline-db__grip-col {
+  padding: 0;
+}
+.inline-db__grip-cell {
+  position: relative;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  color: var(--color-text-tertiary);
+}
+.inline-db__row-number {
+  display: inline-block;
+  width: 100%;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-tertiary);
+  opacity: 0.75;
+}
+.inline-db__row-grip {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--color-text-tertiary);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 80ms ease-in;
+}
+.inline-db__table-el tbody tr:hover .inline-db__row-grip,
+.inline-db__row-grip:focus-visible {
+  opacity: 1;
+}
+/* Le numéro cède la place à la prise : les deux occupent la même case */
+.inline-db__table-el tbody tr:hover .inline-db__row-number,
+.inline-db__grip-cell:focus-within .inline-db__row-number {
+  opacity: 0;
+}
+.inline-db__row-grip:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+.inline-db__row-grip:disabled {
+  cursor: default;
+}
+/* Tri actif : l'ordre ne s'attrape plus à la main, la prise ne s'annonce pas */
+.inline-db__table-el tbody tr:hover .inline-db__row-grip:disabled {
+  opacity: 0.35;
+}
+.inline-db__row--dragging {
+  opacity: 0.45;
+}
+/* Bord d'insertion : posé en ombre pour survivre aux bordures fusionnées */
+.inline-db__row--drop-before .inline-db__cell {
+  box-shadow: inset 0 2px 0 var(--color-primary-500);
+}
+.inline-db__row--drop-after .inline-db__cell {
+  box-shadow: inset 0 -2px 0 var(--color-primary-500);
+}
+
+/* Colonne de remplissage : elle ne porte rien, elle prend la place qui reste */
+.inline-db__filler-col,
+.inline-db__filler-cell {
+  padding: 0;
+  border-right: none;
+}
+
+/* Réservé aux lecteurs d'écran (type de colonne, intitulé de la poignée) */
+.inline-db__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Cellules porteuses d'un input/bouton : le padding vient de l'enfant */
+.inline-db__cell--input {
+  padding: 0;
+}
+.inline-db__cell--checkbox {
+  vertical-align: middle;
+}
+/* Zone de clic confortable autour de la case : la cellule entière réagit */
+.inline-db__cell-check {
+  display: flex;
+  align-items: center;
+  min-height: 19px;
+}
+.inline-db__cell-checkbox {
+  display: inline-flex;
+}
+
+.inline-db__cell-input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  padding: 6px 10px;
+  outline: none;
+  transition: background 80ms ease-in;
+}
+.inline-db__cell-input:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__cell-input:focus {
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+/* Invite de cellule vide : muette au repos, lisible dès que la ligne est visée */
+.inline-db__cell-input::placeholder {
+  color: transparent;
+}
+.inline-db__table-el tbody tr:hover .inline-db__cell-input::placeholder,
+.inline-db__cell-input:focus::placeholder {
+  color: var(--color-text-tertiary);
+}
+.inline-db__cell-input--number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.inline-db__cell-input--url {
+  color: var(--color-primary-500);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Cellule-bouton (select / multiSelect / date / relation) */
+.inline-db__cell-btn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 31px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: background 80ms ease-in;
+}
+.inline-db__cell-btn:hover {
+  background: var(--color-hover-overlay);
+}
+/* Cellule dont le popover est ouvert : elle reste visiblement « en cours » */
+.inline-db__cell-btn[aria-expanded='true'] {
+  background: var(--color-hover-overlay);
+  box-shadow: inset 0 0 0 1px var(--color-focus-ring, var(--color-primary-500));
+}
+
+/* ---- Invite des cellules vides (commune à tous les types) ----
+   Rien au repos, sinon la table serait un mur de mots gris ; révélée au survol
+   de la ligne, au focus clavier et tant que le popover de la cellule est ouvert */
+.inline-db__cell-hint {
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+  opacity: 0;
+  transition: opacity 80ms ease-in;
+}
+.inline-db__table-el tbody tr:hover .inline-db__cell-hint,
+.inline-db__cell-btn:focus-visible .inline-db__cell-hint,
+.inline-db__note-btn:focus-visible .inline-db__cell-hint,
+.inline-db__progress-btn:focus-visible .inline-db__cell-hint,
+.inline-db__cell-btn[aria-expanded='true'] .inline-db__cell-hint {
+  opacity: 1;
+}
+
+/* Cellule date : une date ne se coupe pas en deux lignes */
+.inline-db__date-btn {
+  flex-wrap: nowrap;
+}
+/* La valeur mise en forme dans la langue de l'app */
+.inline-db__date-value {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Cellules email/phone : input + icône-lien discrète en bout ---- */
+.inline-db__cell-flex {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.inline-db__cell-flex .inline-db__cell-input {
+  flex: 1;
+}
+.inline-db__cell-linkout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin-right: 4px;
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.inline-db__cell-linkout:hover {
+  color: var(--color-primary-500);
+  background: var(--color-hover-overlay);
+  opacity: 1;
+}
+
+/* ---- Cellule rating : 5 étoiles cliquables ---- */
+.inline-db__stars {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-height: 31px;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+.inline-db__star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 2px;
+  border-radius: 3px;
+  /* Étoile éteinte discrète mais présente : une cellule vide doit se voir */
+  color: color-mix(in srgb, var(--color-text-tertiary) 65%, transparent);
+  cursor: pointer;
+  transition:
+    color 80ms ease-in,
+    transform 80ms ease-in;
+}
+.inline-db__star--on {
+  color: var(--color-warning-500);
+}
+/* Aperçu au survol : les étoiles parcourues s'allument avant le clic */
+.inline-db__stars--preview .inline-db__star--on {
+  color: color-mix(in srgb, var(--color-warning-500) 75%, transparent);
+}
+.inline-db__star:hover {
+  color: var(--color-warning-500);
+  transform: scale(1.12);
+}
+
+/* ---- Cellule progress : barre fine + valeur ---- */
+.inline-db__progress-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 31px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  padding: 5px 10px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 80ms ease-in;
+}
+.inline-db__progress-btn:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__progress-track {
+  flex: 1;
+  min-width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  /* Visible sur --color-surface dans tous les thèmes (dark comme papier) */
+  background: color-mix(in srgb, var(--color-text-tertiary) 25%, transparent);
+  overflow: hidden;
+}
+/* Sans valeur, la piste s'efface à moitié : présente pour montrer où cliquer,
+   assez pâle pour ne pas se lire comme un zéro */
+.inline-db__progress-btn--empty .inline-db__progress-track {
+  background: color-mix(in srgb, var(--color-text-tertiary) 14%, transparent);
+}
+.inline-db__progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-primary-500);
+  transition: width 120ms ease-out;
+}
+.inline-db__progress-value {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+/* Édition : le champ occupe la cellule, le pourcentage reste au même endroit */
+.inline-db__progress-edit {
+  display: flex;
+  align-items: center;
+  min-height: 31px;
+}
+
+/* ---- Cellule note : lien vers une note du coffre ---- */
+.inline-db__note-btn {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-height: 31px;
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__note-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__note-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 31px;
+  padding: 0 4px 0 0;
+  min-width: 0;
+}
+.inline-db__note-open {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-primary-500);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+.inline-db__note-open:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.inline-db__note-missing {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 10px;
+  font-style: italic;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__note-unlink {
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 3px;
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    opacity 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__note-cell:hover .inline-db__note-unlink,
+.inline-db__note-unlink:focus-visible {
+  opacity: 1;
+}
+.inline-db__note-unlink:hover {
+  color: var(--color-error-500);
+  background: var(--color-hover-overlay);
+}
+
+/* ---- Cellules relation (lignes liées d'une autre base) ---- */
+.inline-db__rel-btn {
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 5px 8px;
+}
+/* Cellule relation : les pastilles s'ouvrent chacune, le reste de la place
+   appartient au bouton qui ouvre le selecteur */
+.inline-db__rel-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-height: 31px;
+  padding: 5px 8px;
+  min-width: 0;
+}
+.inline-db__rel-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 180px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Pastille cliquable : elle ouvre la note qui porte la base visee */
+.inline-db__rel-pill--open {
+  cursor: pointer;
+  transition:
+    background 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__rel-pill--open:hover {
+  background: color-mix(in srgb, var(--color-primary-500) 32%, transparent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Zone restante de la cellule : cliquer a cote des pastilles ouvre le selecteur */
+.inline-db__rel-fill {
+  flex: 1;
+  min-width: 44px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 0 2px;
+  border-radius: 4px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+span.inline-db__rel-fill {
+  cursor: default;
+}
+.inline-db__rel-fill:hover {
+  background: var(--color-hover-overlay);
+}
+/* Lien conservé dont la ligne n'existe plus : présent mais éteint */
+.inline-db__rel-pill--missing {
+  color: var(--color-text-tertiary);
+  background: var(--color-hover-overlay);
+  font-style: italic;
+}
+.inline-db__rel-hint,
+.inline-db__rel-unavailable {
+  display: block;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__relpicker {
+  width: 260px;
+}
+/* En-tete du selecteur : quelle base, dans quelle note */
+.inline-db__relpicker-head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 6px 6px;
+  min-width: 0;
+}
+.inline-db__relpicker-db {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__relpicker-note {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__relpicker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.inline-db__relpicker-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.inline-db__relpicker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Deux proprietes secondaires sous le titre : reconnaitre la ligne sans ouvrir
+   la base d'en face */
+.inline-db__relpicker-sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+}
+.inline-db__relpicker-meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__relpicker-pill {
+  font-size: 10.5px;
+  line-height: 15px;
+  padding: 0 6px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Creer la ligne cherchee, sans quitter la cellule */
+.inline-db__relpicker-create {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-primary-500);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__relpicker-create:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__relpicker-blocked,
+.inline-db__relpicker-note-line {
+  margin: 0;
+  padding: 5px 6px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+.inline-db__relpicker-clean {
+  border: none;
+  background: transparent;
+  padding: 5px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__relpicker-clean:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* ---- Cellules rollup (calculées, jamais éditables) ---- */
+.inline-db__cell-rollup {
+  display: block;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.inline-db__cell-rollup--unavailable {
+  color: var(--color-text-tertiary);
+}
+/* Liste de valeurs : du texte, pas un chiffre — il se tronque proprement */
+.inline-db__cell-rollup--text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: normal;
+}
+
+/* ---- Cellules createdTime/updatedTime (lecture seule) ---- */
+.inline-db__cell-time {
+  display: block;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Suppression de ligne : discrète, révélée au survol */
+/* Largeur donnée par le <colgroup> (mise en page fixe) : rien à poser ici */
+.inline-db__row-actions {
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.inline-db__row-delete {
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition:
+    opacity 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__table-el tbody tr:hover .inline-db__row-delete,
+.inline-db__row-delete:focus-visible {
+  opacity: 1;
+}
+.inline-db__row-delete:hover {
+  color: var(--color-error-500);
+  background: var(--color-hover-overlay);
+}
+
+/* ---- Bouton ⚡ compléter depuis le lien (QW-13) : révélé au survol comme la corbeille ---- */
+.inline-db__row-meta {
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition:
+    opacity 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__table-el tbody tr:hover .inline-db__row-meta,
+.inline-db__row-meta:focus-visible,
+.inline-db__row-meta--busy,
+.inline-db__row-meta--error {
+  opacity: 1;
+}
+.inline-db__row-meta:hover:not(:disabled) {
+  color: var(--color-primary-500);
+  background: var(--color-hover-overlay);
+}
+.inline-db__row-meta--error {
+  color: var(--color-error-500);
+}
+.inline-db__row-meta:disabled {
+  cursor: default;
+}
+
+/* Chargement : ⚡ remplacé par un petit anneau qui tourne */
+.inline-db__spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: inline-db-spin 700ms linear infinite;
+}
+@keyframes inline-db-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pied de table : nouvelle ligne */
+.inline-db__footer-cell {
+  padding: 0;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+.inline-db__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.inline-db__add-row-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__add-row-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+/* Compte des lignes : une indication, pas une annonce */
+.inline-db__row-count {
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Popovers en fixed (coordonnées viewport, jamais amputés par un overflow) ---- */
+.inline-db__popover {
+  position: fixed;
+  z-index: 1000;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-dropdown, var(--shadow-lg));
+  padding: 8px;
+  /* La hauteur maximale est posee EN LIGNE par `anchorPos`, qui seule connait
+     la place restante a l'ecran. Le defilement, lui, est ici : sans lui, la
+     borne couperait le contenu au lieu de le rendre atteignable. */
+  overflow-y: auto;
+}
+.inline-db__popover--editor {
+  width: 260px;
+}
+
+/* ---- Sélecteur de date maison ----
+   Le calendrier de Chromium n'a ni la police, ni les rayons, ni les couleurs du
+   produit : celui-ci est dessiné en jetons de thème, donc juste sur les dix.
+   Grammaire reprise du calendrier du bandeau (7 colonnes, jours en capitales,
+   cases rondes, aujourd'hui pointé). */
+.inline-db__datepicker {
+  width: 248px;
+  padding: 10px;
+}
+.inline-db__dp {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.inline-db__dp-input {
+  font-variant-numeric: tabular-nums;
+}
+.inline-db__dp-input--invalid,
+.inline-db__dp-input--invalid:focus {
+  border-color: var(--color-error-500);
+  box-shadow: 0 0 0 1px var(--color-error-500);
+}
+.inline-db__dp-error {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--color-error-500);
+}
+.inline-db__dp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.inline-db__dp-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__dp-nav:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__dp-month {
+  flex: 1;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  /* Les langues qui n'emploient pas la majuscule aux mois la reçoivent ici */
+  text-transform: capitalize;
+}
+.inline-db__dp-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.inline-db__dp-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.inline-db__dp-weekday {
+  padding: 2px 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-text-tertiary);
+}
+.inline-db__dp-day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background 80ms ease-in;
+}
+.inline-db__dp-day:hover {
+  background: var(--color-hover-overlay);
+}
+/* Jours empruntés au mois voisin : la mise en retrait tient à la COULEUR seule.
+   Une opacité par-dessus la couleur tertiaire faisait tomber le contraste sous
+   3:1 sur les onze thèmes ; sans elle il va de 3,6:1 à 6,3:1. */
+.inline-db__dp-day--outside {
+  color: var(--color-text-tertiary);
+}
+/* Aujourd'hui : pastille sous le quantième — pas de fond plein, qui obligerait
+   à choisir une couleur de texte tenant sur les dix thèmes */
+.inline-db__dp-day--today {
+  font-weight: 700;
+}
+.inline-db__dp-day--today::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary-500);
+}
+/* Jour choisi : teinte + anneau, le texte garde la couleur du thème */
+.inline-db__dp-day--selected {
+  background: color-mix(in srgb, var(--color-primary-500) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-primary-500);
+  font-weight: 600;
+}
+.inline-db__dp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+.inline-db__dp-action {
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__dp-action:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__dp-action--clear:hover:not(:disabled) {
+  color: var(--color-error-500);
+}
+.inline-db__dp-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Confirmation opt-in du proxy de métadonnées (web uniquement) */
+.inline-db__meta-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 260px;
+  padding: 10px;
+}
+.inline-db__meta-confirm-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.inline-db__meta-confirm-body {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+.inline-db__meta-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.inline-db__meta-confirm-btn {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__meta-confirm-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__meta-confirm-btn--primary {
+  border-color: transparent;
+  background: var(--color-primary-500);
+  color: #fff;
+}
+.inline-db__meta-confirm-btn--primary:hover {
+  background: var(--color-primary-600, var(--color-primary-500));
+  color: #fff;
+}
+
+/* ---- Sélecteur de résultats d'un connecteur (⚡ avec source choisie) ----
+   Aucune vignette distante : la CSP épingle img-src à 'self' blob: data:,
+   on affiche donc une pastille d'initiale. */
+.inline-db__connector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 280px;
+  padding: 8px;
+}
+/* Focus programmatique du dialogue (messages sans cible cliquable) : pas de liseré */
+.inline-db__connector:focus {
+  outline: none;
+}
+.inline-db__connector-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  padding: 0 2px;
+}
+.inline-db__connector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.inline-db__connector-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 5px 6px;
+  border-radius: 5px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__connector-item:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__connector-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-primary-500) 16%, transparent);
+  color: var(--color-primary-500);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.inline-db__connector-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.inline-db__connector-name {
+  font-size: 13px;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__connector-meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__connector-msg {
+  margin: 0;
+  padding: 2px 4px 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+.inline-db__connector-msg--error {
+  color: var(--color-error-500);
+}
+.inline-db__connector-loading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+.inline-db__connector-action {
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__connector-action:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* Dropdown d'options select/multiSelect */
+.inline-db__dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.inline-db__dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__dropdown-item:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__dropdown-check {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.inline-db__dropdown-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  padding: 4px 6px;
+}
+.inline-db__dropdown-clear {
+  border: none;
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+  background: transparent;
+  margin-top: 4px;
+  padding: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0 0 4px 4px;
+}
+.inline-db__dropdown-clear:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* ---- Sélecteur de note (popover fixed, même mécanique que le dropdown) ---- */
+.inline-db__notepicker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 240px;
+  padding: 8px;
+}
+.inline-db__notepicker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.inline-db__notepicker-item {
+  display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 5px 6px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__notepicker-item:hover {
+  background: var(--color-hover-overlay);
+}
+
+/* ---- Éditeur de propriété ---- */
+.inline-db__pe {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.inline-db__pe-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  justify-content: space-between;
+}
+
+/* L'icone du type, dans l'en-tete : elle rappelle CE QU'ON REGLE des l'ouverture. */
+.inline-db__pe-headicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+/* Le titre porte le NOM de la colonne : « Property » ne disait rien de plus
+   que la fenetre elle-meme. */
+.inline-db__pe-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__pe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+/* Etiquettes en casse normale : les capitales espacees appartenaient a un
+   langage visuel que plus rien d'autre dans la base n'emploie. */
+.inline-db__pe-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  opacity: 0.85;
+}
+.inline-db__pe-input,
+.inline-db__pe-select {
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+.inline-db__pe-input:focus,
+.inline-db__pe-select:focus {
+  border-color: var(--color-focus-ring, var(--color-primary-500));
+  box-shadow: 0 0 0 1px var(--color-focus-ring, var(--color-primary-500));
+}
+.inline-db__pe-input::placeholder {
+  color: var(--color-text-tertiary);
+}
+.inline-db__pe-select {
+  cursor: pointer;
+}
+.inline-db__pe-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inline-db__pe-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inline-db__pe-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.inline-db__pe-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px;
+  background: var(--color-background-secondary);
+  border-radius: 5px;
+}
+.inline-db__pe-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.inline-db__pe-swatch--active {
+  border-color: var(--color-focus-ring, var(--color-primary-500));
+}
+.inline-db__pe-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 4px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.inline-db__pe-icon-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+/* Étoile « valeur par défaut » : franche une fois posée. Pas d'opacité
+   d'élément au repos (elle passait sous le contraste 3:1 et délavait
+   l'anneau de focus) — la discrétion vient de la couleur héritée. */
+.inline-db__pe-default-btn--active {
+  color: var(--color-primary-500);
+}
+.inline-db__pe-default-btn--active:hover {
+  color: var(--color-primary-500);
+}
+.inline-db__pe-hint {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--color-text-tertiary);
+}
+/* Case a cocher du design system, ramenee a l'echelle du popover */
+.inline-db__pe-check {
+  margin-top: 6px;
+  font-size: 12px;
+}
+/* Action proposee dans le popover (reduire a un seul lien) : discrete, jamais
+   automatique */
+.inline-db__pe-inline-action {
+  margin-top: 4px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__pe-inline-action:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__pe-add-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: left;
+}
+.inline-db__pe-add-option:hover {
+  color: var(--color-text-primary);
+}
+/* ---- Éditeur de propriété : réordonner la colonne ---- */
+.inline-db__pe-move-btn:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.inline-db__pe-divider {
+  height: 1px;
+  background: var(--color-border-light, var(--color-border));
+}
+.inline-db__pe-delete {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-error-500);
+  cursor: pointer;
+  text-align: left;
+}
+.inline-db__pe-delete:hover {
+  background: color-mix(in srgb, var(--color-error-500) 12%, transparent);
+}
+
+/* ---- Focus visible commun aux contrôles du bloc ---- */
+.inline-db__col-btn:focus-visible,
+.inline-db__col-resizer:focus-visible,
+.inline-db__row-grip:focus-visible,
+.inline-db__add-col-btn:focus-visible,
+.inline-db__cell-btn:focus-visible,
+.inline-db__row-delete:focus-visible,
+.inline-db__row-meta:focus-visible,
+.inline-db__meta-confirm-btn:focus-visible,
+.inline-db__add-row-btn:focus-visible,
+.inline-db__dropdown-item:focus-visible,
+.inline-db__dropdown-clear:focus-visible,
+.inline-db__pe-icon-btn:focus-visible,
+.inline-db__pe-color-dot:focus-visible,
+.inline-db__pe-swatch:focus-visible,
+.inline-db__pe-add-option:focus-visible,
+.inline-db__pe-delete:focus-visible,
+.inline-db__pe-move-btn:focus-visible,
+.inline-db__pe-inline-action:focus-visible,
+.inline-db__cell-linkout:focus-visible,
+.inline-db__star:focus-visible,
+.inline-db__progress-btn:focus-visible,
+.inline-db__note-btn:focus-visible,
+.inline-db__note-open:focus-visible,
+.inline-db__note-unlink:focus-visible,
+.inline-db__connector-item:focus-visible,
+.inline-db__connector-action:focus-visible,
+.inline-db__notepicker-item:focus-visible,
+.inline-db__rel-pill--open:focus-visible,
+.inline-db__rel-fill:focus-visible,
+.inline-db__relpicker-create:focus-visible,
+.inline-db__relpicker-clean:focus-visible,
+.inline-db__dp-nav:focus-visible,
+.inline-db__dp-day:focus-visible,
+.inline-db__dp-action:focus-visible,
+.inline-db__viewtab:focus-visible,
+.inline-db__viewtab-menu:focus-visible,
+.inline-db__viewtab-add:focus-visible,
+.inline-db__tool-btn:focus-visible,
+.inline-db__viewmenu-type:focus-visible,
+.inline-db__viewmenu-item:focus-visible,
+.inline-db__viewpanel-add:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+
+/* ---- Pastille d'option select/multiSelect (commune aux vues) ---- */
+.inline-db__option-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--color-text-primary);
+  background: color-mix(
+    in srgb,
+    var(--inline-db-option-color, var(--color-neutral-400)) 22%,
+    transparent
+  );
+}
+
+/* ---- Vue board (base ; l'agent board complète) ---- */
+.inline-db__board {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  overflow-x: auto;
+  align-items: flex-start;
+}
+.inline-db__column {
+  flex: 0 0 220px;
+  border-radius: 6px;
+  background: var(--color-background-secondary);
+  padding: 8px;
+}
+.inline-db__card {
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 5px;
+  background: var(--color-surface);
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+.inline-db__card + .inline-db__card {
+  margin-top: 6px;
+}
+
+/* ---- Board : toolbar (sélecteur groupBy) ---- */
+.inline-db__board-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px 0;
+}
+.inline-db__board-groupby {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.inline-db__board-groupby-label {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+.inline-db__board-select {
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.inline-db__board-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-focus-ring, var(--color-primary-500));
+}
+
+/* ---- Board : état vide (aucune propriété select) ---- */
+.inline-db__board-empty {
+  padding: 20px 14px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+/* ---- Board : colonnes ---- */
+.inline-db__column--drop-target {
+  background: color-mix(in srgb, var(--color-primary-500) 8%, var(--color-background-secondary));
+  box-shadow: inset 0 0 0 2px var(--color-primary-500);
+}
+.inline-db__column-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px 8px;
+  min-width: 0;
+}
+.inline-db__column-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--inline-db-option-color, var(--color-neutral-400));
+}
+.inline-db__column-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__column-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 6px;
+  border-radius: 9px;
+  color: var(--color-text-tertiary);
+  background: var(--color-hover-overlay);
+}
+.inline-db__column-cards {
+  display: flex;
+  flex-direction: column;
+  /* Zone de drop utilisable même colonne vide */
+  min-height: 28px;
+}
+
+/* ---- Board : cartes ---- */
+.inline-db__card {
+  position: relative;
+  cursor: grab;
+}
+.inline-db__card--dragging {
+  opacity: 0.45;
+}
+.inline-db__card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring, var(--color-primary-500));
+}
+.inline-db__card-title {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  padding-right: 20px;
+}
+.inline-db__card-title--empty {
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+.inline-db__card-title-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  padding: 0;
+  outline: none;
+  box-shadow: 0 1px 0 var(--color-focus-ring, var(--color-primary-500));
+}
+.inline-db__card-sub {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Board : actions de carte (ouvrir la fiche, menu ⋯) ---- */
+.inline-db__card-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 2px;
+}
+.inline-db__card-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 80ms ease-in,
+    background 80ms ease-in;
+}
+.inline-db__card:hover .inline-db__card-icon-btn,
+.inline-db__card:focus-within .inline-db__card-icon-btn,
+.inline-db__card-icon-btn:focus-visible,
+.inline-db__card-icon-btn[aria-expanded='true'] {
+  opacity: 1;
+}
+.inline-db__card-icon-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__card-menu {
+  /* fixed : jamais amputé par le scroll horizontal du board */
+  position: fixed;
+  z-index: 1000;
+  min-width: 150px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+.inline-db__card-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.inline-db__card-menu-item:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__card-menu-item[aria-checked='true'] {
+  font-weight: 600;
+}
+.inline-db__card-menu-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Board : nouvelle carte en pied de colonne ---- */
+.inline-db__new-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  padding: 5px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition:
+    background 80ms ease-in,
+    color 80ms ease-in;
+}
+.inline-db__new-card-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* ---- Aperçu read-only (versions) : contenu visible, interactions neutralisées ---- */
+.inline-db--readonly .inline-db__table-wrap,
+.inline-db--readonly .inline-db__board,
+.inline-db--readonly .inline-db__board-area,
+.inline-db--readonly .inline-db__viewbar,
+.inline-db--readonly .inline-db__header {
+  pointer-events: none;
+}
+/* Les onglets restent LISIBLES (on voit quelle vue est appliquée), seuls les
+   gestes qui écriraient disparaissent */
+.inline-db--readonly .inline-db__viewtab-menu,
+.inline-db--readonly .inline-db__viewtab-add,
+.inline-db--readonly .inline-db__row-grip,
+.inline-db--readonly .inline-db__col-resizer,
+.inline-db--readonly .inline-db__source,
+.inline-db--readonly .inline-db__new-row-btn,
+.inline-db--readonly .inline-db__add-row-btn,
+.inline-db--readonly .inline-db__add-col-btn,
+.inline-db--readonly .inline-db__row-delete,
+.inline-db--readonly .inline-db__row-meta,
+.inline-db--readonly .inline-db__new-card-btn,
+.inline-db--readonly .inline-db__card-menu-btn,
+.inline-db--readonly .inline-db__note-btn,
+.inline-db--readonly .inline-db__note-unlink {
+  display: none;
+}
+
+/* ==================== Recherche rapide et panneau des colonnes ==================== */
+
+.inline-db__search {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-text-secondary);
+}
+
+.inline-db__search:focus-within {
+  border-color: var(--color-primary-400, #87ceeb);
+}
+
+.inline-db__search-input {
+  width: 120px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  outline: none;
+}
+
+/* Le champ de recherche s'élargit quand on s'en sert : discret au repos,
+   confortable dès qu'on tape. */
+.inline-db__search-input:focus {
+  width: 190px;
+}
+
+.inline-db__viewpanel-hint {
+  margin: 0 0 6px;
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+}
+
+.inline-db__proplist {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.inline-db__proprow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inline-db__prop-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 6px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-db__prop-toggle:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* Une colonne masquée reste lisible — c'est ce qui permet de la retrouver. */
+.inline-db__prop-toggle.is-hidden {
+  opacity: 0.5;
+}
+
+.inline-db__prop-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-db__prop-move {
+  display: inline-flex;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+/* Panneau des colonnes : poignée de glissement, type, actions de lot. */
+.inline-db__prop-bulk {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.inline-db__prop-bulk-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.inline-db__prop-bulk-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.inline-db__prop-grip {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px;
+  color: var(--color-text-tertiary, #999);
+  cursor: grab;
+}
+
+.inline-db__prop-grip:active {
+  cursor: grabbing;
+}
+
+.inline-db__proprow.is-dragging {
+  opacity: 0.45;
+}
+
+/* Le trait marque OÙ la colonne va tomber — sans lui, le glisser-déposer se
+   fait à l'aveugle. */
+.inline-db__proprow.is-drop {
+  box-shadow: inset 0 2px 0 var(--color-primary-400, #87ceeb);
+}
+
+.inline-db__prop-type {
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 0.625rem;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+/* ==================== Ligne des calculs ==================== */
+
+/* Discrète au repos : un pied de colonne ne doit pas peser autant qu'une
+   donnée. Il se révèle au survol de la table, comme dans Notion. */
+.inline-db__calc-row {
+  border-top: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.08));
+}
+
+.inline-db__calc-cell {
+  padding: 0;
+  vertical-align: middle;
+}
+
+.inline-db__calc-btn {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.inline-db__calc-btn:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+/* Le libellé « Calculer » n'apparaît qu'au survol : sans calcul posé, la
+   colonne reste muette. */
+.inline-db__calc-placeholder {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.inline-db__calc-btn:hover .inline-db__calc-placeholder,
+.inline-db__calc-btn:focus-visible .inline-db__calc-placeholder {
+  opacity: 0.7;
+}
+
+.inline-db__calc-label {
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inline-db__calc-value {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.inline-db__calcmenu {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.inline-db__calcmenu-item {
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-db__calcmenu-item:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+}
+
+.inline-db__calcmenu-item.is-on {
+  background: var(--color-selected);
+  font-weight: 600;
+}
+
+/* ==================== Vue calendrier ==================== */
+
+.inline-db__calendar {
+  padding: 8px 0;
+}
+
+.inline-db__calendar-empty {
+  padding: 24px 16px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.inline-db__cal-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 8px;
+}
+
+.inline-db__cal-nav,
+.inline-db__cal-today {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inline-db__cal-nav:hover,
+.inline-db__cal-today:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
+  color: var(--color-text-primary);
+}
+
+.inline-db__cal-month {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Le nom de la colonne qui range les cartes : sans lui, on ne sait pas SUR
+   QUELLE date le calendrier travaille. */
+.inline-db__cal-prop {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.inline-db__cal-weekdays,
+.inline-db__cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.inline-db__cal-weekday {
+  padding: 2px 6px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  opacity: 0.65;
+}
+
+.inline-db__cal-day {
+  min-height: 84px;
+  padding: 4px;
+  border: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.07));
+  margin: -1px 0 0 -1px;
+  overflow: hidden;
+}
+
+/* Les jours des mois voisins restent lisibles mais s'effacent : la grille a
+   toujours six semaines pour que le bloc ne saute pas d'un mois à l'autre. */
+.inline-db__cal-day.is-outside {
+  opacity: 0.4;
+}
+
+.inline-db__cal-day.is-today .inline-db__cal-daynum span {
+  background: var(--color-primary-500, #4682b4);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 5px;
+}
+
+.inline-db__cal-daynum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+}
+
+.inline-db__cal-add {
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--color-text-tertiary, #999);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.inline-db__cal-day:hover .inline-db__cal-add {
+  opacity: 1;
+}
+
+.inline-db__cal-card {
+  margin-top: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-selected);
+  color: var(--color-text-primary);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  cursor: grab;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-db__cal-card:active {
+  cursor: grabbing;
+}
+
+/* Les lignes SANS date ne disparaissent pas : elles attendent ici qu'on les
+   pose sur un jour. */
+.inline-db__cal-undated {
+  margin-top: 10px;
+  padding: 8px;
+  border-top: 1px dashed var(--color-border, rgba(0, 0, 0, 0.12));
+}
+
+.inline-db__cal-undated-label {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.inline-db__cal-undated-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.inline-db__cal-undated-cards .inline-db__cal-card {
+  margin-top: 0;
+}
+
+/* ==================== Fiche d'une ligne ==================== */
+
+.inline-db__rp-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.inline-db__rp {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 901;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(72vh, 680px);
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-lg, 12px);
+  background: var(--color-surface, #fff);
+  box-shadow: var(--shadow-lg, 0 12px 40px rgba(0, 0, 0, 0.2));
+}
+
+.inline-db__rp-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.08));
+}
+
+.inline-db__rp-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-db__rp-steps {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.inline-db__rp-icon {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.inline-db__rp-icon:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-primary);
+}
+
+.inline-db__rp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 16px;
+  overflow-y: auto;
+}
+
+.inline-db__rp-field {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  align-items: start;
+  gap: 10px;
+}
+
+.inline-db__rp-label {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 5px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.inline-db__rp-name {
+  color: var(--color-text-primary);
+}
+
+.inline-db__rp-type {
+  font-size: 0.625rem;
+  opacity: 0.6;
+}
+
+/* Une colonne masquée reste éditable ici, et c'est dit : c'est le seul endroit
+   d'où l'on peut lire une donnée que la vue cache. */
+.inline-db__rp-hidden {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-selected);
+  font-size: 0.5625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inline-db__rp-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background, transparent);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+}
+
+.inline-db__rp-input:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #87ceeb);
+}
+
+.inline-db__rp-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 5px;
+  accent-color: var(--color-primary-500, #4682b4);
+}
+
+.inline-db__rp-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.inline-db__rp-option {
+  padding: 3px 9px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inline-db__rp-option.is-on {
+  background: var(--color-selected);
+  border-color: var(--color-primary-400, #87ceeb);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.inline-db__rp-readonly {
+  padding-top: 5px;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+}
+
+.inline-db__cal-card {
+  cursor: pointer;
+}
+
+/* Formule : la valeur est dérivée, donc jamais éditable dans la cellule. Un
+   motif d'erreur s'affiche à la place du résultat plutôt qu'un zéro muet. */
+.inline-db__cell-formula--error {
+  color: var(--color-error, #e74c3c);
+  font-style: italic;
+}
+
+.inline-db__pe-formula {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background, transparent);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.inline-db__pe-formula:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #87ceeb);
+}
+
+.inline-db__pe-formula-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.625rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.inline-db__pe-formula-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.625rem;
+  color: var(--color-error, #e74c3c);
+}
+
+/* ==================== Vue galerie ==================== */
+
+.inline-db__gallery {
+  padding: 8px 0;
+}
+
+.inline-db__gal-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.inline-db__gal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-db__gal-card:hover {
+  border-color: var(--color-primary-300, #87ceeb);
+}
+
+.inline-db__gal-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.inline-db__gal-field {
+  display: flex;
+  gap: 6px;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+}
+
+.inline-db__gal-field-name {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.inline-db__gal-field-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-db__gal-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  border: 1px dashed var(--color-border, rgba(0, 0, 0, 0.16));
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inline-db__gal-add:hover {
+  border-color: var(--color-primary-300, #87ceeb);
+  color: var(--color-text-primary);
+}
+
+.inline-db__gal-empty {
+  margin: 12px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* ==================== Colonne personne ==================== */
+
+.inline-db__cell-people {
+  gap: 4px;
+}
+
+.inline-db__people {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+/* Pastille d'initiales : la couleur est DÉRIVÉE du nom, donc stable d'une
+   session et d'un appareil à l'autre sans rien stocker. */
+.inline-db__person {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.inline-db__person--more {
+  background: var(--color-neutral-400, #9aa3ae);
+}
+
+.inline-db__person--c0 {
+  background: var(--color-folder-blue, #3b82f6);
+}
+.inline-db__person--c1 {
+  background: var(--color-folder-green, #22a06b);
+}
+.inline-db__person--c2 {
+  background: var(--color-folder-purple, #a855f7);
+}
+.inline-db__person--c3 {
+  background: var(--color-folder-amber, #d97706);
+}
+.inline-db__person--c4 {
+  background: var(--color-folder-teal, #14b8a6);
+}
+.inline-db__person--c5 {
+  background: var(--color-folder-pink, #ec4899);
+}
+.inline-db__person--c6 {
+  background: var(--color-folder-indigo, #6366f1);
+}
+.inline-db__person--c7 {
+  background: var(--color-folder-red, #ef4444);
+}
+
+/* ==================== Modèles de ligne ==================== */
+
+.inline-db__add-row-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.inline-db__add-row-caret {
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.inline-db__add-row-caret:hover {
+  color: var(--color-text-primary);
+}
+
+.inline-db__tplrow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.inline-db__tplrow .inline-db__calcmenu-item {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.inline-db__rp-tpl {
+  padding: 3px 9px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inline-db__rp-tpl:hover:not(:disabled) {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-primary);
+}
+
+.inline-db__rp-tpl:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.inline-db__rp-tplbar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.08));
+}
+
+.inline-db__rp-people {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.inline-db__rp-people .inline-db__person {
+  margin-right: 5px;
+}
+
+/* ==================== Sous-éléments ==================== */
+
+/* L'indentation ne porte QUE sur la première colonne : décaler la rangée
+   entière désalignerait les colonnes entre un parent et ses enfants. */
+.inline-db__subtree {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.inline-db__subtree-caret {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-tertiary, #999);
+  font-size: 0.625rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+
+.inline-db__subtree-caret:hover {
+  color: var(--color-text-primary);
+}
+
+.inline-db__subtree-caret.is-collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Même largeur qu'un chevron : sans elle, une ligne sans enfant se décalerait
+   d'un cran par rapport à ses frères. */
+.inline-db__subtree-spacer {
+  display: inline-block;
+  width: 14px;
+}
+
+.inline-db__rp-foot {
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.08));
+}
+
+/* ==================== Menu de colonne ==================== */
+
+.inline-db__colmenu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  /* 268 px : de quoi loger icone + libelle + valeur sans troncature sur les
+     entrees les plus longues (« Trier par ordre decroissant »). */
+  width: 268px;
+  padding: 2px;
+}
+
+.inline-db__colmenu-name {
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background, transparent);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+}
+
+.inline-db__colmenu-name:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #87ceeb);
+}
+
+.inline-db__colmenu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-db__colmenu-item:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+}
+
+.inline-db__colmenu-item.is-on {
+  background: var(--color-selected);
+  font-weight: 600;
+}
+
+/* L'action destructrice se distingue AVANT le clic, pas après. */
+.inline-db__colmenu-item--danger {
+  color: var(--color-error, #e74c3c);
+}
+
+.inline-db__colmenu-value {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.6875rem;
+  opacity: 0.8;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-db__colmenu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--color-border-light, rgba(0, 0, 0, 0.08));
+}
+
+/* Le sous-menu des calculs s'ouvre DANS la liste : empiler un second popover
+   ferait perdre le fil de ce qu'on réglait. */
+.inline-db__colmenu-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 2px 0 2px 10px;
+  padding-left: 6px;
+  border-left: 2px solid var(--color-border-light, rgba(0, 0, 0, 0.1));
+}
+
+.inline-db__colmenu-move {
+  display: flex;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.inline-db__colmenu-arrow {
+  flex: 1;
+  padding: 4px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inline-db__colmenu-arrow:hover:not(:disabled) {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-primary);
+}
+
+.inline-db__colmenu-arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.inline-db__colmenu-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 6px;
+}
+
+.inline-db__colmenu-back {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.inline-db__colmenu-back:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+  color: var(--color-text-primary);
+}
+
+.inline-db__colmenu-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.inline-db__colmenu-search {
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background, transparent);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+
+.inline-db__colmenu-search:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #87ceeb);
+}
+
+/* Deux colonnes, comme la grille de types de Notion : seize types en liste
+   verticale demanderaient un défilement pour un choix qui doit être visuel. */
+.inline-db__typegrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+
+/* Sous 280 px, deux colonnes tronquent « Sélection multiple » : une seule
+   colonne vaut mieux qu'un libellé coupé. */
+@media (max-width: 320px) {
+  .inline-db__typegrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inline-db__typeitem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+/* L'icone garde SA colonne : sans largeur fixe, les libelles ne s'alignent
+   plus d'une ligne a l'autre et la grille devient illisible. */
+.inline-db__typeitem-icon,
+.inline-db__colmenu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.inline-db__typeitem-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-db__typeitem.is-on .inline-db__typeitem-icon,
+.inline-db__colmenu-item:hover .inline-db__colmenu-icon {
+  color: var(--color-text-primary);
+}
+
+.inline-db__colmenu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* L'icone d'une action destructrice suit sa couleur. */
+.inline-db__colmenu-item--danger .inline-db__colmenu-icon {
+  color: inherit;
+}
+
+.inline-db__typeitem:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.05));
+}
+
+.inline-db__typeitem.is-on {
+  background: var(--color-selected);
+  font-weight: 600;
+}
+
+/* ==================== Kanban : plafonds, couloirs, resumes ==================== */
+
+/* La barre du plateau porte le regroupement a gauche et les options a droite. */
+.inline-db__board-toolbar {
+  justify-content: space-between;
+  gap: 8px;
+}
+.inline-db__board-settings-anchor {
+  position: relative;
+}
+.inline-db__board-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+.inline-db__board-settings-btn:hover,
+.inline-db__board-settings-btn[aria-expanded='true'] {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-light, var(--color-border));
+}
+
+.inline-db__board-settings {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  z-index: 900;
+  width: 260px;
+  /* Le panneau defile plutot que de deborder : un plateau a douze colonnes
+     rendrait sinon les derniers plafonds inatteignables. */
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.18));
+}
+.inline-db__board-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.inline-db__board-settings-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.inline-db__board-settings-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-tertiary);
+}
+.inline-db__board-settings-check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.inline-db__board-seg {
+  display: flex;
+  gap: 3px;
+}
+.inline-db__board-seg-btn {
+  flex: 1;
+  padding: 4px 0;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.inline-db__board-seg-btn:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+.inline-db__board-seg-btn[aria-pressed='true'] {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+}
+.inline-db__board-wip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.inline-db__board-wip-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__board-wip-input {
+  width: 52px;
+  padding: 3px 6px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: 12px;
+  text-align: right;
+}
+
+/* ---- Couloirs (second axe) ---- */
+.inline-db__lane + .inline-db__lane {
+  border-top: 1px solid var(--color-border-light, var(--color-border));
+}
+.inline-db__lane-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px 0;
+}
+.inline-db__lane-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 0.01em;
+}
+
+/* ---- Plafond d'en-cours ---- */
+.inline-db__column-count--full {
+  color: var(--color-warning-500, var(--color-folder-amber));
+  background: color-mix(in srgb, var(--color-folder-amber) 18%, transparent);
+}
+.inline-db__column-count--over {
+  color: var(--color-error-500, var(--color-folder-red));
+  background: color-mix(in srgb, var(--color-folder-red) 20%, transparent);
+  font-weight: 700;
+}
+/* Le depassement se SIGNALE et ne bloque rien : un plateau qui refuse un depot
+   fait perdre la carte qu'on tenait. */
+.inline-db__column--over-wip {
+  box-shadow: inset 0 2px 0 0 var(--color-folder-red);
+}
+
+/* ---- Resume de colonne ---- */
+.inline-db__column-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 2px 6px;
+  padding: 0 2px 8px;
+}
+.inline-db__column-summary-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__column-summary-value {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.inline-db__column-summary-bar {
+  grid-column: 1 / -1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-hover-overlay);
+  overflow: hidden;
+}
+.inline-db__column-summary-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-primary-500);
+}
+
+/* ---- Colonne repliee ---- */
+.inline-db__column--collapsed {
+  flex: 0 0 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+.inline-db__column--collapsed:hover {
+  background: var(--color-hover-overlay);
+}
+.inline-db__column-title-vertical {
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 160px;
+}
+.inline-db__column-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+}
+.inline-db__column:hover .inline-db__column-collapse,
+.inline-db__column-collapse:focus-visible {
+  opacity: 1;
+}
+.inline-db__column-collapse:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* ---- Cartes : tailles, teinte, commandes ---- */
+.inline-db__card--compact {
+  padding: 6px 9px;
+  font-size: 12px;
+}
+.inline-db__card--tall {
+  padding: 10px 12px;
+}
+.inline-db__card--tinted {
+  /* Teinte legere + lisere franc : la couleur doit se voir sans rendre le titre
+     illisible sur le theme clair comme sur le sombre. */
+  background: color-mix(in srgb, var(--inline-db-option-color) 10%, var(--color-surface));
+  border-left: 3px solid var(--inline-db-option-color);
+}
+.inline-db__card-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.inline-db__card-check input {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* ---- Progression reglable sur la carte ---- */
+.inline-db__card-progress {
+  margin-top: 6px;
+}
+.inline-db__card-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+.inline-db__card-progress-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inline-db__card-progress-value {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.inline-db__card-progress-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-hover-overlay);
+  overflow: hidden;
+}
+.inline-db__card-progress-bar.is-editable {
+  cursor: pointer;
+}
+.inline-db__card-progress-bar:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+.inline-db__card-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-primary-500);
+  transition: width 90ms linear;
+}
+/* Une barre a 100 % change de couleur : c'est l'information qu'on cherche en
+   balayant un plateau du regard. */
+.inline-db__card-progress-bar[aria-valuenow='100'] .inline-db__card-progress-fill {
+  background: var(--color-folder-green);
+}
+/* ==================== Base bornee en hauteur ==================== */
+
+/*
+ * Quand un bloc recoit une hauteur (poignee au coin bas-droit), blockSize.css
+ * designe son DERNIER enfant comme zone defilante — ici, la vue active. Pour la
+ * table, la galerie et le calendrier, ca suffit. LE KANBAN A TROIS NIVEAUX, et
+ * c'est la ou une premiere version s'est plantee :
+ *
+ *   .inline-db__board-area
+ *     .inline-db__board-toolbar     <- « Grouper par », options du plateau
+ *     .inline-db__lane              <- UN par couloir ; un seul sans couloirs
+ *       [.inline-db__lane-header]
+ *       .inline-db__board           <- la rangee de colonnes
+ *
+ * La regle precedente visait `.inline-db__board-area > .inline-db__board` : le
+ * couloir se trouve ENTRE les deux, le combinateur `>` ne matchait donc rien, et
+ * la rangee de colonnes gardait sa hauteur naturelle. Symptome exact : un bloc
+ * tire plus haut affichait un grand blanc sous la barre de defilement
+ * horizontale — le defaut meme qu'on cherchait a supprimer.
+ *
+ * SELECTEURS DOUBLES sur `board-area` : la regle generique de blockSize.css
+ * (`.note-block-resizable--bounded > :last-child`) vaut aussi (0,2,0), et
+ * l'ordre d'import des deux feuilles n'est garanti nulle part.
+ */
+.note-block-resizable--bounded > .inline-db__board-area.inline-db__board-area {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+ * La barre du plateau reste en vue pendant qu'on fait defiler : c'est justement
+ * quand un plateau depasse l'ecran qu'on vient y changer le groupement. Elle est
+ * `sticky` plutot que sortie du flux, parce que la zone defilante est ici la
+ * meme boite pour tous les couloirs.
+ */
+.note-block-resizable--bounded > .inline-db__board-area > .inline-db__board-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  flex: 0 0 auto;
+  background: var(--color-surface);
+}
+
+/*
+ * La place gagnee va au DERNIER couloir — le seul, quand il n'y en a pas
+ * plusieurs. `flex-shrink: 0` : un couloir plus haut que la boite ne doit pas se
+ * comprimer, c'est la zone qui defile.
+ */
+.note-block-resizable--bounded > .inline-db__board-area > .inline-db__lane {
+  flex: 0 0 auto;
+}
+
+.note-block-resizable--bounded > .inline-db__board-area > .inline-db__lane:last-child {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+}
+
+.note-block-resizable--bounded
+  > .inline-db__board-area
+  > .inline-db__lane:last-child
+  > .inline-db__board {
+  flex: 1 0 auto;
+}
+
+/*
+ * Bloc borne PLUS HAUT que son contenu : la place gagnee doit aller quelque
+ * part. Sans cette regle, les colonnes gardent la hauteur de leurs cartes et le
+ * reste est du blanc. Etirees, elles deviennent la zone ou l'on depose — ce qui
+ * est exactement ce qu'on veut d'un plateau qu'on a choisi de faire grand.
+ */
+.note-block-resizable--bounded .inline-db__board {
+  align-items: stretch;
+}

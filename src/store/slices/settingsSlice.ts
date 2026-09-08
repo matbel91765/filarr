@@ -5,9 +5,48 @@
  * de l'application (préférences, sécurité, notifications, etc.).
  */
 
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import type { ViewMode, SortOption, SortDirection } from '../../types';
 import profileStorage from '../../services/core/profileStorage';
+
+// Paramètres "Protection du bureau" (Wave 1 — surface desktop) :
+// mode d'import (copier vs déplacer-dans-le-coffre, renderer-only) +
+// réglages MIROITÉS vers le main process via filarr-flags.json (raccourcis
+// globaux, verrouillage lié à la session OS, purge des fichiers temporaires).
+// IMPORTANT : les défauts des champs miroités doivent rester IDENTIQUES à
+// DEFAULT_DESKTOP_PROTECTION_SETTINGS (electron/desktopProtection.ts) — un
+// premier miroir avec d'autres valeurs écraserait le comportement main-side.
+export interface DesktopProtectionSettings {
+  /** Comportement d'import par défaut : copier, ou déplacer dans le coffre (supprime l'original). */
+  importMode: 'copy' | 'move';
+  /** Afficher le choix copier/déplacer à chaque import. */
+  askImportMode: boolean;
+  /** Activer les raccourcis clavier globaux (mini-mode / verrouillage). */
+  hotkeysEnabled: boolean;
+  /** Accélérateur Electron pour ouvrir le mini-mode. */
+  hotkeyMini: string;
+  /** Accélérateur Electron pour tout verrouiller. */
+  hotkeyLock: string;
+  /** Verrouiller le coffre quand la session OS est verrouillée. */
+  lockOnOsLock: boolean;
+  /** Verrouiller le coffre à la mise en veille. */
+  lockOnSuspend: boolean;
+  /** Purger les fichiers temporaires en clair au verrouillage. */
+  purgeTempOnLock: boolean;
+}
+
+export const DESKTOP_PROTECTION_DEFAULTS: DesktopProtectionSettings = {
+  importMode: 'copy',
+  askImportMode: false,
+  hotkeysEnabled: true,
+  // Mnémonique de marque (« F » du glyphe) ; Ctrl+Alt+L verrouille la session
+  // sur certains systèmes — évité à dessein. Mêmes valeurs que le main.
+  hotkeyMini: 'CommandOrControl+Alt+F',
+  hotkeyLock: 'CommandOrControl+Alt+Shift+L',
+  lockOnOsLock: true,
+  lockOnSuspend: true,
+  purgeTempOnLock: true,
+};
 
 // Types pour l'état des paramètres
 export interface SettingsState {
@@ -43,6 +82,15 @@ export interface SettingsState {
     sessionTimeout: number; // en minutes
   };
 
+  // Paramètres de synchronisation
+  sync: {
+    autoSyncEnabled: boolean;
+    syncInterval: number; // en minutes
+    syncOnlyOnWiFi: boolean;
+    conflictResolution: 'manual' | 'local' | 'remote' | 'newest';
+    syncFolders: string[]; // IDs des dossiers à synchroniser
+  };
+
   // Paramètres de notifications
   notifications: {
     enabled: boolean;
@@ -50,6 +98,7 @@ export interface SettingsState {
     desktopNotifications: boolean;
     emailNotifications: boolean;
     reminderNotifications: boolean;
+    syncNotifications: boolean;
     errorNotifications: boolean;
     notificationPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
     notificationDuration: number; // en millisecondes
@@ -82,6 +131,12 @@ export interface SettingsState {
     betaFeatures: boolean;
     experimentalFeatures: string[]; // Liste des fonctionnalités expérimentales activées
   };
+
+  // Protection du bureau (Wave 1).
+  // Optionnel car redux-persist (autoMergeLevel1) remplace le slice entier
+  // par la version persistée : un état persisté antérieur à cette fonctionnalité
+  // n'a pas ce groupe. Toujours lire via selectDesktopProtection.
+  desktop?: DesktopProtectionSettings;
 
   // Métadonnées
   loading: boolean;
@@ -128,12 +183,21 @@ const initialState: SettingsState = {
     sessionTimeout: 60,
   },
 
+  sync: {
+    autoSyncEnabled: false,
+    syncInterval: 15,
+    syncOnlyOnWiFi: false,
+    conflictResolution: 'manual',
+    syncFolders: [],
+  },
+
   notifications: {
     enabled: true,
     soundEnabled: true,
     desktopNotifications: true,
     emailNotifications: false,
     reminderNotifications: true,
+    syncNotifications: true,
     errorNotifications: true,
     notificationPosition: 'top-right',
     notificationDuration: 5000,
@@ -163,6 +227,8 @@ const initialState: SettingsState = {
     betaFeatures: false,
     experimentalFeatures: [],
   },
+
+  desktop: DESKTOP_PROTECTION_DEFAULTS,
 
   loading: false,
   error: null,
@@ -323,6 +389,32 @@ const settingsSlice = createSlice({
       state.lastSaved = new Date().toISOString();
     },
 
+    // Synchronisation
+    setAutoSync(state, action: PayloadAction<{ enabled: boolean; interval?: number }>) {
+      state.sync.autoSyncEnabled = action.payload.enabled;
+      if (action.payload.interval !== undefined) {
+        state.sync.syncInterval = action.payload.interval;
+      }
+      state.lastSaved = new Date().toISOString();
+    },
+
+    setConflictResolution(state, action: PayloadAction<'manual' | 'local' | 'remote' | 'newest'>) {
+      state.sync.conflictResolution = action.payload;
+      state.lastSaved = new Date().toISOString();
+    },
+
+    addSyncFolder(state, action: PayloadAction<string>) {
+      if (!state.sync.syncFolders.includes(action.payload)) {
+        state.sync.syncFolders.push(action.payload);
+        state.lastSaved = new Date().toISOString();
+      }
+    },
+
+    removeSyncFolder(state, action: PayloadAction<string>) {
+      state.sync.syncFolders = state.sync.syncFolders.filter((id) => id !== action.payload);
+      state.lastSaved = new Date().toISOString();
+    },
+
     // Notifications
     setNotificationsEnabled(state, action: PayloadAction<boolean>) {
       state.notifications.enabled = action.payload;
@@ -422,6 +514,18 @@ const settingsSlice = createSlice({
       state.lastSaved = new Date().toISOString();
     },
 
+    // Protection du bureau (Wave 1)
+    updateDesktopProtection(state, action: PayloadAction<Partial<DesktopProtectionSettings>>) {
+      // L'état persisté peut ne pas contenir le groupe (voir le commentaire du
+      // type) : toujours repartir des défauts avant d'appliquer le patch.
+      state.desktop = {
+        ...DESKTOP_PROTECTION_DEFAULTS,
+        ...(state.desktop ?? {}),
+        ...action.payload,
+      };
+      state.lastSaved = new Date().toISOString();
+    },
+
     // Mettre à jour plusieurs paramètres en une fois
     updateSettings(state, action: PayloadAction<Partial<SettingsState>>) {
       return {
@@ -455,6 +559,9 @@ const settingsSlice = createSlice({
         if (action.payload.security) {
           state.security = { ...state.security, ...action.payload.security };
         }
+        if (action.payload.sync) {
+          state.sync = { ...state.sync, ...action.payload.sync };
+        }
         if (action.payload.notifications) {
           state.notifications = { ...state.notifications, ...action.payload.notifications };
         }
@@ -466,6 +573,13 @@ const settingsSlice = createSlice({
         }
         if (action.payload.advanced) {
           state.advanced = { ...state.advanced, ...action.payload.advanced };
+        }
+        if (action.payload.desktop) {
+          state.desktop = {
+            ...DESKTOP_PROTECTION_DEFAULTS,
+            ...(state.desktop ?? {}),
+            ...action.payload.desktop,
+          };
         }
       })
       .addCase(loadSettings.rejected, (state, action) => {
@@ -525,6 +639,12 @@ export const {
   setBiometricAuth,
   setSessionTimeout,
 
+  // Synchronisation
+  setAutoSync,
+  setConflictResolution,
+  addSyncFolder,
+  removeSyncFolder,
+
   // Notifications
   setNotificationsEnabled,
   setNotificationSound,
@@ -549,10 +669,23 @@ export const {
   setBetaFeatures,
   toggleExperimentalFeature,
 
+  // Protection du bureau
+  updateDesktopProtection,
+
   // Utilitaires
   updateSettings,
   clearSettingsError,
 } = settingsSlice.actions;
+
+// Sélecteur mémoïsé : les réglages "Protection du bureau" complétés par les
+// défauts (l'état persisté peut prédater le groupe — voir le type).
+export const selectDesktopProtection = createSelector(
+  (state: { settings: SettingsState }) => state.settings.desktop,
+  (desktop): DesktopProtectionSettings => ({
+    ...DESKTOP_PROTECTION_DEFAULTS,
+    ...(desktop ?? {}),
+  })
+);
 
 // Exporter le reducer
 export default settingsSlice.reducer;

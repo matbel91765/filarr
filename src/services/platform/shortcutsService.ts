@@ -6,6 +6,7 @@
  */
 
 import i18n from '../../i18n/config';
+import { isWebPlatform } from './isWebPlatform';
 
 // Types pour les raccourcis clavier
 export interface KeyboardShortcut {
@@ -37,7 +38,7 @@ export interface ShortcutEvent {
 export type ShortcutCallback = (event: ShortcutEvent) => void;
 
 // Configuration par défaut des raccourcis
-const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
+const BASE_DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
   // Fichiers
   {
     id: 'new-file',
@@ -47,7 +48,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'file:new',
     category: 'file',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'new-folder',
@@ -57,7 +58,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'folder:new',
     category: 'folder',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'delete',
@@ -67,7 +68,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'item:delete',
     category: 'edit',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'rename',
@@ -77,7 +78,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'item:rename',
     category: 'edit',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Navigation & Recherche
@@ -89,7 +90,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'search:quick',
     category: 'search',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'command-palette',
@@ -99,7 +100,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'palette:open',
     category: 'system',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Favoris (Ctrl+1-9)
@@ -111,7 +112,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:1',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-2',
@@ -121,7 +122,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:2',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-3',
@@ -131,7 +132,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:3',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-4',
@@ -141,7 +142,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:4',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-5',
@@ -151,7 +152,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:5',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-6',
@@ -161,7 +162,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:6',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-7',
@@ -171,7 +172,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:7',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-8',
@@ -181,7 +182,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:8',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'favorite-9',
@@ -191,7 +192,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'favorite:9',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Vue
@@ -203,7 +204,30 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'view:toggle-sidebar',
     category: 'view',
     enabled: true,
-    customizable: true
+    customizable: true,
+  },
+  {
+    id: 'toggle-focus-mode',
+    name: i18n.t('shortcuts.names.toggleFocusMode'),
+    description: i18n.t('shortcuts.descriptions.toggleFocusMode'),
+    // Ctrl+Maj+F, vérifié libre dans ce registre. À ne pas confondre avec
+    // Ctrl+Alt+F, que `desktopProtection` réserve au mini-coffre en raccourci
+    // GLOBAL Electron — celui-là gagne sur toute la machine.
+    keys: ['Ctrl', 'Shift', 'F'],
+    action: 'view:toggle-focus',
+    category: 'view',
+    enabled: true,
+    customizable: true,
+  },
+  {
+    id: 'toggle-header',
+    name: i18n.t('shortcuts.names.toggleHeader'),
+    description: i18n.t('shortcuts.descriptions.toggleHeader'),
+    keys: ['Ctrl', 'Shift', 'B'],
+    action: 'view:toggle-header',
+    category: 'view',
+    enabled: true,
+    customizable: true,
   },
   {
     id: 'toggle-view-mode',
@@ -213,7 +237,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'view:toggle-mode',
     category: 'view',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Édition
@@ -225,7 +249,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'edit:select-all',
     category: 'edit',
     enabled: true,
-    customizable: false // Standard shortcut, non-customizable
+    customizable: false, // Standard shortcut, non-customizable
   },
   {
     id: 'copy',
@@ -235,7 +259,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'edit:copy',
     category: 'edit',
     enabled: true,
-    customizable: false
+    customizable: false,
   },
   {
     id: 'cut',
@@ -245,7 +269,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'edit:cut',
     category: 'edit',
     enabled: true,
-    customizable: false
+    customizable: false,
   },
   {
     id: 'paste',
@@ -255,7 +279,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'edit:paste',
     category: 'edit',
     enabled: true,
-    customizable: false
+    customizable: false,
   },
   {
     id: 'undo',
@@ -265,7 +289,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'edit:undo',
     category: 'edit',
     enabled: true,
-    customizable: false
+    customizable: false,
   },
   {
     id: 'redo',
@@ -275,7 +299,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'edit:redo',
     category: 'edit',
     enabled: true,
-    customizable: false
+    customizable: false,
   },
 
   // Navigation
@@ -287,7 +311,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'navigation:back',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'go-forward',
@@ -297,7 +321,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'navigation:forward',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'go-parent',
@@ -307,7 +331,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'navigation:parent',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'go-home',
@@ -317,7 +341,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'navigation:home',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Panneaux (split view)
@@ -329,7 +353,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'panel:focus-other',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'panel-close',
@@ -339,7 +363,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'panel:close',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'panel-split-right',
@@ -349,7 +373,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'panel:split-right',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Onglets
@@ -361,7 +385,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'tab:new',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'tab-close',
@@ -371,7 +395,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'tab:close',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'tab-next',
@@ -381,7 +405,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'tab:next',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'tab-prev',
@@ -391,7 +415,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'tab:prev',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
 
   // Notes
@@ -403,29 +427,18 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'note:new',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'note-daily',
     name: 'Daily Note',
-    description: 'Open today\'s daily note',
+    description: "Open today's daily note",
     keys: ['Ctrl', 'Shift', 'D'],
     action: 'note:daily',
     category: 'navigation',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
-  {
-    id: 'note-focus-mode',
-    name: 'Focus Mode',
-    description: 'Toggle distraction-free writing mode',
-    keys: ['Ctrl', 'Shift', 'F'],
-    action: 'note:focus-mode',
-    category: 'navigation',
-    enabled: true,
-    customizable: true
-  },
-
   // Système
   {
     id: 'settings',
@@ -435,7 +448,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'system:settings',
     category: 'system',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'help',
@@ -445,7 +458,7 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'system:help',
     category: 'system',
     enabled: true,
-    customizable: true
+    customizable: true,
   },
   {
     id: 'refresh',
@@ -455,9 +468,39 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     action: 'system:refresh',
     category: 'system',
     enabled: true,
-    customizable: true
-  }
+    customizable: true,
+  },
 ];
+
+// Combos que le navigateur se réserve (preventDefault sans effet — Ctrl+W
+// fermerait l'onglet du NAVIGATEUR) : sur le web, les défauts concernés
+// basculent sur Alt. Ne touche que la couche défaut ; les personnalisations
+// sauvegardées s'appliquent par-dessus, et diff/reset se font contre ces
+// mêmes défauts.
+const WEB_SHORTCUT_OVERRIDES: Record<string, string[]> = {
+  'new-file': ['Alt', 'N'],
+  'note-new': ['Alt', 'Shift', 'N'],
+  'tab-new': ['Alt', 'T'],
+  'tab-close': ['Alt', 'W'],
+  'tab-next': ['Alt', 'PageDown'],
+  'tab-prev': ['Alt', 'PageUp'],
+  'favorite-1': ['Alt', '1'],
+  'favorite-2': ['Alt', '2'],
+  'favorite-3': ['Alt', '3'],
+  'favorite-4': ['Alt', '4'],
+  'favorite-5': ['Alt', '5'],
+  'favorite-6': ['Alt', '6'],
+  'favorite-7': ['Alt', '7'],
+  'favorite-8': ['Alt', '8'],
+  'favorite-9': ['Alt', '9'],
+};
+
+const DEFAULT_SHORTCUTS: KeyboardShortcut[] = isWebPlatform()
+  ? BASE_DEFAULT_SHORTCUTS.map((shortcut) => {
+      const keys = WEB_SHORTCUT_OVERRIDES[shortcut.id];
+      return keys ? { ...shortcut, keys } : shortcut;
+    })
+  : BASE_DEFAULT_SHORTCUTS;
 
 // Clé de stockage pour les raccourcis personnalisés
 const STORAGE_KEY = 'filarr_keyboard_shortcuts';
@@ -485,7 +528,7 @@ class ShortcutsService {
     if (this.isInitialized) return;
 
     // Charger les raccourcis par défaut
-    DEFAULT_SHORTCUTS.forEach(shortcut => {
+    DEFAULT_SHORTCUTS.forEach((shortcut) => {
       this.shortcuts.set(shortcut.id, { ...shortcut });
     });
 
@@ -503,7 +546,7 @@ class ShortcutsService {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const customShortcuts: Partial<KeyboardShortcut>[] = JSON.parse(saved);
-        customShortcuts.forEach(custom => {
+        customShortcuts.forEach((custom) => {
           if (custom.id && this.shortcuts.has(custom.id)) {
             const existing = this.shortcuts.get(custom.id)!;
             if (existing.customizable) {
@@ -524,7 +567,7 @@ class ShortcutsService {
     try {
       const customShortcuts: Partial<KeyboardShortcut>[] = [];
       this.shortcuts.forEach((shortcut, id) => {
-        const defaultShortcut = DEFAULT_SHORTCUTS.find(s => s.id === id);
+        const defaultShortcut = DEFAULT_SHORTCUTS.find((s) => s.id === id);
         if (defaultShortcut && shortcut.customizable) {
           // Ne sauvegarder que les différences par rapport aux valeurs par défaut
           const diff: Partial<KeyboardShortcut> = { id };
@@ -563,7 +606,7 @@ class ShortcutsService {
    * Récupère les raccourcis par catégorie
    */
   getShortcutsByCategory(category: ShortcutCategory): KeyboardShortcut[] {
-    return this.getAllShortcuts().filter(s => s.category === category);
+    return this.getAllShortcuts().filter((s) => s.category === category);
   }
 
   /**
@@ -609,7 +652,7 @@ class ShortcutsService {
    * Réinitialise un raccourci à sa valeur par défaut
    */
   resetShortcut(id: string): boolean {
-    const defaultShortcut = DEFAULT_SHORTCUTS.find(s => s.id === id);
+    const defaultShortcut = DEFAULT_SHORTCUTS.find((s) => s.id === id);
     if (!defaultShortcut) {
       return false;
     }
@@ -624,7 +667,7 @@ class ShortcutsService {
    */
   resetAllShortcuts(): void {
     this.shortcuts.clear();
-    DEFAULT_SHORTCUTS.forEach(shortcut => {
+    DEFAULT_SHORTCUTS.forEach((shortcut) => {
       this.shortcuts.set(shortcut.id, { ...shortcut });
     });
     localStorage.removeItem(STORAGE_KEY);
@@ -638,7 +681,7 @@ class ShortcutsService {
     const mods: string[] = [];
     const others: string[] = [];
 
-    keys.forEach(key => {
+    keys.forEach((key) => {
       const normalized = this.normalizeKeyName(key);
       if (modifiers.includes(normalized)) {
         if (!mods.includes(normalized)) {
@@ -660,30 +703,30 @@ class ShortcutsService {
    */
   private normalizeKeyName(key: string): string {
     const keyMap: Record<string, string> = {
-      'control': 'Ctrl',
-      'ctrl': 'Ctrl',
-      'alt': 'Alt',
-      'shift': 'Shift',
-      'meta': 'Meta',
-      'cmd': 'Meta',
-      'command': 'Meta',
-      'escape': 'Escape',
-      'esc': 'Escape',
-      'enter': 'Enter',
-      'return': 'Enter',
-      'space': 'Space',
+      control: 'Ctrl',
+      ctrl: 'Ctrl',
+      alt: 'Alt',
+      shift: 'Shift',
+      meta: 'Meta',
+      cmd: 'Meta',
+      command: 'Meta',
+      escape: 'Escape',
+      esc: 'Escape',
+      enter: 'Enter',
+      return: 'Enter',
+      space: 'Space',
       ' ': 'Space',
-      'arrowup': 'Up',
-      'arrowdown': 'Down',
-      'arrowleft': 'Left',
-      'arrowright': 'Right',
-      'backspace': 'Backspace',
-      'delete': 'Delete',
-      'tab': 'Tab',
-      'home': 'Home',
-      'end': 'End',
-      'pageup': 'PageUp',
-      'pagedown': 'PageDown'
+      arrowup: 'Up',
+      arrowdown: 'Down',
+      arrowleft: 'Left',
+      arrowright: 'Right',
+      backspace: 'Backspace',
+      delete: 'Delete',
+      tab: 'Tab',
+      home: 'Home',
+      end: 'End',
+      pageup: 'PageUp',
+      pagedown: 'PageDown',
     };
 
     const lower = key.toLowerCase();
@@ -693,6 +736,20 @@ class ShortcutsService {
 
     // Capitaliser la première lettre pour les touches simples
     return key.length === 1 ? key.toUpperCase() : key;
+  }
+
+  /**
+   * Touche principale d'un événement. Quand Alt participe au combo, event.key
+   * est composé par la disposition (Option macOS → '∑', AZERTY → 'é') : on
+   * repasse par le code physique pour que Alt+lettre/chiffre matche partout.
+   */
+  mainKeyFromEvent(event: KeyboardEvent): string {
+    if (event.altKey) {
+      const { code } = event;
+      if (code.startsWith('Key')) return code.slice(3);
+      if (code.startsWith('Digit')) return code.slice(5);
+    }
+    return this.normalizeKeyName(event.key);
   }
 
   /**
@@ -706,7 +763,7 @@ class ShortcutsService {
     if (event.shiftKey) pressedKeys.push('Shift');
 
     // Ajouter la touche principale
-    const key = this.normalizeKeyName(event.key);
+    const key = this.mainKeyFromEvent(event);
     if (!['Ctrl', 'Alt', 'Shift', 'Meta', 'Control'].includes(key)) {
       pressedKeys.push(key);
     }
@@ -757,13 +814,13 @@ class ShortcutsService {
     const event: ShortcutEvent = {
       shortcutId: shortcut.id,
       action: shortcut.action,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     // Déclencher les écouteurs spécifiques
     const listeners = this.listeners.get(shortcut.id);
     if (listeners) {
-      listeners.forEach(callback => {
+      listeners.forEach((callback) => {
         try {
           callback(event);
         } catch (error) {
@@ -773,7 +830,7 @@ class ShortcutsService {
     }
 
     // Déclencher les écouteurs globaux
-    this.globalListeners.forEach(callback => {
+    this.globalListeners.forEach((callback) => {
       try {
         callback(event);
       } catch (error) {
@@ -786,26 +843,28 @@ class ShortcutsService {
    * Formate les touches pour l'affichage
    */
   formatKeys(keys: string[]): string {
-    return keys.map(key => {
-      // Symboles spéciaux pour certaines touches
-      const symbols: Record<string, string> = {
-        'Ctrl': '⌃',
-        'Alt': '⌥',
-        'Shift': '⇧',
-        'Meta': '⌘',
-        'Enter': '↵',
-        'Escape': 'Esc',
-        'Backspace': '⌫',
-        'Delete': 'Del',
-        'Up': '↑',
-        'Down': '↓',
-        'Left': '←',
-        'Right': '→',
-        'Space': '␣'
-      };
+    return keys
+      .map((key) => {
+        // Symboles spéciaux pour certaines touches
+        const symbols: Record<string, string> = {
+          Ctrl: '⌃',
+          Alt: '⌥',
+          Shift: '⇧',
+          Meta: '⌘',
+          Enter: '↵',
+          Escape: 'Esc',
+          Backspace: '⌫',
+          Delete: 'Del',
+          Up: '↑',
+          Down: '↓',
+          Left: '←',
+          Right: '→',
+          Space: '␣',
+        };
 
-      return symbols[key] || key;
-    }).join(' + ');
+        return symbols[key] || key;
+      })
+      .join(' + ');
   }
 
   /**
@@ -819,7 +878,7 @@ class ShortcutsService {
       { id: 'edit', name: i18n.t('shortcuts.categories.edit') },
       { id: 'view', name: i18n.t('shortcuts.categories.view') },
       { id: 'search', name: i18n.t('shortcuts.categories.search') },
-      { id: 'system', name: i18n.t('shortcuts.categories.system') }
+      { id: 'system', name: i18n.t('shortcuts.categories.system') },
     ];
   }
 

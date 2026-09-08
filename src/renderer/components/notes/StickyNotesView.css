@@ -1,115 +1,250 @@
-/* ==================== Sticky Notes View ==================== */
+/* ==================== Atelier — la fenêtre et son décor ==================== */
 
+/**
+ * `.sticky-notes-view` est la FENÊTRE (repère écran), `.__canvas` est le PLAN
+ * (repère monde). Tout ce qui est peint entre les deux — grille, nappes de
+ * parallaxe, lueur — appartient au décor et vit dans `.board-backdrop`.
+ *
+ * Le fond reste TRANSPARENT : la vue est aussi un mode de la section Notes, où
+ * elle est posée dans un panneau qui a déjà sa surface. Le décor se lit
+ * par-dessus, quel qu'il soit.
+ */
 .sticky-notes-view {
   flex: 1;
   overflow: hidden;
   position: relative;
   cursor: default;
-  background: radial-gradient(
-    circle,
-    var(--color-border-light, rgba(0, 0, 0, 0.03)) 1px,
-    transparent 1px
-  );
-  background-size: 20px 20px;
 }
 
+/* Destination plein écran (route /board) : le conteneur de route est une
+   colonne flex, donc `flex: 1` suffit à prendre toute la hauteur — `min-height`
+   empêche seulement le contenu de repousser la fenêtre vers le bas. */
+.sticky-notes-view--board {
+  min-height: 0;
+}
+
+/**
+ * Le plan n'a PAS de taille.
+ *
+ * Il en avait une : 4000 × 4000 px en dur. Deux dégâts. D'abord le monde était
+ * borné en apparence alors qu'il ne l'est pas — une note posée à x = 5000 vivait
+ * hors du rectangle. Ensuite et surtout, le fond ne répondait plus au-delà : le
+ * double-clic « créer une note ici » teste `e.target`, et passé la limite la
+ * cible n'était plus le plan. Une boîte de taille nulle laisse les cartes
+ * (absolues) se placer où elles veulent et rend le fond à la FENÊTRE, qui, elle,
+ * couvre toujours tout ce que l'utilisateur voit.
+ */
 .sticky-notes-view__canvas {
   position: relative;
-  width: 4000px;
-  height: 4000px;
+  z-index: 1;
+  width: 0;
+  height: 0;
 }
 
-/* ---- Sticky Note ---- */
+/* ==================== Décor (ParallaxBackdrop) ==================== */
 
-.sticky-note {
+/**
+ * `pointer-events: none` sur TOUTES les couches : le décor est posé par-dessus
+ * le fond de la fenêtre, donc la moindre couche cliquable volerait le
+ * double-clic de création et le panoramique au clic-milieu.
+ */
+.board-backdrop {
   position: absolute;
-  padding: 14px 16px;
-  border-radius: 4px;
-  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.12);
-  cursor: grab;
-  transition: box-shadow 0.15s;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Lueur périphérique du thème : transparente au centre, teintée aux bords.
+     Elle emprunte la rampe PRIMAIRE, donc elle est bleu ciel par défaut, dorée
+     sous Minuit, rose sous Sakura — sans une seule règle par thème. */
+  background: radial-gradient(
+    130% 120% at 50% 50%,
+    transparent 42%,
+    color-mix(in srgb, var(--color-primary-500) 9%, transparent) 100%
+  );
+}
+
+.board-backdrop__glow,
+.board-backdrop__haze {
+  position: absolute;
+  /* Débord généreux : les nappes se déplacent, elles ne doivent jamais laisser
+     voir leur bord. */
+  inset: -35%;
+  /* La translation passe par des variables pour qu'une règle « mouvement
+     réduit » puisse la neutraliser — un `transform` en style en ligne, non. */
+  transform: translate3d(var(--par-x, 0px), var(--par-y, 0px), 0);
+  will-change: transform;
+}
+
+/* Couche lente (0,2 × pan) : deux grandes nappes très diffuses. */
+.board-backdrop__glow {
+  background:
+    radial-gradient(
+      42% 40% at 22% 18%,
+      color-mix(in srgb, var(--color-primary-400) 14%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      38% 36% at 80% 76%,
+      color-mix(in srgb, var(--color-primary-600) 11%, transparent) 0%,
+      transparent 70%
+    );
+}
+
+/* Couche rapide (0,5 × pan) : plus fine, plus discrète — c'est l'écart entre
+   les deux vitesses qui fait la profondeur, pas leur intensité. */
+.board-backdrop__haze {
+  background:
+    radial-gradient(
+      26% 24% at 68% 24%,
+      color-mix(in srgb, var(--color-text-primary) 5%, transparent) 0%,
+      transparent 72%
+    ),
+    radial-gradient(
+      30% 26% at 28% 78%,
+      color-mix(in srgb, var(--color-primary-300) 8%, transparent) 0%,
+      transparent 72%
+    );
+}
+
+/**
+ * La grille. `currentColor` et non une couleur en dur : le dégradé radial est
+ * fabriqué en JavaScript (il lui faut le rayon du point, qui suit le zoom), et
+ * c'est le seul moyen de lui faire porter un TOKEN de thème.
+ *
+ * Position et maille sont posées en style en ligne par `ParallaxBackdrop` : la
+ * grille est verrouillée au MONDE, pas à la fenêtre.
+ */
+.board-backdrop__grid {
+  position: absolute;
+  inset: 0;
+  color: var(--color-border);
+  opacity: 0.55;
+}
+
+/* ---- Tableau vide ---- */
+
+/* `pointer-events: none` n'est pas cosmétique : le message occupe le centre de
+   la fenêtre, c'est-à-dire l'endroit exact où l'on double-clique pour créer sa
+   première note. Sans ça, il intercepterait le geste qu'il vient de suggérer. */
+.sticky-notes-view__empty {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  user-select: none;
+  text-align: center;
+  padding: 24px;
+}
+
+.sticky-notes-view__empty-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.sticky-notes-view__empty-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-tertiary);
+}
+
+/* ---- Cadre de sélection ---- */
+
+/**
+ * En pixels ÉCRAN, dans la fenêtre et non dans le plan : c'est un geste de
+ * l'utilisateur, pas un objet du monde — il ne doit ni zoomer ni se déformer.
+ *
+ * `pointer-events: none` : le cadre naît sous le curseur et grandit avec lui,
+ * il volerait donc son propre `mouseup`.
+ *
+ * `--color-selected` est déjà le token « ce qui est retenu » du produit : le
+ * cadre parle la même langue que la sélection d'une liste ou d'un fichier.
+ */
+.sticky-notes-view__marquee {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--color-selected);
+  border: 1px solid var(--color-selected-border, var(--color-primary-400));
+  border-radius: 2px;
+}
+
+/* ---- Viewport Controls (minimap + boutons + zoom) ---- */
+
+/**
+ * Colonne alignée à droite : la minimap au-dessus, la rangée de boutons en
+ * dessous. `align-items: flex-end` pour que la rangée, plus étroite ou plus
+ * large que la minimap, reste ancrée au même bord.
+ */
+.sticky-notes-view__controls {
+  position: absolute;
+  z-index: 3;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
   user-select: none;
 }
 
-.sticky-note:hover {
-  box-shadow: 3px 5px 14px rgba(0, 0, 0, 0.18);
-  z-index: 10;
+.sticky-notes-view__controls-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.sticky-note--dragging {
-  cursor: grabbing;
-  box-shadow: 4px 8px 20px rgba(0, 0, 0, 0.22);
-  z-index: 100;
-  opacity: 0.9;
-}
+/* Les boutons de la barre viennent du design system (`ui/Button`) : rien
+   à styler ici, sinon les aligner sur la pastille de zoom. */
 
-.sticky-note__title {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: rgba(0, 0, 0, 0.75);
-  margin-bottom: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sticky-note__text {
-  flex: 1;
+/* Compte de la sélection — même surface que la pastille de zoom, teinte
+   primaire : c'est un état vivant, pas une mesure passive. */
+.sticky-notes-view__selection-count {
+  padding: 4px 10px;
+  background: var(--color-selected);
+  border: 1px solid var(--color-selected-border, var(--color-primary-400));
+  border-radius: var(--radius-sm, 4px);
   font-size: 0.6875rem;
-  color: rgba(0, 0, 0, 0.55);
-  line-height: 1.4;
-  overflow: hidden;
-  word-break: break-word;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  white-space: nowrap;
 }
 
-.sticky-note__footer {
-  margin-top: 8px;
-  font-size: 0.625rem;
-  color: rgba(0, 0, 0, 0.35);
+/* État d'une bascule dont le libellé ne change pas (« Plan ») : éteinte, elle
+   s'estompe ; allumée, elle est pleine. Le titre du bouton dit le reste. */
+.sticky-notes-view__toggle[data-on='false'] {
+  opacity: 0.55;
 }
-
-/* ---- Zoom Indicator ---- */
 
 .sticky-notes-view__zoom {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
   padding: 4px 10px;
-  background: var(--color-surface, #fff);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
   font-size: 0.6875rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-secondary);
-  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.06));
-  user-select: none;
+  box-shadow: var(--shadow-sm);
+  cursor: help;
 }
 
-/* ---- Dark Mode ---- */
+/* ==================== Mouvement réduit ==================== */
 
-[data-theme='dark'] .sticky-notes-view {
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-[data-theme='dark'] .sticky-note {
-  box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme='dark'] .sticky-note__title {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-[data-theme='dark'] .sticky-note__text {
-  color: rgba(255, 255, 255, 0.65);
-}
-
-[data-theme='dark'] .sticky-note__footer {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-[data-theme='dark'] .sticky-notes-view__zoom {
-  background: var(--color-surface, #1e1e2e);
+@media (prefers-reduced-motion: reduce) {
+  .board-backdrop__glow,
+  .board-backdrop__haze {
+    transform: none;
+    will-change: auto;
+  }
 }

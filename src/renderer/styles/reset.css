@@ -42,8 +42,11 @@ body {
 }
 
 /* Root element */
+/* 100dvh suit la barre d'URL mobile qui se rétracte au défilement ; 100vh est
+   laissé juste avant comme repli pour les moteurs qui ignorent dvh. */
 #root {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -154,6 +157,49 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+/* Keyboard focus visibility for buttons and ARIA-role widgets. reset.css strips
+   the outline on <button>, so without this most icon buttons, menu items, tree
+   items and clickable role-widgets show no focus ring when tabbed to — the
+   single largest keyboard-visibility gap in the app. */
+button:focus-visible,
+[role='button']:focus-visible,
+[role='menuitem']:focus-visible,
+[role='menuitemradio']:focus-visible,
+[role='menuitemcheckbox']:focus-visible,
+[role='option']:focus-visible,
+[role='tab']:focus-visible,
+[role='treeitem']:focus-visible,
+[role='switch']:focus-visible,
+[role='checkbox']:focus-visible,
+[role='radio']:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Skip-to-content link — visually hidden until focused, then pinned top-left. */
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100000;
+  padding: 8px 14px;
+  border-radius: 6px;
+  background: var(--color-primary-600, #2563eb);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 /* Tables */
 table {
   border-collapse: collapse;
@@ -213,11 +259,11 @@ meter {
 
 /* Selection — only tint the background, never override text color */
 ::selection {
-  background-color: var(--color-primary-200);
+  background-color: var(--color-selection-bg);
 }
 
 ::-moz-selection {
-  background-color: var(--color-primary-200);
+  background-color: var(--color-selection-bg);
 }
 
 /* Scrollbar (Webkit) */
@@ -244,7 +290,8 @@ meter {
 [data-theme='space'] ::-webkit-scrollbar-track,
 [data-theme='aurora'] ::-webkit-scrollbar-track,
 [data-theme='crepuscule'] ::-webkit-scrollbar-track,
-[data-theme='foret'] ::-webkit-scrollbar-track {
+[data-theme='foret'] ::-webkit-scrollbar-track,
+[data-theme='minuit'] ::-webkit-scrollbar-track {
   background: var(--color-background-secondary);
 }
 
@@ -252,7 +299,8 @@ meter {
 [data-theme='space'] ::-webkit-scrollbar-thumb,
 [data-theme='aurora'] ::-webkit-scrollbar-thumb,
 [data-theme='crepuscule'] ::-webkit-scrollbar-thumb,
-[data-theme='foret'] ::-webkit-scrollbar-thumb {
+[data-theme='foret'] ::-webkit-scrollbar-thumb,
+[data-theme='minuit'] ::-webkit-scrollbar-thumb {
   background: var(--color-neutral-600);
   border-color: var(--color-background-secondary);
 }
@@ -261,8 +309,60 @@ meter {
 [data-theme='space'] ::-webkit-scrollbar-thumb:hover,
 [data-theme='aurora'] ::-webkit-scrollbar-thumb:hover,
 [data-theme='crepuscule'] ::-webkit-scrollbar-thumb:hover,
-[data-theme='foret'] ::-webkit-scrollbar-thumb:hover {
+[data-theme='foret'] ::-webkit-scrollbar-thumb:hover,
+[data-theme='minuit'] ::-webkit-scrollbar-thumb:hover {
   background: var(--color-neutral-500);
+}
+
+/* Scrollbar (web) — propriétés standard : Firefox est ainsi thémé, et sur
+   Chromium elles priment sur ::-webkit-scrollbar (rendu fin moderne). Seule
+   scrollbar-color hérite depuis <html> ; scrollbar-width n'hérite PAS, d'où
+   la règle descendante. Le desktop (data-platform absent) garde le Webkit. */
+[data-platform='web'],
+[data-platform='web'] * {
+  scrollbar-width: thin;
+}
+
+[data-platform='web'] {
+  scrollbar-color: var(--color-neutral-300) var(--color-background-secondary);
+}
+
+[data-platform='web'][data-theme='dark'],
+[data-platform='web'][data-theme='space'],
+[data-platform='web'][data-theme='aurora'],
+[data-platform='web'][data-theme='crepuscule'],
+[data-platform='web'][data-theme='foret'],
+[data-platform='web'][data-theme='minuit'] {
+  scrollbar-color: var(--color-neutral-600) var(--color-background-secondary);
+}
+
+/* Encoches et barres système (web mobile). env() vaut 0 quand l'appareil n'a
+   rien à contourner, et le desktop n'a pas data-platform du tout : ces règles
+   sont sans effet partout ailleurs. Le viewport-fit=cover de index.html est ce
+   qui donne des valeurs non nulles à env() sur iOS.
+
+   DES VARIABLES, ET SURTOUT PAS DU PADDING. Ce sélecteur pèse (0,2,0) ; les
+   modes d'affichage des barres posent LEUR réserve sur la même propriété avec
+   (0,1,0) (`.layout--header-side`, `.layout--no-chrome`). En padding direct,
+   celle-ci gagnait donc toujours et effaçait le décalage du rail sur le client
+   web : le rail se posait SUR la page (constaté le 2026-08-31). C'est
+   Layout.css qui additionne les deux réserves — voir l'en-tête de ce fichier,
+   et la règle 4 de scripts/check-window-chrome.cjs qui l'impose. */
+[data-platform='web'] .layout {
+  --layout-safe-top: env(safe-area-inset-top);
+  --layout-safe-left: env(safe-area-inset-left);
+  --layout-safe-right: env(safe-area-inset-right);
+  --layout-safe-bottom: env(safe-area-inset-bottom);
+}
+
+/* iOS zoome le viewport dès qu'un champ passe sous 16px à la mise au point, et
+   ne dézoome jamais. max() garde les champs volontairement plus grands. */
+@media (hover: none) and (pointer: coarse) {
+  [data-platform='web'] input,
+  [data-platform='web'] textarea,
+  [data-platform='web'] select {
+    font-size: max(16px, 1em);
+  }
 }
 
 /* Placeholder */

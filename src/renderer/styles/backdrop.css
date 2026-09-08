@@ -1,0 +1,265 @@
+/**
+ * LE DÉCOR D'UN THÈME SUR MESURE — et pourquoi il ne se voyait pas.
+ *
+ * ── LA COUCHE ÉTAIT LÀ, ET RIEN NE PASSAIT DEVANT ───────────────────────────
+ *
+ * La première version posait un `<div>` fixe en `z-index: 0` au début du
+ * `<body>`. Il était bien dans le document, avec la bonne image — et
+ * parfaitement invisible, pour deux raisons distinctes :
+ *
+ *   1. `.layout` peint `background-color: var(--color-background)` sur TOUTE la
+ *      page. Un fond opaque par-dessus le décor.
+ *   2. À `z-index: 0`, la couche appartient à l'étage des éléments POSITIONNÉS.
+ *      Elle passe donc au-dessus du contenu en flux plutôt qu'en dessous : là
+ *      où elle n'était pas cachée, elle aurait masqué le texte.
+ *
+ * Le dépôt donnait pourtant la réponse. Quatre thèmes livrés portent déjà la
+ * ligne « Surfaces must be semi-transparent to let the starfield show through »
+ * suivie de `#root { background: transparent }`. Il fallait la lire.
+ *
+ * ── CE QUI CHANGE, ET CE QUI NE CHANGE PAS ──────────────────────────────────
+ *
+ * `z-index: -1` place la couche SOUS tout le contenu, au-dessus de la seule
+ * couleur de fond de la page. Et `[data-backdrop='on']` rend transparent le
+ * seul fond qui couvrait tout — celui de `.layout`.
+ *
+ * Les cartes, la barre latérale et l'en-tête gardent LEURS surfaces. C'est
+ * volontaire : un décor qui traverse aussi le texte donne une application
+ * qu'on ne peut plus lire, et « joli pendant trois minutes » n'est pas un
+ * critère.
+ */
+
+/* La couche elle-même. Les trois réglages arrivent en variables, posées par
+   `customThemeStore` — un style en ligne par propriété obligerait à réécrire
+   l'élément entier à chaque mouvement d'un curseur de réglage. */
+.filarr-backdrop {
+  position: fixed;
+  inset: 0;
+  /* ⚠ NÉGATIF. Voir l'en-tête : à zéro, la couche passait devant le contenu. */
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--filarr-backdrop-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--filarr-backdrop-opacity, 1);
+  filter: blur(var(--filarr-backdrop-blur, 0px));
+  /* Le flou tire du vide depuis les bords : sans ce débord, une bordure claire
+     apparaît sur les quatre côtés de l'écran. */
+  transform: scale(var(--filarr-backdrop-scale, 1));
+}
+
+/* Le fond qui couvrait tout. C'est LA ligne qui rendait le décor invisible. */
+[data-backdrop='on'] .layout {
+  background-color: transparent;
+}
+
+/* `#root` n'a pas de fond dans `reset.css`, mais les quatre thèmes vivants le
+   remettent à `transparent` par prudence. On fait pareil : une future feuille
+   qui lui en donnerait un recasserait le décor sans qu'on comprenne pourquoi. */
+[data-backdrop='on'] #root {
+  background: transparent;
+}
+
+/* ==================== LES DÉCORS VIVANTS ====================
+ *
+ * Ils partagent la couche du décor image et se peignent par-dessus, ce qui
+ * permet de combiner une photo ET une lueur qui suit le curseur.
+ *
+ * ── DEUX VARIABLES SUFFISENT À TOUT ────────────────────────────────────────
+ *
+ * `--filarr-pointer-x` et `--filarr-pointer-y` portent la position du curseur
+ * en pourcentage. Elles sont écrites par un seul écouteur, à la fréquence
+ * d'affichage, et TOUT ce qui suit s'en sert. Aucun de ces effets ne demande
+ * de rendu React : c'est ce qui permet à un décor de suivre la souris sans
+ * coûter une seule reconciliation.
+ */
+
+.filarr-living {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ---------- LUEUR : une halo qui suit le curseur ---------- */
+.filarr-living--glow::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle 42vmax at var(--filarr-pointer-x, 50%) var(--filarr-pointer-y, 50%),
+    color-mix(in srgb, var(--color-primary-400) 26%, transparent) 0%,
+    transparent 62%
+  );
+  /* La transition adoucit le saut quand le pointeur revient dans la fenêtre
+     après en être sorti — sans elle, la lueur se téléporte. */
+  transition: background 220ms linear;
+}
+
+/* ---------- CONSTELLATION : une trame qui se décale au curseur ---------- */
+.filarr-living--constellation::before,
+.filarr-living--constellation::after {
+  content: '';
+  position: absolute;
+  inset: -10%;
+  background-image: radial-gradient(
+    circle 1.5px,
+    color-mix(in srgb, var(--color-text-primary) 22%, transparent) 99%,
+    transparent 100%
+  );
+  background-size: 46px 46px;
+}
+
+/* Deux trames à des vitesses différentes : c'est la PARALLAXE qui donne la
+   profondeur. Une seule couche qui se décale ne fait qu'une image qui glisse. */
+.filarr-living--constellation::before {
+  transform: translate(
+    calc((var(--filarr-pointer-x, 50%) - 50%) * 0.06),
+    calc((var(--filarr-pointer-y, 50%) - 50%) * 0.06)
+  );
+}
+
+.filarr-living--constellation::after {
+  background-size: 88px 88px;
+  opacity: 0.55;
+  transform: translate(
+    calc((var(--filarr-pointer-x, 50%) - 50%) * 0.16),
+    calc((var(--filarr-pointer-y, 50%) - 50%) * 0.16)
+  );
+}
+
+/* ---------- AURORE : deux voiles qui respirent ---------- */
+.filarr-living--aurora::before,
+.filarr-living--aurora::after {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  filter: blur(60px);
+  opacity: 0.55;
+}
+
+.filarr-living--aurora::before {
+  background: radial-gradient(
+    ellipse 60% 40% at 30% 35%,
+    color-mix(in srgb, var(--color-primary-400) 55%, transparent),
+    transparent 70%
+  );
+  animation: filarr-drift-a 26s ease-in-out infinite alternate;
+}
+
+.filarr-living--aurora::after {
+  background: radial-gradient(
+    ellipse 50% 45% at 70% 65%,
+    color-mix(in srgb, var(--color-primary-700) 50%, transparent),
+    transparent 70%
+  );
+  animation: filarr-drift-b 34s ease-in-out infinite alternate;
+}
+
+@keyframes filarr-drift-a {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(5%, 4%, 0) scale(1.12);
+  }
+}
+
+@keyframes filarr-drift-b {
+  from {
+    transform: translate3d(4%, 3%, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(-5%, -4%, 0) scale(1);
+  }
+}
+
+/* ---------- HORLOGE : l'heure, en très grand, derrière tout ---------- */
+.filarr-living__clock {
+  position: absolute;
+  right: 4vw;
+  bottom: 3vh;
+  margin: 0;
+  font-size: clamp(72px, 16vw, 260px);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  /* Très basse opacité : c'est un décor, pas une information. Une heure
+     lisible au premier coup d'œil derrière du texte rendrait les deux
+     illisibles. */
+  color: color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+  user-select: none;
+}
+
+.filarr-living__date {
+  position: absolute;
+  right: 4.5vw;
+  bottom: 1vh;
+  margin: 0;
+  font-size: clamp(12px, 1.6vw, 22px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+  user-select: none;
+}
+
+/* ==================== CE QUI ARRÊTE TOUT ====================
+ *
+ * Deux interrupteurs, et ils sont sur le même pied.
+ *
+ *   · `data-animated-bg='off'` — le réglage « Fond animé » des paramètres, qui
+ *     existait déjà pour les thèmes vivants livrés. Un décor sur mesure qui
+ *     l'ignorerait ferait mentir un interrupteur que l'utilisateur a coupé.
+ *   · `prefers-reduced-motion` — le réglage du SYSTÈME. Il n'est pas
+ *     négociable : le mouvement de fond continu déclenche des malaises chez une
+ *     partie des gens, et ce n'est pas à nous d'en décider.
+ *
+ * Dans les deux cas le décor ne DISPARAÎT pas : il s'immobilise. L'image, la
+ * lueur et la trame restent, elles cessent de bouger.
+ */
+
+[data-animated-bg='off'] .filarr-living--aurora::before,
+[data-animated-bg='off'] .filarr-living--aurora::after {
+  animation: none;
+}
+
+[data-animated-bg='off'] .filarr-living--glow::before {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filarr-living--aurora::before,
+  .filarr-living--aurora::after {
+    animation: none;
+  }
+
+  .filarr-living--glow::before,
+  .filarr-living--constellation::before,
+  .filarr-living--constellation::after {
+    transition: none;
+    transform: none;
+  }
+}
+
+/*
+ * FENÊTRE EN ARRIÈRE-PLAN OU MASQUÉE : PAUSE, PAS ARRÊT.
+ *
+ * Le thème « minuit » le faisait déjà (global.css, `.app-blurred`) ; l'aurore
+ * non. Or c'est là que va le cœur : une animation, n'importe laquelle, tient
+ * la boucle d'affichage réveillée et fait recomposer l'écran entier à la
+ * fréquence de la dalle tant que la fenêtre est visible — mesuré sur mobile à
+ * ~55 points d'un cœur de plancher, sans un pixel de flou, plus une part par
+ * nœud animé. Chromium ne bride pas de lui-même une animation compositée dans
+ * une fenêtre visible mais inactive. `animation-play-state: paused` garde la
+ * texture et le point de la dérive : au retour, le ciel reprend où il était.
+ *
+ * `.app-blurred` est posé sur <html> par App.tsx sur `blur` et quand le
+ * document est masqué (`visibilitychange`), retiré sur `focus` visible.
+ */
+.app-blurred .filarr-living--aurora::before,
+.app-blurred .filarr-living--aurora::after {
+  animation-play-state: paused;
+}

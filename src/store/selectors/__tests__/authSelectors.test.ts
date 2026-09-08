@@ -22,6 +22,7 @@ import {
   selectShouldReauthenticate,
 } from '../authSelectors';
 import { createMockRootState, createAuthenticatedState } from '../../../test-utils/mockState';
+import { describe, it, expect } from 'vitest';
 
 /**
  * Helper to create a fully authenticated state with user, token, etc.

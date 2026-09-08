@@ -1,3 +1,17 @@
+import { describe, it, expect, afterEach } from 'vitest';
+
+/**
+ * `window` N'EXISTE PAS DANS L'ENVIRONNEMENT `node` DE VITEST.
+ *
+ * Ces tests viennent de Jest, ou l'environnement JSDOM etait le defaut et ou
+ * `window === globalThis`. Ils ne testent aucun DOM — ils posent seulement
+ * `window.electron` pour doubler le pont IPC. Aliaser suffit donc, et evite
+ * d'ajouter jsdom (une dependance de plusieurs megaoctets) pour cinq lignes.
+ */
+if (typeof (globalThis as { window?: unknown }).window === 'undefined') {
+  (globalThis as { window?: unknown }).window = globalThis;
+}
+
 /**
  * Tests for the renderer-side IPC facade.
  *

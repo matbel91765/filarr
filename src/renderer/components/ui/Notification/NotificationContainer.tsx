@@ -54,13 +54,9 @@ export const NotificationContainer: React.FC<NotificationContainerProps> = ({
   }
 
   return (
-    <div className={containerClasses} aria-live="polite" aria-atomic="false">
+    <div className={containerClasses} role="region" aria-label="Notifications">
       {visibleNotifications.map((notification) => (
-        <Notification
-          key={notification.id}
-          {...notification}
-          onClose={onClose}
-        />
+        <Notification key={notification.id} {...notification} onClose={onClose} />
       ))}
     </div>
   );

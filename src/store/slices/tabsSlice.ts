@@ -70,12 +70,12 @@ function totalTabCount(state: TabsState): number {
 
 /** Find panel by id */
 function findPanel(state: TabsState, panelId: string): PanelInfo | undefined {
-  return state.panels.find(p => p.id === panelId);
+  return state.panels.find((p) => p.id === panelId);
 }
 
 /** Get the focused panel */
 function getFocusedPanel(state: TabsState): PanelInfo | undefined {
-  return state.panels.find(p => p.id === state.focusedPanelId);
+  return state.panels.find((p) => p.id === state.focusedPanelId);
 }
 
 /** Activate neighbor tab after closing one */
@@ -89,8 +89,8 @@ function activateNeighbor(panel: PanelInfo, closedIndex: number): void {
 function collapsePanels(state: TabsState): void {
   if (state.panels.length <= 1) return;
 
-  const survivorIndex = state.panels.findIndex(p => p.tabs.length > 0);
-  const emptyIndex = state.panels.findIndex(p => p.tabs.length === 0);
+  const survivorIndex = state.panels.findIndex((p) => p.tabs.length > 0);
+  const emptyIndex = state.panels.findIndex((p) => p.tabs.length === 0);
 
   if (survivorIndex === -1 || emptyIndex === -1) {
     // Both have tabs — shouldn't collapse, or edge case
@@ -115,7 +115,16 @@ const tabsSlice = createSlice({
   name: 'tabs',
   initialState,
   reducers: {
-    addTab(state, action: PayloadAction<{ panelId?: string; route: string; title: string; folderId?: string; icon?: string }>) {
+    addTab(
+      state,
+      action: PayloadAction<{
+        panelId?: string;
+        route: string;
+        title: string;
+        folderId?: string;
+        icon?: string;
+      }>
+    ) {
       if (totalTabCount(state) >= state.maxTabs) return;
 
       const targetPanelId = action.payload.panelId || state.focusedPanelId;
@@ -140,11 +149,11 @@ const tabsSlice = createSlice({
       const panel = findPanel(state, panelId);
       if (!panel) return;
 
-      const tab = panel.tabs.find(t => t.id === tabId);
+      const tab = panel.tabs.find((t) => t.id === tabId);
       if (!tab || !tab.closable) return;
 
-      const tabIndex = panel.tabs.findIndex(t => t.id === tabId);
-      panel.tabs = panel.tabs.filter(t => t.id !== tabId);
+      const tabIndex = panel.tabs.findIndex((t) => t.id === tabId);
+      panel.tabs = panel.tabs.filter((t) => t.id !== tabId);
 
       if (panel.activeTabId === tabId) {
         activateNeighbor(panel, tabIndex);
@@ -160,11 +169,11 @@ const tabsSlice = createSlice({
       const panel = getFocusedPanel(state);
       if (!panel) return;
 
-      const activeTab = panel.tabs.find(t => t.id === panel.activeTabId);
+      const activeTab = panel.tabs.find((t) => t.id === panel.activeTabId);
       if (!activeTab || !activeTab.closable) return;
 
-      const tabIndex = panel.tabs.findIndex(t => t.id === panel.activeTabId);
-      panel.tabs = panel.tabs.filter(t => t.id !== panel.activeTabId);
+      const tabIndex = panel.tabs.findIndex((t) => t.id === panel.activeTabId);
+      panel.tabs = panel.tabs.filter((t) => t.id !== panel.activeTabId);
 
       activateNeighbor(panel, tabIndex);
 
@@ -178,7 +187,7 @@ const tabsSlice = createSlice({
       const panel = findPanel(state, panelId);
       if (!panel) return;
 
-      const tab = panel.tabs.find(t => t.id === tabId);
+      const tab = panel.tabs.find((t) => t.id === tabId);
       if (tab) {
         panel.activeTabId = tabId;
         state.focusedPanelId = panelId;
@@ -189,7 +198,7 @@ const tabsSlice = createSlice({
       const panel = getFocusedPanel(state);
       if (!panel || panel.tabs.length === 0) return;
 
-      const currentIndex = panel.tabs.findIndex(t => t.id === panel.activeTabId);
+      const currentIndex = panel.tabs.findIndex((t) => t.id === panel.activeTabId);
       const nextIndex = (currentIndex + 1) % panel.tabs.length;
       panel.activeTabId = panel.tabs[nextIndex].id;
     },
@@ -198,17 +207,26 @@ const tabsSlice = createSlice({
       const panel = getFocusedPanel(state);
       if (!panel || panel.tabs.length === 0) return;
 
-      const currentIndex = panel.tabs.findIndex(t => t.id === panel.activeTabId);
+      const currentIndex = panel.tabs.findIndex((t) => t.id === panel.activeTabId);
       const prevIndex = (currentIndex - 1 + panel.tabs.length) % panel.tabs.length;
       panel.activeTabId = panel.tabs[prevIndex].id;
     },
 
-    updateTabRoute(state, action: PayloadAction<{ panelId: string; tabId: string; route: string; title: string; folderId?: string }>) {
+    updateTabRoute(
+      state,
+      action: PayloadAction<{
+        panelId: string;
+        tabId: string;
+        route: string;
+        title: string;
+        folderId?: string;
+      }>
+    ) {
       const { panelId, tabId, route, title, folderId } = action.payload;
       const panel = findPanel(state, panelId);
       if (!panel) return;
 
-      const tab = panel.tabs.find(t => t.id === tabId);
+      const tab = panel.tabs.find((t) => t.id === tabId);
       if (tab) {
         tab.route = route;
         tab.title = title;
@@ -221,8 +239,8 @@ const tabsSlice = createSlice({
       const panel = findPanel(state, panelId);
       if (!panel) return;
 
-      panel.tabs = panel.tabs.filter(t => t.id === tabId || !t.closable);
-      if (!panel.tabs.find(t => t.id === panel.activeTabId)) {
+      panel.tabs = panel.tabs.filter((t) => t.id === tabId || !t.closable);
+      if (!panel.tabs.find((t) => t.id === panel.activeTabId)) {
         panel.activeTabId = tabId;
       }
     },
@@ -234,14 +252,17 @@ const tabsSlice = createSlice({
       }
     },
 
-    splitPanel(state, action: PayloadAction<{ tabId: string; sourcePanelId: string; side: 'left' | 'right' }>) {
+    splitPanel(
+      state,
+      action: PayloadAction<{ tabId: string; sourcePanelId: string; side: 'left' | 'right' }>
+    ) {
       if (state.panels.length >= 2) return; // Already split
 
       const { tabId, sourcePanelId, side } = action.payload;
       const sourcePanel = findPanel(state, sourcePanelId);
       if (!sourcePanel) return;
 
-      const tabIndex = sourcePanel.tabs.findIndex(t => t.id === tabId);
+      const tabIndex = sourcePanel.tabs.findIndex((t) => t.id === tabId);
       if (tabIndex === -1) return;
 
       const tab = sourcePanel.tabs[tabIndex];
@@ -259,7 +280,12 @@ const tabsSlice = createSlice({
 
       // If source panel is now empty of tabs, add a home tab
       if (sourcePanel.tabs.length === 0) {
-        const homeTab: TabInfo = { id: generateTabId(), title: i18n.t('tabs.home'), route: '/', closable: false };
+        const homeTab: TabInfo = {
+          id: generateTabId(),
+          title: i18n.t('tabs.home'),
+          route: '/',
+          closable: false,
+        };
         sourcePanel.tabs.push(homeTab);
         sourcePanel.activeTabId = homeTab.id;
       }
@@ -282,7 +308,10 @@ const tabsSlice = createSlice({
       state.focusedPanelId = newPanel.id;
     },
 
-    moveTabToPanel(state, action: PayloadAction<{ tabId: string; sourcePanelId: string; targetPanelId: string }>) {
+    moveTabToPanel(
+      state,
+      action: PayloadAction<{ tabId: string; sourcePanelId: string; targetPanelId: string }>
+    ) {
       const { tabId, sourcePanelId, targetPanelId } = action.payload;
       if (sourcePanelId === targetPanelId) return;
 
@@ -290,7 +319,7 @@ const tabsSlice = createSlice({
       const targetPanel = findPanel(state, targetPanelId);
       if (!sourcePanel || !targetPanel) return;
 
-      const tabIndex = sourcePanel.tabs.findIndex(t => t.id === tabId);
+      const tabIndex = sourcePanel.tabs.findIndex((t) => t.id === tabId);
       if (tabIndex === -1) return;
 
       const tab = sourcePanel.tabs[tabIndex];
@@ -328,7 +357,8 @@ const tabsSlice = createSlice({
       for (const panel of rest) {
         // Avoid duplicate home tabs
         for (const tab of panel.tabs) {
-          const isDuplicateHome = !tab.closable && first.tabs.some(t => !t.closable && t.route === tab.route);
+          const isDuplicateHome =
+            !tab.closable && first.tabs.some((t) => !t.closable && t.route === tab.route);
           if (!isDuplicateHome) {
             first.tabs.push(tab);
           }
@@ -339,6 +369,46 @@ const tabsSlice = createSlice({
       state.focusedPanelId = first.id;
       state.splitDirection = 'none';
       state.splitRatio = 0.5;
+    },
+
+    /**
+     * Remove every `/folder/<id>` tab whose id isn't in `validFolderIds`.
+     *
+     * Called right after `fetchFolders.fulfilled` on profile switch. Without
+     * this, a tab carrying a previous profile's folder id can survive into
+     * the new session and trigger a `fetchFolder(id)` IPC call, which then
+     * either ENOENTs (logged) or — if a stale on-disk index for the new
+     * profile still references the id — silently rehydrates the foreign
+     * folder back into `state.folders.byId` (the cross-profile leak the
+     * user observed in Test 2). Any panel left without tabs after pruning
+     * gets a default Home tab so the panel isn't dead.
+     */
+    pruneOrphanFolderTabs(state, action: PayloadAction<string[]>) {
+      const valid = new Set(action.payload);
+      for (const panel of state.panels) {
+        const removed: string[] = [];
+        panel.tabs = panel.tabs.filter((tab) => {
+          if (!tab.closable) return true;
+          const m = tab.route.match(/^\/folder\/(.+)$/);
+          if (!m) return true;
+          if (valid.has(m[1])) return true;
+          removed.push(tab.id);
+          return false;
+        });
+        if (removed.includes(panel.activeTabId)) {
+          panel.activeTabId = panel.tabs[0]?.id ?? 'home';
+        }
+        if (panel.tabs.length === 0) {
+          const homeTab: TabInfo = {
+            id: generateTabId(),
+            title: i18n.t('tabs.home'),
+            route: '/',
+            closable: false,
+          };
+          panel.tabs.push(homeTab);
+          panel.activeTabId = homeTab.id;
+        }
+      }
     },
   },
 });
@@ -357,6 +427,7 @@ export const {
   moveTabToPanel,
   setSplitRatio,
   unsplit,
+  pruneOrphanFolderTabs,
 } = tabsSlice.actions;
 
 export default tabsSlice.reducer;

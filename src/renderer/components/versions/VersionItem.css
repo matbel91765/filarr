@@ -21,26 +21,26 @@
 }
 
 .version-item:hover {
-  border-color: var(--color-primary-light, #93c5fd);
+  border-color: var(--color-primary-300);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
 .version-item:focus {
-  outline: 2px solid var(--color-primary, #3b82f6);
+  outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
 
 .version-item--selected {
-  border-color: var(--color-primary, #3b82f6);
-  background: var(--color-primary-bg, #eff6ff);
+  border-color: var(--color-primary-500);
+  background: var(--color-selected);
 }
 
 .version-item--compare-a {
-  border-left: 3px solid var(--color-success, #10b981);
+  border-left: 3px solid var(--color-success-500);
 }
 
 .version-item--compare-b {
-  border-left: 3px solid var(--color-warning, #f59e0b);
+  border-left: 3px solid var(--color-warning-500);
 }
 
 .version-item--disabled {
@@ -62,11 +62,11 @@
   align-items: center;
   gap: var(--spacing-2, 8px);
   font-weight: 600;
-  color: var(--color-text, #1f2937);
+  color: var(--color-text-primary);
 }
 
 .version-item__number svg {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary-500);
 }
 
 .version-item__time {
@@ -89,7 +89,7 @@
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: var(--font-size-xs, 12px);
   padding: var(--spacing-1, 4px) var(--spacing-2, 8px);
-  background: var(--color-surface-elevated, #f9fafb);
+  background: var(--color-surface-active);
   border-radius: var(--radius-sm, 6px);
 }
 
@@ -100,7 +100,7 @@
 
 .version-item__comment {
   flex: 1;
-  color: var(--color-text-muted, #9ca3af);
+  color: var(--color-text-tertiary);
   font-style: italic;
   font-size: var(--font-size-sm, 14px);
   overflow: hidden;
@@ -135,13 +135,13 @@
 }
 
 .version-item__action:hover:not(:disabled) {
-  border-color: var(--color-primary, #3b82f6);
-  color: var(--color-primary, #3b82f6);
-  background: var(--color-primary-bg, #eff6ff);
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-500);
+  background: var(--color-selected);
 }
 
 .version-item__action:focus {
-  outline: 2px solid var(--color-primary, #3b82f6);
+  outline: 2px solid var(--color-primary-500);
   outline-offset: 1px;
 }
 
@@ -156,20 +156,20 @@
 }
 
 .version-item__action--active {
-  border-color: var(--color-primary, #3b82f6);
-  background: var(--color-primary, #3b82f6);
-  color: white;
+  border-color: var(--color-primary-500);
+  background: var(--color-primary-500);
+  color: var(--color-text-inverted);
 }
 
 .version-item__action--active:hover:not(:disabled) {
-  background: var(--color-primary-dark, #2563eb);
-  color: white;
+  background: var(--color-primary-600);
+  color: var(--color-text-inverted);
 }
 
 .version-item__action--danger:hover:not(:disabled) {
-  border-color: var(--color-error, #ef4444);
-  color: var(--color-error, #ef4444);
-  background: var(--color-error-bg, #fef2f2);
+  border-color: var(--color-error-500);
+  color: var(--color-error-500);
+  background: rgba(239, 68, 68, 0.12);
 }
 
 /* ==================== INDICATORS ==================== */
@@ -192,52 +192,15 @@
   font-size: var(--font-size-xs, 12px);
   font-weight: 700;
   border-radius: 50%;
-  color: white;
+  color: var(--color-text-inverted);
 }
 
 .version-item__indicator-a {
-  background: var(--color-success, #10b981);
+  background: var(--color-success-500);
 }
 
 .version-item__indicator-b {
-  background: var(--color-warning, #f59e0b);
-}
-
-/* ==================== DARK THEME ==================== */
-
-[data-theme="dark"] .version-item {
-  background: var(--color-surface-dark, #1f2937);
-  border-color: var(--color-border-dark, #374151);
-}
-
-[data-theme="dark"] .version-item:hover {
-  border-color: var(--color-primary-light, #60a5fa);
-}
-
-[data-theme="dark"] .version-item--selected {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-[data-theme="dark"] .version-item__number {
-  color: var(--color-text-dark, #f9fafb);
-}
-
-[data-theme="dark"] .version-item__size {
-  background: var(--color-surface-elevated-dark, #111827);
-}
-
-[data-theme="dark"] .version-item__action {
-  background: var(--color-surface-dark, #1f2937);
-  border-color: var(--color-border-dark, #374151);
-  color: var(--color-text-secondary-dark, #9ca3af);
-}
-
-[data-theme="dark"] .version-item__action:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.1);
-}
-
-[data-theme="dark"] .version-item__actions {
-  border-color: var(--color-border-dark, #374151);
+  background: var(--color-warning-500);
 }
 
 /* ==================== RESPONSIVE ==================== */

@@ -5,16 +5,10 @@
  * actions et paramètres. Ouverte avec Ctrl+P.
  */
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-  forwardRef
-} from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { useCommandPalette, Command, CommandCategory } from '../../../../hooks/useCommandPalette';
 import './CommandPalette.css';
 
@@ -35,16 +29,8 @@ export interface CommandPaletteProps {
  * Composant CommandPalette
  */
 export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
-  (
-    {
-      isOpen,
-      onClose,
-      onExecute,
-      className,
-      placeholder = 'Rechercher fichiers, commandes, paramètres...'
-    },
-    ref
-  ) => {
+  ({ isOpen, onClose, onExecute, className, placeholder }, ref) => {
+    const { t } = useTranslation();
     const {
       query,
       setQuery,
@@ -55,7 +41,7 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
       recentCommands,
       categories,
       getCategoryIcon,
-      getCategoryName
+      getCategoryName,
     } = useCommandPalette();
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -94,19 +80,22 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
         // Afficher les commandes récentes en premier si pas de recherche
         return {
           recent: recentCommands.slice(0, 5),
-          ...categories.reduce((acc, cat) => {
-            const commands = filteredCommands.filter(cmd => cmd.category === cat.id);
-            if (commands.length > 0) {
-              acc[cat.id] = commands;
-            }
-            return acc;
-          }, {} as Record<string, Command[]>)
+          ...categories.reduce(
+            (acc, cat) => {
+              const commands = filteredCommands.filter((cmd) => cmd.category === cat.id);
+              if (commands.length > 0) {
+                acc[cat.id] = commands;
+              }
+              return acc;
+            },
+            {} as Record<string, Command[]>
+          ),
         };
       }
 
       // Grouper par catégorie
       const groups: Record<string, Command[]> = {};
-      filteredCommands.forEach(cmd => {
+      filteredCommands.forEach((cmd) => {
         if (!groups[cmd.category]) {
           groups[cmd.category] = [];
         }
@@ -119,7 +108,7 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
     // Calculer l'index global pour la navigation
     const flattenedCommands = useMemo(() => {
       const result: Command[] = [];
-      Object.values(groupedCommands).forEach(commands => {
+      Object.values(groupedCommands).forEach((commands) => {
         result.push(...commands);
       });
       return result;
@@ -131,16 +120,12 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
         switch (event.key) {
           case 'ArrowDown':
             event.preventDefault();
-            setSelectedIndex(prev =>
-              prev < flattenedCommands.length - 1 ? prev + 1 : 0
-            );
+            setSelectedIndex((prev) => (prev < flattenedCommands.length - 1 ? prev + 1 : 0));
             break;
 
           case 'ArrowUp':
             event.preventDefault();
-            setSelectedIndex(prev =>
-              prev > 0 ? prev - 1 : flattenedCommands.length - 1
-            );
+            setSelectedIndex((prev) => (prev > 0 ? prev - 1 : flattenedCommands.length - 1));
             break;
 
           case 'Enter':
@@ -159,13 +144,9 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
             event.preventDefault();
             // Tab pour naviguer vers le bas, Shift+Tab vers le haut
             if (event.shiftKey) {
-              setSelectedIndex(prev =>
-                prev > 0 ? prev - 1 : flattenedCommands.length - 1
-              );
+              setSelectedIndex((prev) => (prev > 0 ? prev - 1 : flattenedCommands.length - 1));
             } else {
-              setSelectedIndex(prev =>
-                prev < flattenedCommands.length - 1 ? prev + 1 : 0
-              );
+              setSelectedIndex((prev) => (prev < flattenedCommands.length - 1 ? prev + 1 : 0));
             }
             break;
         }
@@ -209,7 +190,7 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
               }
             }}
             className={clsx('command-palette__item', {
-              'command-palette__item--selected': isSelected
+              'command-palette__item--selected': isSelected,
             })}
             onClick={() => handleExecute(command)}
             onMouseEnter={() => setSelectedIndex(globalIndex)}
@@ -219,7 +200,9 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
             {/* Icône */}
             <span
               className="command-palette__item-icon"
-              dangerouslySetInnerHTML={{ __html: command.icon || getCategoryIcon(command.category) }}
+              dangerouslySetInnerHTML={{
+                __html: command.icon || getCategoryIcon(command.category),
+              }}
             />
 
             {/* Contenu */}
@@ -228,9 +211,7 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
                 {highlightMatch(command.name, query)}
               </span>
               {command.description && (
-                <span className="command-palette__item-description">
-                  {command.description}
-                </span>
+                <span className="command-palette__item-description">{command.description}</span>
               )}
             </div>
 
@@ -256,11 +237,7 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
     let globalIndex = -1;
 
     const paletteContent = (
-      <div
-        className="command-palette__backdrop"
-        onClick={handleBackdropClick}
-        role="presentation"
-      >
+      <div className="command-palette__backdrop" onClick={handleBackdropClick} role="presentation">
         <div
           ref={ref}
           className={clsx('command-palette', className)}
@@ -286,7 +263,13 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
                 ref={inputRef}
                 type="text"
                 className="command-palette__input"
-                placeholder={placeholder}
+                placeholder={
+                  placeholder ||
+                  t(
+                    'commandPalette.ui.placeholder',
+                    'Rechercher fichiers, commandes, paramètres...'
+                  )
+                }
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -302,7 +285,7 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
                 <button
                   className="command-palette__clear"
                   onClick={() => setQuery('')}
-                  aria-label="Effacer la recherche"
+                  aria-label={t('commandPalette.ui.clearSearch', 'Effacer la recherche')}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M18 6L6 18M6 6l12 12" />
@@ -325,10 +308,12 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
               return (
                 <div key={category} className="command-palette__group">
                   <div className="command-palette__group-header">
-                    {category === 'recent' ? 'Récent' : getCategoryName(category as CommandCategory)}
+                    {category === 'recent'
+                      ? t('commandPalette.categories.recent', 'Récent')
+                      : getCategoryName(category as CommandCategory)}
                   </div>
                   <div className="command-palette__group-items">
-                    {commands.map(command => {
+                    {commands.map((command) => {
                       globalIndex++;
                       return renderCommand(command, globalIndex);
                     })}
@@ -344,8 +329,10 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
                   <path d="M21 21l-4.35-4.35" />
                   <path d="M8 11h6" />
                 </svg>
-                <p>Aucun résultat pour "{query}"</p>
-                <span>Essayez avec d'autres termes</span>
+                <p>
+                  {t('commandPalette.ui.empty', 'Aucun résultat pour « {{query}} »', { query })}
+                </p>
+                <span>{t('commandPalette.ui.emptyHint', "Essayez avec d'autres termes")}</span>
               </div>
             )}
           </div>
@@ -353,13 +340,14 @@ export const CommandPalette = forwardRef<HTMLDivElement, CommandPaletteProps>(
           {/* Footer avec instructions */}
           <div className="command-palette__footer">
             <div className="command-palette__hint">
-              <kbd>↑</kbd><kbd>↓</kbd> pour naviguer
+              <kbd>↑</kbd>
+              <kbd>↓</kbd> {t('commandPalette.ui.hintNavigate', 'pour naviguer')}
             </div>
             <div className="command-palette__hint">
-              <kbd>↵</kbd> pour exécuter
+              <kbd>↵</kbd> {t('commandPalette.ui.hintExecute', 'pour exécuter')}
             </div>
             <div className="command-palette__hint">
-              <kbd>Esc</kbd> pour fermer
+              <kbd>Esc</kbd> {t('commandPalette.ui.hintClose', 'pour fermer')}
             </div>
           </div>
         </div>
@@ -390,9 +378,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   for (let i = 0; i < text.length && charIndex < queryChars.length; i++) {
     if (lowerText[i] === queryChars[charIndex]) {
       if (i > lastIndex) {
-        parts.push(
-          <span key={`text-${lastIndex}`}>{text.slice(lastIndex, i)}</span>
-        );
+        parts.push(<span key={`text-${lastIndex}`}>{text.slice(lastIndex, i)}</span>);
       }
       parts.push(
         <mark key={`match-${i}`} className="command-palette__highlight">

@@ -23,6 +23,7 @@ import {
   selectSimilarFiles,
 } from '../fileSelectors';
 import { createMockRootState } from '../../../test-utils/mockState';
+import { describe, it, expect } from 'vitest';
 
 describe('fileSelectors', () => {
   // Helper to create state with files
@@ -297,7 +298,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(3);
-      expect(result.map(f => f.id)).toEqual(['file-1', 'file-2', 'file-4']);
+      expect(result.map((f) => f.id)).toEqual(['file-1', 'file-2', 'file-4']);
     });
 
     it('should filter out folders from items', () => {
@@ -306,7 +307,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       // folder-3 is in the items but should be filtered out
-      expect(result.every(item => item.type !== 'folder')).toBe(true);
+      expect(result.every((item) => item.type !== 'folder')).toBe(true);
     });
 
     it('should return empty array for non-existent folder', () => {
@@ -396,7 +397,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       // Yesterday's files should come first (older dates)
-      const dates = result.map(f => new Date(f.date!).getTime());
+      const dates = result.map((f) => new Date(f.date!).getTime());
       expect(dates[0]).toBeLessThanOrEqual(dates[1]);
       expect(dates[1]).toBeLessThanOrEqual(dates[2]);
     });
@@ -416,7 +417,7 @@ describe('fileSelectors', () => {
       const selector = selectSortedFiles('folder-1');
       const result = selector(state);
 
-      const dates = result.map(f => new Date(f.date!).getTime());
+      const dates = result.map((f) => new Date(f.date!).getTime());
       expect(dates[0]).toBeGreaterThanOrEqual(dates[1]);
       expect(dates[1]).toBeGreaterThanOrEqual(dates[2]);
     });
@@ -476,7 +477,7 @@ describe('fileSelectors', () => {
       const selector = selectSortedFiles('folder-1');
       const result = selector(state);
 
-      const types = result.map(f => f.type);
+      const types = result.map((f) => f.type);
       expect(types).toEqual(['image', 'text', 'text']);
     });
 
@@ -619,7 +620,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(2);
-      expect(result.map(f => f.name)).toEqual(['document.txt', 'document-copy.txt']);
+      expect(result.map((f) => f.name)).toEqual(['document.txt', 'document-copy.txt']);
     });
 
     it('should filter files by partial name match', () => {
@@ -636,7 +637,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(2);
-      expect(result.every(f => f.type === 'text')).toBe(true);
+      expect(result.every((f) => f.type === 'text')).toBe(true);
     });
 
     it('should filter by name and type', () => {
@@ -645,7 +646,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(2);
-      expect(result.every(f => f.type === 'text' && f.name.includes('document'))).toBe(true);
+      expect(result.every((f) => f.type === 'text' && f.name.includes('document'))).toBe(true);
     });
 
     it('should filter by minimum size', () => {
@@ -654,7 +655,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(2);
-      expect(result.every(f => (f.size || 0) >= 2000)).toBe(true);
+      expect(result.every((f) => (f.size || 0) >= 2000)).toBe(true);
     });
 
     it('should filter by maximum size', () => {
@@ -663,7 +664,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(2);
-      expect(result.every(f => (f.size || 0) <= 2000)).toBe(true);
+      expect(result.every((f) => (f.size || 0) <= 2000)).toBe(true);
     });
 
     it('should filter by size range', () => {
@@ -674,10 +675,12 @@ describe('fileSelectors', () => {
       // file-1: 1024, file-2: 2048, file-4: 1100 (all within range)
       // file-3: 5120 (out of range)
       expect(result).toHaveLength(3);
-      expect(result.every(f => {
-        const size = f.size || 0;
-        return size >= 1000 && size <= 3000;
-      })).toBe(true);
+      expect(
+        result.every((f) => {
+          const size = f.size || 0;
+          return size >= 1000 && size <= 3000;
+        })
+      ).toBe(true);
     });
 
     it('should filter by date range start', () => {
@@ -692,7 +695,7 @@ describe('fileSelectors', () => {
 
       // Should include files from yesterday and today, but not from last week
       expect(result.length).toBeGreaterThan(0);
-      expect(result.every(f => new Date(f.date!) >= twoDaysAgo)).toBe(true);
+      expect(result.every((f) => new Date(f.date!) >= twoDaysAgo)).toBe(true);
     });
 
     it('should filter by date range end', () => {
@@ -707,7 +710,7 @@ describe('fileSelectors', () => {
 
       // Should only include the video file from last week
       expect(result.length).toBeGreaterThan(0);
-      expect(result.every(f => new Date(f.date!) <= yesterday)).toBe(true);
+      expect(result.every((f) => new Date(f.date!) <= yesterday)).toBe(true);
     });
 
     it('should filter by complete date range', () => {
@@ -737,12 +740,15 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result.length).toBeGreaterThan(0);
-      expect(result.every(f =>
-        f.name.includes('document') &&
-        f.type === 'text' &&
-        (f.size || 0) >= 1000 &&
-        (f.size || 0) <= 2000
-      )).toBe(true);
+      expect(
+        result.every(
+          (f) =>
+            f.name.includes('document') &&
+            f.type === 'text' &&
+            (f.size || 0) >= 1000 &&
+            (f.size || 0) <= 2000
+        )
+      ).toBe(true);
     });
 
     it('should handle files with missing size when filtering', () => {
@@ -790,7 +796,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result).toHaveLength(2);
-      expect(result.every(f => f.type === 'text')).toBe(true);
+      expect(result.every((f) => f.type === 'text')).toBe(true);
     });
 
     it('should return empty array for non-existent type', () => {
@@ -820,7 +826,7 @@ describe('fileSelectors', () => {
       expect(result).toHaveLength(4);
 
       // Should be sorted in descending order (newest first)
-      const dates = result.map(f => new Date(f.date!).getTime());
+      const dates = result.map((f) => new Date(f.date!).getTime());
       for (let i = 0; i < dates.length - 1; i++) {
         expect(dates[i]).toBeGreaterThanOrEqual(dates[i + 1]);
       }
@@ -1123,7 +1129,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       expect(result.length).toBeGreaterThan(0);
-      expect(result.some(f => f.type === 'text')).toBe(true);
+      expect(result.some((f) => f.type === 'text')).toBe(true);
     });
 
     it('should return files with similar names', () => {
@@ -1131,7 +1137,7 @@ describe('fileSelectors', () => {
       const selector = selectSimilarFiles('file-1');
       const result = selector(state);
 
-      expect(result.some(f => f.name.includes('document'))).toBe(true);
+      expect(result.some((f) => f.name.includes('document'))).toBe(true);
     });
 
     it('should exclude the source file itself', () => {
@@ -1139,7 +1145,7 @@ describe('fileSelectors', () => {
       const selector = selectSimilarFiles('file-1');
       const result = selector(state);
 
-      expect(result.every(f => f.id !== 'file-1')).toBe(true);
+      expect(result.every((f) => f.id !== 'file-1')).toBe(true);
     });
 
     it('should limit results to 5 files', () => {
@@ -1202,7 +1208,7 @@ describe('fileSelectors', () => {
       const result = selector(state);
 
       // file-4 is 'document-copy.txt', should find 'document.txt'
-      expect(result.some(f => f.name.includes('document'))).toBe(true);
+      expect(result.some((f) => f.name.includes('document'))).toBe(true);
     });
 
     it('should avoid duplicates in results', () => {
@@ -1210,7 +1216,7 @@ describe('fileSelectors', () => {
       const selector = selectSimilarFiles('file-1');
       const result = selector(state);
 
-      const ids = result.map(f => f.id);
+      const ids = result.map((f) => f.id);
       const uniqueIds = [...new Set(ids)];
       expect(ids.length).toBe(uniqueIds.length);
     });

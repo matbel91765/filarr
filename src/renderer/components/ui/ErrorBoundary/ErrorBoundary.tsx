@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { isChunkLoadError, recoverFromChunkError } from './chunkRecovery';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -11,6 +12,8 @@ interface ErrorBoundaryState {
   error: Error | null;
   errorInfo: ErrorInfo | null;
   showDetails: boolean;
+  /** Un chunk manquant : la page se recharge, l'erreur n'appartient a personne. */
+  recovering: boolean;
 }
 
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -21,6 +24,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
       error: null,
       errorInfo: null,
       showDetails: false,
+      recovering: false,
     };
   }
 
@@ -29,6 +33,24 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    /**
+     * UN CHUNK MANQUANT N'EST PAS UNE PANNE, C'EST UNE VERSION PERIMEE.
+     *
+     * Un onglet reste ouvert pendant un deploiement demande des fichiers que le
+     * nouveau build ne porte plus : la premiere route paresseuse ouverte apres
+     * coup echoue. Recharger va rechercher `index.html`, qui nomme les nouveaux
+     * fichiers — c'est la reparation, pas un contournement. Une seule tentative
+     * par minute (chunkRecovery), sinon un vrai fichier absent bouclerait.
+     */
+    const recovering = recoverFromChunkError(error, {
+      storage: typeof sessionStorage === 'undefined' ? null : sessionStorage,
+      reload: () => window.location.reload(),
+    });
+    if (recovering) {
+      this.setState({ errorInfo, recovering: true });
+      return;
+    }
+
     console.error('[ErrorBoundary] Caught error:', error);
     console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
     this.setState({ errorInfo });
@@ -47,6 +69,17 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   render(): ReactNode {
     if (this.state.hasError) {
+      // Le rechargement est deja demande : afficher une panne serait mentir.
+      if (this.state.recovering) {
+        return (
+          <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400" role="status">
+              Une nouvelle version de Filarr est disponible. Rechargement...
+            </p>
+          </div>
+        );
+      }
+
       if (this.props.fallback) {
         return this.props.fallback;
       }
@@ -83,8 +116,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
             {/* Error message */}
             <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-6">
-              {error?.message ||
-                "L'application a rencontre un probleme. Veuillez recharger la page."}
+              {isChunkLoadError(error)
+                ? "Un fichier de l'application n'a pas pu etre charge, et le rechargement automatique n'y a rien change. Verifiez votre connexion, puis rechargez."
+                : error?.message ||
+                  "L'application a rencontre un probleme. Veuillez recharger la page."}
             </p>
 
             {/* Action buttons */}

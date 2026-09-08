@@ -1,0 +1,131 @@
+/**
+ * Avatar Styles
+ *
+ * Pastille d'initiales et empilement d'avatars. Tout passe par les jetons du
+ * thème : aucune couleur calculée, aucune valeur inline — clair, sombre et
+ * chaque thème nommé (Minuit, Space, Lofi…) reprennent la main sans que le
+ * composant ait à savoir dans quel thème il vit.
+ */
+
+/* ===== Pastille ===== */
+.avatar {
+  --avatar-size: 24px;
+  --avatar-font-size: 0.62rem;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: var(--radius-avatar, 9999px);
+  font-size: var(--avatar-font-size);
+  font-weight: var(--font-weight-bold, 700);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  user-select: none;
+  cursor: default;
+}
+
+/* ===== Tailles ===== */
+.avatar--xs {
+  --avatar-size: 20px;
+  --avatar-font-size: 0.55rem;
+}
+
+.avatar--sm {
+  --avatar-size: 24px;
+  --avatar-font-size: 0.62rem;
+}
+
+.avatar--md {
+  --avatar-size: 32px;
+  --avatar-font-size: 0.75rem;
+}
+
+/* ===== Teintes =====
+   Huit paires fond/texte, chacune étant un couple que les thèmes entretiennent
+   DÉJÀ comme « pastel + texte posé dessus » : les barreaux -100/-700 des
+   couleurs sémantiques (Minuit rend les -100 translucides ET remonte les -700
+   en clair, précisément pour ce couple), le couple primary-50/primary-600 de
+   la pastille « Partagé » (VaultsList), et le gris surface-active/text-secondary
+   de la pastille de débordement de la barre de présence. Prendre un fond dans
+   une famille et un texte dans une autre casserait ces garanties. */
+.avatar--hue-0 {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+.avatar--hue-1 {
+  background-color: var(--color-success-100);
+  color: var(--color-success-700);
+}
+
+.avatar--hue-2 {
+  background-color: var(--color-warning-100);
+  color: var(--color-warning-700);
+}
+
+.avatar--hue-3 {
+  background-color: var(--color-error-100);
+  color: var(--color-error-700);
+}
+
+.avatar--hue-4 {
+  background-color: var(--color-info-100);
+  color: var(--color-info-700);
+}
+
+.avatar--hue-5 {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+.avatar--hue-6 {
+  background-color: var(--color-surface-active);
+  color: var(--color-text-secondary);
+}
+
+.avatar--hue-7 {
+  background-color: var(--color-success-50);
+  color: var(--color-success-700);
+}
+
+/* ===== Empilement ===== */
+.avatar-stack {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Chevauchement d'un tiers, séparé par un anneau couleur de surface : sans
+   lui, deux pastilles de même teinte fusionnent en un seul blob. L'anneau
+   s'ajoute au diamètre (box-sizing du parent), la taille annoncée est celle
+   de l'aire colorée. */
+.avatar-stack .avatar {
+  border: var(--border-width-2, 2px) solid var(--color-surface);
+  width: calc(var(--avatar-size) + 2 * var(--border-width-2, 2px));
+  height: calc(var(--avatar-size) + 2 * var(--border-width-2, 2px));
+  margin-left: calc(var(--avatar-size) / -3);
+}
+
+.avatar-stack .avatar:first-child {
+  margin-left: 0;
+}
+
+/* Le dernier posé passe dessous, le premier dessus : l'ordre de lecture est
+   l'ordre de la liste, pas l'ordre du DOM inversé. */
+.avatar-stack .avatar:hover {
+  z-index: 1;
+}
+
+/* Pastille « +N » : neutre, elle ne doit pas passer pour une personne. */
+.avatar-stack__overflow {
+  background-color: var(--color-surface-active);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold, 600);
+  text-transform: none;
+}

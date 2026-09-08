@@ -78,7 +78,7 @@
 /* ===== Toggle Thumb ===== */
 .toggle__thumb {
   display: block;
-  background-color: var(--color-neutral-0);
+  background-color: var(--color-control-knob);
   border-radius: 50%;
   box-shadow: var(--shadow-sm);
   transition: transform var(--duration-normal) var(--ease-out);
@@ -187,26 +187,22 @@
 }
 
 /* ===== Dark Mode ===== */
-[data-theme="dark"] .toggle {
+[data-theme='dark'] .toggle {
   background-color: var(--color-neutral-600);
 }
 
-[data-theme="dark"] .toggle-container:hover .toggle:not(.toggle--disabled) {
+[data-theme='dark'] .toggle-container:hover .toggle:not(.toggle--disabled) {
   background-color: var(--color-neutral-500);
 }
 
-[data-theme="dark"] .toggle__input:checked + .toggle,
-[data-theme="dark"] .toggle--checked {
+[data-theme='dark'] .toggle__input:checked + .toggle,
+[data-theme='dark'] .toggle--checked {
   background-color: var(--color-primary-500);
 }
 
-[data-theme="dark"] .toggle-container:hover .toggle__input:checked + .toggle,
-[data-theme="dark"] .toggle-container:hover .toggle--checked {
+[data-theme='dark'] .toggle-container:hover .toggle__input:checked + .toggle,
+[data-theme='dark'] .toggle-container:hover .toggle--checked {
   background-color: var(--color-primary-600);
-}
-
-[data-theme="dark"] .toggle__thumb {
-  background-color: var(--color-neutral-100);
 }
 
 /* ===== Animations ===== */

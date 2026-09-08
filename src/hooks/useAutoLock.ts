@@ -13,16 +13,20 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../store';
 import { lockApp } from '../store/slices/authSlice';
-import { clearHybridCrypto } from '../services/auth/hybridCrypto';
+import { forgetSessionSecrets } from '../services/auth/sessionTeardown';
+import { purgeCollabOnKeyLoss } from '../services/collab/collabSession';
+import { selectEffectiveAutoLock } from '../store/slices/governanceSlice';
 
 const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'] as const;
 const DEBOUNCE_MS = 30_000; // Only reset timer every 30s max
 
 export function useAutoLock(): void {
   const dispatch = useDispatch();
-  const { autoLockEnabled, autoLockTimeout } = useSelector(
-    (state: RootState) => state.settings.security
-  );
+  // E9-10: the effective auto-lock = the user's setting intersected with the org's idle-timeout cap
+  // (org cap is a maximum; a shorter user choice wins; an org cap forces auto-lock on). When no org
+  // policy is active this is exactly the user's own security setting (non-regression).
+  const { enabled: autoLockEnabled, timeoutMinutes: autoLockTimeout } =
+    useSelector(selectEffectiveAutoLock);
   const isLocked = useSelector((state: RootState) => state.auth.isLocked);
 
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,8 +34,7 @@ export function useAutoLock(): void {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerLock = useCallback(() => {
-    clearHybridCrypto();
-    dispatch(lockApp());
+    void forgetSessionSecrets(dispatch, 'auto-lock');
   }, [dispatch]);
 
   const resetTimer = useCallback(() => {

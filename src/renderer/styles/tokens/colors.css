@@ -42,6 +42,7 @@
   /* Warning */
   --color-warning-50: #fffbeb;
   --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
   --color-warning-500: #f59e0b;
   --color-warning-600: #d97706;
   --color-warning-700: #b45309;
@@ -52,6 +53,21 @@
   --color-error-500: #ef4444;
   --color-error-600: #dc2626;
   --color-error-700: #b91c1c;
+
+  /* ===== Aveux posés SUR LE FOND DE PAGE ===== */
+  /* Le barreau -700 est la couleur de TEXTE des pastilles -50 : il est sombre,
+     et il DOIT le rester, y compris en thème sombre où ces pastilles restent
+     des fonds clairs. Posé à même le fond d'un thème sombre, en revanche, il
+     tombe à ~3:1 (et ~2,3:1 pour le rouge) : c'est ce qui rendait les deux
+     phrases les plus coûteuses de l'éditeur de notes — « rien ne les
+     enregistrera tout seul », « ce coffre ne les accepte plus » — les moins
+     lisibles de l'écran. Ces deux jetons-ci sont l'autre usage, et chaque thème
+     sombre les redéfinit. Mesuré sur le fond de chacun des douze thèmes : jamais
+     moins de 4,5:1 (garde-fou dans vaultPaneSaveState.vitest.ts). */
+  --color-warning-on-background: #92400e;
+  --color-error-on-background: #b91c1c;
+  --color-success-on-background: #047857;
+  --color-info-on-background: #1d4ed8;
 
   /* Info */
   --color-info-50: #eff6ff;
@@ -87,9 +103,25 @@
   /* ===== Interactive States ===== */
   --color-hover-overlay: rgba(135, 206, 235, 0.08);
   --color-active-overlay: rgba(135, 206, 235, 0.16);
-  --color-focus-ring: var(--color-primary-300);
+  /* Bleu SECONDAIRE et non le bleu ciel : l'anneau de focus est un contour
+     d'interface, il lui faut 3:1 sur la surface (WCAG 1.4.11). Le bleu ciel
+     tombait à 1,74:1 sur blanc — invisible pour qui navigue au clavier.
+     Celui-ci tient 4,11:1 sur blanc, et 4,00:1 au pire des fonds sombres. */
+  --color-focus-ring: var(--color-primary-600);
   --color-selected: var(--color-primary-50);
   --color-selected-hover: var(--color-primary-100);
+  /* Liseré d'une carte/ligne sélectionnée. Token à part de primary-200 pour
+     que les thèmes sombres puissent le rendre translucide sans toucher à la
+     rampe primaire. */
+  --color-selected-border: var(--color-primary-200);
+  /* Fond de la sélection de texte (::selection). Sur les thèmes sombres, un
+     pastel OPAQUE de la rampe primaire rend le texte illisible : chaque thème
+     sombre redéfinit ce token en teinte translucide. */
+  --color-selection-bg: var(--color-primary-200);
+  /* Pastille des interrupteurs : elle flotte au-dessus de la piste et doit
+     rester claire même quand le thème redéfinit neutral-0 en couleur sombre
+     (Minuit, Space, Aurora…). */
+  --color-control-knob: var(--color-neutral-0);
 
   /* ===== Folder Customization Colors ===== */
   --color-folder-red: #ef4444;
@@ -125,6 +157,11 @@
  * Dark Mode Theme
  */
 [data-theme='dark'] {
+  /* Aveux sur fond de page — voir :root. Le barreau -700 y est illisible. */
+  --color-warning-on-background: #fcd34d;
+  --color-error-on-background: #fca5a5;
+  --color-success-on-background: #6ee7b7;
+  --color-info-on-background: #93c5fd;
   /* ===== Application Semantic Colors (Dark Mode) ===== */
   --color-background: #0a0e1a;
   --color-background-secondary: #10141f;
@@ -152,8 +189,14 @@
   /* ===== Interactive States (Dark) ===== */
   --color-hover-overlay: rgba(135, 206, 235, 0.12);
   --color-active-overlay: rgba(135, 206, 235, 0.2);
+  /* Posé EXPLICITEMENT ici : sur fond sombre c'est le bleu ciel qui porte
+     (10,56:1), pas le bleu secondaire que :root donne aux thèmes clairs */
+  --color-focus-ring: var(--color-primary-300);
   --color-selected: rgba(135, 206, 235, 0.16);
   --color-selected-hover: rgba(135, 206, 235, 0.24);
+  --color-selected-border: rgba(135, 206, 235, 0.45);
+  --color-selection-bg: rgba(135, 206, 235, 0.32);
+  --color-control-knob: var(--color-text-primary);
 
   /* ===== Overlay Colors (Dark) ===== */
   --color-overlay-light: rgba(30, 36, 51, 0.9);
@@ -166,6 +209,11 @@
  * Surfaces are semi-transparent to let the galaxy show through
  */
 [data-theme='space'] {
+  /* Aveux sur fond de page — voir :root. Le barreau -700 y est illisible. */
+  --color-warning-on-background: #fcd34d;
+  --color-error-on-background: #fca5a5;
+  --color-success-on-background: #6ee7b7;
+  --color-info-on-background: #93c5fd;
   --color-neutral-0: #0e1025;
   --color-neutral-50: #12142a;
   --color-neutral-100: #1a1d33;
@@ -207,6 +255,9 @@
   --color-focus-ring: #8b5cf6;
   --color-selected: rgba(139, 92, 246, 0.14);
   --color-selected-hover: rgba(139, 92, 246, 0.22);
+  --color-selected-border: rgba(167, 139, 250, 0.45);
+  --color-selection-bg: rgba(139, 92, 246, 0.38);
+  --color-control-knob: var(--color-text-primary);
 
   --color-overlay-light: rgba(14, 16, 37, 0.92);
   --color-overlay-dark: rgba(8, 10, 22, 0.85);
@@ -236,7 +287,7 @@
 
   --color-text-primary: #3d3229;
   --color-text-secondary: #6b5d4f;
-  --color-text-tertiary: #8c7b6a;
+  --color-text-tertiary: #756350;
   --color-text-disabled: #a89885;
   --color-text-inverted: #faf6f0;
 
@@ -255,7 +306,9 @@
 
   --color-hover-overlay: rgba(180, 120, 80, 0.08);
   --color-active-overlay: rgba(180, 120, 80, 0.15);
-  --color-focus-ring: #c49060;
+  /* Assombri : #c49060 ne tenait que 2,60:1 sur le papier du thème. 4,31:1 ici,
+     et 3,35:1 encore sur la surface la plus sombre du thème */
+  --color-focus-ring: #9c6a35;
   --color-selected: rgba(180, 120, 80, 0.1);
   --color-selected-hover: rgba(180, 120, 80, 0.18);
 
@@ -287,7 +340,7 @@
 
   --color-text-primary: #1a3a5c;
   --color-text-secondary: #3e6890;
-  --color-text-tertiary: #6b92b8;
+  --color-text-tertiary: #4f6f90;
   --color-text-disabled: #92bbe0;
   --color-text-inverted: #ffffff;
 
@@ -306,7 +359,9 @@
 
   --color-hover-overlay: rgba(56, 163, 220, 0.06);
   --color-active-overlay: rgba(56, 163, 220, 0.12);
-  --color-focus-ring: #5fbadf;
+  /* Assombri : #5fbadf ne tenait que 2,09:1 sur ces blancs bleutés. 4,06:1 ici,
+     et 3,40:1 encore sur la surface la plus sombre du thème */
+  --color-focus-ring: #2382b4;
   --color-selected: rgba(56, 163, 220, 0.08);
   --color-selected-hover: rgba(56, 163, 220, 0.15);
 
@@ -319,6 +374,11 @@
  * Theme: Aurora — northern lights, arctic night sky with green/violet accents
  */
 [data-theme='aurora'] {
+  /* Aveux sur fond de page — voir :root. Le barreau -700 y est illisible. */
+  --color-warning-on-background: #fcd34d;
+  --color-error-on-background: #fca5a5;
+  --color-success-on-background: #6ee7b7;
+  --color-info-on-background: #93c5fd;
   --color-neutral-0: #0b1120;
   --color-neutral-50: #111b2e;
   --color-neutral-100: #162038;
@@ -360,6 +420,9 @@
   --color-focus-ring: #22d3a0;
   --color-selected: rgba(34, 211, 160, 0.1);
   --color-selected-hover: rgba(34, 211, 160, 0.18);
+  --color-selected-border: rgba(110, 231, 183, 0.45);
+  --color-selection-bg: rgba(34, 211, 160, 0.32);
+  --color-control-knob: var(--color-text-primary);
 
   --color-overlay-light: rgba(11, 17, 32, 0.92);
   --color-overlay-dark: rgba(6, 10, 20, 0.85);
@@ -389,7 +452,7 @@
 
   --color-text-primary: #4a2035;
   --color-text-secondary: #7a4a60;
-  --color-text-tertiary: #a0708a;
+  --color-text-tertiary: #86586f;
   --color-text-disabled: #c8a0b2;
   --color-text-inverted: #fff8f9;
 
@@ -421,6 +484,11 @@
  * Theme: Crépuscule — warm dark twilight, amber-to-purple dusk glow
  */
 [data-theme='crepuscule'] {
+  /* Aveux sur fond de page — voir :root. Le barreau -700 y est illisible. */
+  --color-warning-on-background: #fcd34d;
+  --color-error-on-background: #fca5a5;
+  --color-success-on-background: #6ee7b7;
+  --color-info-on-background: #93c5fd;
   --color-neutral-0: #1a1018;
   --color-neutral-50: #221620;
   --color-neutral-100: #2a1c28;
@@ -462,6 +530,9 @@
   --color-focus-ring: #e8845c;
   --color-selected: rgba(232, 132, 92, 0.12);
   --color-selected-hover: rgba(232, 132, 92, 0.2);
+  --color-selected-border: rgba(240, 176, 144, 0.45);
+  --color-selection-bg: rgba(232, 132, 92, 0.32);
+  --color-control-knob: var(--color-text-primary);
 
   --color-overlay-light: rgba(26, 16, 24, 0.92);
   --color-overlay-dark: rgba(14, 8, 14, 0.85);
@@ -472,6 +543,11 @@
  * Theme: Forêt — deep pine-green dark theme, mossy canopy with warm amber glints
  */
 [data-theme='foret'] {
+  /* Aveux sur fond de page — voir :root. Le barreau -700 y est illisible. */
+  --color-warning-on-background: #fcd34d;
+  --color-error-on-background: #fca5a5;
+  --color-success-on-background: #6ee7b7;
+  --color-info-on-background: #93c5fd;
   --color-neutral-0: #0d1a12;
   --color-neutral-50: #13231a;
   --color-neutral-100: #1a2e22;
@@ -513,10 +589,207 @@
   --color-focus-ring: #6bbe7d;
   --color-selected: rgba(120, 190, 140, 0.1);
   --color-selected-hover: rgba(120, 190, 140, 0.2);
+  --color-selected-border: rgba(176, 218, 186, 0.45);
+  --color-selection-bg: rgba(120, 190, 140, 0.32);
+  --color-control-knob: var(--color-text-primary);
 
   --color-overlay-light: rgba(15, 29, 21, 0.92);
   --color-overlay-dark: rgba(8, 18, 12, 0.85);
   --color-backdrop: rgba(8, 18, 12, 0.75);
+}
+
+/**
+ * Theme: Terracotta — warm sand & cream with clay/terracotta accents
+ */
+[data-theme='terracotta'] {
+  --color-neutral-0: #fdfaf6;
+  --color-neutral-50: #f8f1e9;
+  --color-neutral-100: #f0e5d9;
+
+  --color-background: #f9f2ea;
+  --color-background-secondary: #f2e7db;
+  --color-background-tertiary: #ead9c9;
+  --color-background-elevated: #fdfaf6;
+
+  --color-surface: #fffcf8;
+  --color-surface-hover: #f5ebe0;
+  --color-surface-active: #ecdfd0;
+
+  --color-border: #e0cdb8;
+  --color-border-light: #eaddcd;
+  --color-border-strong: #cbb096;
+
+  --color-text-primary: #45322a;
+  --color-text-secondary: #6e5849;
+  --color-text-tertiary: #7a6250;
+  --color-text-disabled: #b3a08d;
+  --color-text-inverted: #fffcf8;
+
+  --color-primary-50: rgba(194, 84, 47, 0.08);
+  --color-primary-100: rgba(194, 84, 47, 0.15);
+  --color-primary-200: #e8a385;
+  --color-primary-300: #dd8862;
+  --color-primary-400: #d06d44;
+  --color-primary-500: #c2542f;
+  --color-primary-600: #a84527;
+  --color-primary-700: #85351d;
+  --color-primary-800: #5e2614;
+
+  --color-link: #a84527;
+  --color-link-hover: #85351d;
+
+  --color-hover-overlay: rgba(194, 84, 47, 0.08);
+  --color-active-overlay: rgba(194, 84, 47, 0.15);
+  --color-focus-ring: #d06d44;
+  --color-selected: rgba(194, 84, 47, 0.1);
+  --color-selected-hover: rgba(194, 84, 47, 0.18);
+
+  --color-overlay-light: rgba(253, 250, 246, 0.85);
+  --color-overlay-dark: rgba(69, 50, 42, 0.5);
+  --color-backdrop: rgba(69, 50, 42, 0.4);
+}
+
+/**
+ * Theme: Papier — blanc papier, gris chauds, texte encre, accent ardoise
+ */
+[data-theme='papier'] {
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #faf9f7;
+  --color-neutral-100: #f2f1ee;
+
+  --color-background: #ffffff;
+  --color-background-secondary: #faf9f7;
+  --color-background-tertiary: #f4f3f0;
+  --color-background-elevated: #ffffff;
+
+  --color-surface: #fefdfb;
+  --color-surface-hover: #f6f5f2;
+  --color-surface-active: #efeeea;
+
+  --color-border: #e8e6e1;
+  --color-border-light: #f0eeea;
+  --color-border-strong: #d5d2cb;
+
+  --color-text-primary: #33312c;
+  --color-text-secondary: #5f5c54;
+  --color-text-tertiary: #7d7970;
+  --color-text-disabled: #b3afa6;
+  --color-text-inverted: #ffffff;
+
+  --color-primary-50: rgba(83, 104, 120, 0.07);
+  --color-primary-100: rgba(83, 104, 120, 0.14);
+  --color-primary-200: #a9b8c4;
+  --color-primary-300: #8299a9;
+  --color-primary-400: #68808f;
+  --color-primary-500: #536878;
+  --color-primary-600: #435564;
+  --color-primary-700: #35434f;
+  --color-primary-800: #28323b;
+
+  --color-link: #435564;
+  --color-link-hover: #35434f;
+
+  --color-hover-overlay: rgba(83, 104, 120, 0.06);
+  --color-active-overlay: rgba(83, 104, 120, 0.12);
+  --color-focus-ring: #68808f;
+  --color-selected: rgba(83, 104, 120, 0.08);
+  --color-selected-hover: rgba(83, 104, 120, 0.14);
+
+  --color-overlay-light: rgba(255, 255, 255, 0.88);
+  --color-overlay-dark: rgba(51, 49, 44, 0.45);
+  --color-backdrop: rgba(51, 49, 44, 0.35);
+}
+
+/**
+ * Theme: Minuit — bleu nuit profond, texte ivoire, accent doré chaleureux
+ */
+[data-theme='minuit'] {
+  /* Aveux sur fond de page — voir :root. Le barreau -700 y est illisible. */
+  --color-warning-on-background: #fcd34d;
+  --color-error-on-background: #fca5a5;
+  --color-success-on-background: #6ee7b7;
+  --color-info-on-background: #93c5fd;
+  --color-neutral-0: #0a0f1e;
+  --color-neutral-50: #101728;
+  --color-neutral-100: #18203a;
+  /* Le haut de l'échelle restait au gris ardoise de :root : les barres de
+     défilement (reset.css, Layout.css) tranchaient sur le bleu nuit. */
+  --color-neutral-500: #3a4a70;
+  --color-neutral-600: #23304f;
+  /* Le milieu de l'échelle restait aux gris clairs de :root : bouton secondaire
+     au survol, interrupteur éteint, pistes de progression et fond du conteneur
+     PDF s'allumaient en blanc cassé sur le bleu nuit. neutral-400 sert aussi de
+     couleur de TEXTE (FilePreviewPanel) : il lui faut du contraste. */
+  --color-neutral-200: #1f2947;
+  --color-neutral-300: #2a3758;
+  --color-neutral-400: #6b7a9e;
+
+  /* Pastels sémantiques : les valeurs de :root sont des fonds quasi-blancs
+     (#fef3c7, #fef2f2…). Translucides ici pour rester des teintes. */
+  --color-success-50: rgba(16, 185, 129, 0.12);
+  --color-success-100: rgba(16, 185, 129, 0.18);
+  --color-warning-50: rgba(245, 158, 11, 0.1);
+  --color-warning-100: rgba(245, 158, 11, 0.18);
+  --color-warning-200: rgba(245, 158, 11, 0.35);
+  --color-error-50: rgba(239, 68, 68, 0.12);
+  --color-error-100: rgba(239, 68, 68, 0.18);
+  --color-info-50: rgba(59, 130, 246, 0.12);
+  --color-info-100: rgba(59, 130, 246, 0.18);
+  /* Le pendant : le barreau -700 est la couleur de TEXTE posée sur ces pastels
+     (bandeaux d'avertissement, listes de résultats…). Les rouges/verts sombres
+     de :root deviennent illisibles sur une teinte translucide au-dessus du
+     bleu nuit — on remonte l'échelle. */
+  --color-success-700: #6ee7b7;
+  --color-warning-700: #fcd34d;
+  --color-error-700: #fca5a5;
+
+  --color-background: #0a0f1e;
+  --color-background-secondary: #101728;
+  --color-background-tertiary: #141b30;
+  --color-background-elevated: #161e35;
+
+  --color-surface: #101728;
+  --color-surface-hover: #18203a;
+  --color-surface-active: #212b48;
+
+  --color-border: rgba(70, 90, 135, 0.5);
+  --color-border-light: rgba(50, 66, 102, 0.5);
+  --color-border-strong: rgba(130, 155, 210, 0.6);
+
+  --color-text-primary: #f2ece0;
+  --color-text-secondary: #bcc3d6;
+  --color-text-tertiary: #8a93ab;
+  --color-text-disabled: #5b6480;
+  --color-text-inverted: #0a0f1e;
+
+  --color-primary-50: rgba(226, 171, 85, 0.08);
+  --color-primary-100: rgba(226, 171, 85, 0.15);
+  --color-primary-200: #f5d9a3;
+  --color-primary-300: #ecc177;
+  --color-primary-400: #e2ab55;
+  --color-primary-500: #d0953c;
+  --color-primary-600: #e2ab55;
+  --color-primary-700: #ecc177;
+  --color-primary-800: #f5d9a3;
+
+  --color-link: #ecc177;
+  --color-link-hover: #f5d9a3;
+
+  --color-hover-overlay: rgba(226, 171, 85, 0.08);
+  --color-active-overlay: rgba(226, 171, 85, 0.16);
+  --color-focus-ring: #e2ab55;
+  --color-selected: rgba(226, 171, 85, 0.12);
+  --color-selected-hover: rgba(226, 171, 85, 0.2);
+  --color-selected-border: rgba(226, 171, 85, 0.45);
+  --color-selection-bg: rgba(226, 171, 85, 0.32);
+  --color-control-knob: var(--color-text-primary);
+
+  --color-drag-over: rgba(226, 171, 85, 0.12);
+  --color-drop-zone-active: rgba(226, 171, 85, 0.28);
+
+  --color-overlay-light: rgba(16, 23, 40, 0.92);
+  --color-overlay-dark: rgba(6, 10, 20, 0.85);
+  --color-backdrop: rgba(6, 10, 20, 0.75);
 }
 
 /**

@@ -1,0 +1,158 @@
+/**
+ * chrome.css — LA géométrie du chrome natif de fenêtre, et rien d'autre.
+ *
+ * ── LE PROBLÈME ────────────────────────────────────────────────────────────
+ * La fenêtre est sans cadre (electron/main.ts, `titleBarStyle: 'hidden'`). La
+ * bande haute n'appartient donc PAS au DOM : l'OS y peint les boutons de
+ * fenêtre — à DROITE sous Windows/Linux, les feux à GAUCHE sous macOS — et il
+ * les peint AU-DESSUS du web. Un contrôle dessiné là n'est pas « caché », il
+ * est INATTEIGNABLE : le clic part à l'OS, et ferme l'application.
+ *
+ * Jusqu'ici chaque surface plein écran re-devinait la géométrie à la main
+ * (« 140 px à droite, 40 px en haut »), en six endroits indépendants, chacun
+ * découvert après que le bug a mordu. Trois de ces six valeurs étaient
+ * fausses, et AUCUNE n'était juste sur macOS — où 140 px étaient réservés du
+ * côté OPPOSÉ aux feux.
+ *
+ * ── CE QU'ON MESURE, ET POURQUOI IL N'Y A AUCUNE BRANCHE PAR PLATEFORME ────
+ * `env(titlebar-area-*)` donne la zone UTILISABLE de la barre de titre. Les
+ * réserves s'en déduisent par SOUSTRACTION, et c'est ce qui rend macOS gratuit :
+ *
+ *   Windows/Linux   x=0,  width=W-137  →  gauche 0,   droite 137
+ *   macOS           x=78, width=W-78   →  gauche 78,  droite 0
+ *   pas d'overlay   (replis ci-dessous) →  0, 0, 0
+ *
+ * Les replis de chaque `env()` donnent 0 partout où l'API n'existe pas —
+ * 100vw - 0 - 100vw = 0. Le build web n'a donc RIEN à désactiver, et la
+ * fenêtre mini (`frame: false` SANS `titleBarOverlay`, electron/miniWindow.ts)
+ * non plus. C'est délibéré : « pas d'API » veut dire « pas de chrome », jamais
+ * « suppose 140 px ». Un repli qui se trompe est pire qu'une réserve absente —
+ * il amputerait la fenêtre mini de 140 px sur 320.
+ *
+ * ── POURQUOI ZÉRO JAVASCRIPT ───────────────────────────────────────────────
+ * Mesuré sur Electron 41.2.1 / Windows 11 : `env()` calcule exactement la même
+ * chose que `navigator.windowControlsOverlay.getTitlebarAreaRect()`, il est
+ * servi par le moteur AVANT le premier script (donc la première image est déjà
+ * juste, sans recalage visible), et il suit le maximiser/restaurer TOUT SEUL
+ * (1200 → 1920 → 1904, réserve constante à 137). Un module JS qui republierait
+ * ces valeurs dans des variables serait une seconde source pour la même
+ * grandeur : deux sources, deux occasions de diverger, pour zéro gain.
+ *
+ * ── POURQUOI CHAQUE SÉLECTEUR EST DOUBLÉ ───────────────────────────────────
+ * Ce fichier est @importé par global.css, et les `@import` sont hissés EN TÊTE
+ * du bundle : mesuré, il atterrit vers l'octet 141 000, quand les utilitaires
+ * Tailwind occupent 148 000–210 000 et les feuilles de composants vont jusqu'à
+ * 456 000. Un sélecteur de classe simple pèse (0,1,0) — À SPÉCIFICITÉ ÉGALE,
+ * LE PLUS TARDIF GAGNE. Écrites `.chrome-safe-bar`, ces règles perdraient donc
+ * en SILENCE contre un `py-3` de Tailwind ou contre le `padding` d'un
+ * composant. Doublées, elles pèsent (0,2,0) et l'emportent quel que soit
+ * l'ordre du bundle.
+ *
+ * RÈGLE DE SÛRETÉ : ne jamais dé-doubler un sélecteur de ce fichier, et ne
+ * jamais poser un `padding` RACCOURCI sur un élément qui porte une de ces
+ * classes — le raccourci réinitialise `padding-left`/`padding-right` et la
+ * réserve disparaît sans un mot. Passer par `--chrome-bar-pad`.
+ *
+ * ── POURQUOI padding-left/right ET NON padding-inline ──────────────────────
+ * Les feux macOS sont à gauche PHYSIQUEMENT, y compris dans une interface RTL.
+ * Une propriété logique retournerait la réserve du mauvais côté en arabe.
+ */
+
+:root {
+  /** Hauteur de la bande native (0 s'il n'y a pas d'overlay). */
+  --chrome-inset-top: env(titlebar-area-height, 0px);
+  /** Réserve au bord GAUCHE — les feux macOS. 0 ailleurs. */
+  --chrome-inset-left: env(titlebar-area-x, 0px);
+  /** Réserve au bord DROIT — min/max/close Windows/Linux. 0 sur macOS. */
+  --chrome-inset-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+
+  /**
+   * Le padding PROPRE d'une barre, qui s'AJOUTE à la réserve native.
+   *
+   * Déclaré sur `:root` pour que la valeur posée sur l'élément lui-même
+   * l'emporte toujours : une propriété personnalisée héritée cède face à une
+   * propriété personnalisée locale, quelle que soit la spécificité des règles
+   * qui les portent. Aucun conflit d'ordre de cascade n'est possible.
+   */
+  --chrome-bar-pad: 0px;
+}
+
+/* ===== Les branchements — une classe, une ligne dans le composant ===== */
+
+/**
+ * Une barre qui touche le bord DROIT de la bande (boutons Windows/Linux).
+ */
+.chrome-safe-right.chrome-safe-right,
+.chrome-safe-inline.chrome-safe-inline,
+.chrome-safe-bar.chrome-safe-bar {
+  padding-right: calc(var(--chrome-bar-pad) + var(--chrome-inset-right));
+}
+
+/**
+ * Une barre qui touche le bord GAUCHE de la bande (feux macOS).
+ */
+.chrome-safe-left.chrome-safe-left,
+.chrome-safe-inline.chrome-safe-inline,
+.chrome-safe-bar.chrome-safe-bar {
+  padding-left: calc(var(--chrome-bar-pad) + var(--chrome-inset-left));
+}
+
+/**
+ * Une surface qui REFUSE la bande et commence dessous.
+ *
+ * `--chrome-bar-pad` est additionné ici aussi : une surface qui avait déjà son
+ * propre écart en haut le garde, au lieu de le voir écrasé par la réserve.
+ */
+.chrome-safe-top.chrome-safe-top {
+  padding-top: calc(var(--chrome-bar-pad) + var(--chrome-inset-top));
+}
+
+/**
+ * Une barre qui PREND la bande : elle en tient toute la hauteur (un résidu de
+ * bande dépassant sous elle serait une zone morte), et elle devient la poignée
+ * de déplacement de la fenêtre.
+ *
+ * Pas de `> * { no-drag }` ici : `global.css` soustrait déjà button, input,
+ * select, textarea, a et [role] À TOUTE PROFONDEUR, et Blink retire une région
+ * `no-drag` tardive d'une région `drag` antérieure. Une règle sur les enfants
+ * DIRECTS ne rendrait pas les contrôles plus cliquables — elle retirerait
+ * seulement la poignée de déplacement, qui est tout l'intérêt de la classe.
+ */
+.chrome-safe-bar.chrome-safe-bar {
+  min-height: var(--chrome-inset-top);
+  -webkit-app-region: drag;
+}
+
+/**
+ * Une barre qui TIENT la bande sans la revendiquer comme poignée.
+ *
+ * `.chrome-safe-right` ne pose qu'un padding : une barre plus BASSE que la
+ * bande laisse alors une lisière que l'OS peint et que l'écran d'en dessous
+ * croit posséder. La barre d'onglets mesure 37 px pour une bande de 40 :
+ * 3 px de résidu, invisibles jusqu'au jour où un contrôle s'y glisse.
+ */
+.chrome-band-height.chrome-band-height {
+  min-height: var(--chrome-inset-top);
+}
+
+/** Pour un élément non interactif que `global.css` ne nomme pas. */
+.chrome-no-drag.chrome-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/**
+ * La bande de déplacement GLOBALE — la géométrie de `WindowDragRegion`, qui
+ * n'en porte plus aucune en dur. Elle s'arrête au bord des boutons natifs des
+ * DEUX côtés : sous macOS elle démarre après les feux, ce qu'aucune version
+ * précédente ne faisait.
+ */
+.chrome-drag-band {
+  position: fixed;
+  top: 0;
+  left: var(--chrome-inset-left);
+  right: var(--chrome-inset-right);
+  height: var(--chrome-inset-top);
+  z-index: 99999;
+  pointer-events: none;
+  -webkit-app-region: drag;
+}

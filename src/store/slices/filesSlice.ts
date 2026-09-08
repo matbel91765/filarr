@@ -10,8 +10,10 @@ import { fileService } from '../../services';
 import errorService from '../../services/platform/errorService';
 import searchService from '../../services/search/searchService';
 import { indexPdfContent } from '../../services/search/pdfTextExtractor';
+import { generateUniqueId } from '../../utils/idGenerator';
 import type { FileItem, Folder, DownloadResult } from '../../types';
 import { fetchFolder, fetchFolders } from './foldersSlice';
+import { processFileEvent as dispatchAutomationFileEvent } from './automationSlice';
 
 /**
  * Queue PDF text extraction for search indexing (async, non-blocking).
@@ -114,6 +116,19 @@ interface UpdateFileMetadataParams {
   metadata: Partial<FileItem>;
 }
 
+interface ConvertFileToVaultShortcutParams {
+  folderId: string;
+  fileId: string;
+  vaultId: string;
+  itemId: string;
+}
+
+interface ConvertFileToVaultShortcutResult {
+  folderId: string;
+  /** La fiche-raccourci telle que persistée : `vaultRef` posé, sans octets. */
+  file: FileItem;
+}
+
 interface ProgressPayload {
   fileId: string;
   progress: number;
@@ -145,11 +160,56 @@ export const addFileToFolder = createAsyncThunk<
     // Indication de progression initiale
     dispatch(setUploadProgress({ fileId: 'pending', progress: 0 }));
 
+    // Pre-attach an id so we can wire the new file into automation rules below.
+    // fileService.addFileToFolder honors `file.id` if present, else generates one.
+    const preAssignedId = (file as any)?.id || generateUniqueId();
+    try {
+      (file as any).id = preAssignedId;
+    } catch {
+      // File objects in some environments may reject custom props; fileService
+      // will then generate its own id and the automation event will fall back
+      // to the last item in the resulting folder.
+    }
+
     // Ajout du fichier via le service
     const result = await fileService.addFileToFolder(folderId, file as any);
 
     // Mise à jour de progression finale
     dispatch(setUploadProgress({ fileId: 'pending', progress: 100 }));
+
+    // Fire automation `file_created` event (best-effort, fire-and-forget)
+    try {
+      const fileName: string = (file as any)?.name ?? '';
+      const fileType: string = (file as any)?.type || 'file';
+      const fileSize: number = typeof (file as any)?.size === 'number' ? (file as any).size : 0;
+      const newFileId: string =
+        (file as any)?.id ||
+        (Array.isArray(result?.items) && result.items.length > 0
+          ? result.items[result.items.length - 1]
+          : preAssignedId);
+      const dotIdx = fileName.lastIndexOf('.');
+      const extension = dotIdx >= 0 ? fileName.slice(dotIdx + 1).toLowerCase() : '';
+      const now = new Date().toISOString();
+      dispatch(
+        dispatchAutomationFileEvent({
+          trigger: 'file_created',
+          file: {
+            id: newFileId,
+            name: fileName,
+            extension,
+            type: fileType,
+            size: fileSize,
+            folderId,
+            folderPath: result?.name || '',
+            createdAt: now,
+            modifiedAt: now,
+            tags: [],
+          },
+        })
+      );
+    } catch (automationErr) {
+      console.warn('[filesSlice] failed to dispatch automation file_created event:', automationErr);
+    }
 
     // Retourner le résultat pour le reducer
     return result;
@@ -361,6 +421,55 @@ export const updateFileMetadata = createAsyncThunk<
   }
 });
 
+/**
+ * « Déplacer vers le coffre en laissant un raccourci » — la moitié PERSONNELLE
+ * du geste, une fois les octets déposés dans le coffre (`addVaultItem` a rendu
+ * `itemId`). Les octets quittent l'espace personnel ; la fiche reste, devenue
+ * raccourci (`vaultRef`). `movedAt` est pris ICI, au moment du geste : c'est
+ * la seule date que la fiche portera, et elle ne dépend d'aucune horloge serveur.
+ */
+export const convertFileToVaultShortcut = createAsyncThunk<
+  ConvertFileToVaultShortcutResult,
+  ConvertFileToVaultShortcutParams,
+  { rejectValue: SerializedError }
+>(
+  'files/convertToVaultShortcut',
+  async ({ folderId, fileId, vaultId, itemId }, { rejectWithValue }) => {
+    try {
+      const movedAt = new Date().toISOString();
+      const folder = await fileService.convertFileToVaultShortcut(folderId, fileId, {
+        vaultId,
+        itemId,
+        movedAt,
+      });
+      // `Folder.items` est typé `string[]` mais transporte les fiches complètes
+      // (même lecture que `addFileToFolder.fulfilled`) : on relit la fiche
+      // telle que PERSISTÉE plutôt que de la reconstruire ici — c'est elle qui
+      // fait foi sur ce qui a été retiré.
+      const file = (folder.items as unknown as Array<FileItem | string>).find(
+        (item): item is FileItem => typeof item === 'object' && item.id === fileId
+      );
+      if (!file) {
+        throw new Error(`Fiche ${fileId} introuvable après conversion en raccourci`);
+      }
+      return { folderId, file };
+    } catch (error) {
+      const appError = errorService.createFromError(
+        error as Error,
+        `Impossible de transformer le fichier ${fileId} en raccourci vers le coffre`,
+        errorService.ErrorTypes.FILE_SYSTEM
+      );
+      errorService.logError(appError, 'convertFileToVaultShortcut');
+      return rejectWithValue({
+        name: appError.name,
+        message: appError.message,
+        details: appError.metadata ? JSON.parse(JSON.stringify(appError.metadata)) : null,
+        type: appError.type,
+      });
+    }
+  }
+);
+
 // Slice
 const filesSlice = createSlice({
   name: 'files',
@@ -534,6 +643,26 @@ const filesSlice = createSlice({
       .addCase(updateFileMetadata.rejected, (state, action) => {
         state.loading = false;
         // Ensure action.payload is treated as a plain object
+        state.error = action.payload ?? null;
+      })
+
+      // Gestion de convertFileToVaultShortcut
+      .addCase(convertFileToVaultShortcut.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(convertFileToVaultShortcut.fulfilled, (state, action) => {
+        state.loading = false;
+        const { file } = action.payload;
+        // REMPLACER, pas fusionner : une fusion garderait `encryptedData`/`iv`
+        // de l'ancienne fiche, et l'état afficherait des octets qui n'existent plus.
+        state.byId[file.id] = file;
+        if (!state.allIds.includes(file.id)) {
+          state.allIds.push(file.id);
+        }
+      })
+      .addCase(convertFileToVaultShortcut.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload ?? null;
       })
       // Also need to handle readFile.rejected and downloadFile.rejected if they set state.error

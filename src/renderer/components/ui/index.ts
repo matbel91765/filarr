@@ -88,3 +88,23 @@ export { ErrorBoundary } from './ErrorBoundary';
 
 // PomodoroWidget
 export { PomodoroWidget } from './PomodoroWidget';
+
+// Avatar (pastille d'initiales + empilement)
+export { Avatar, AvatarStack } from './Avatar';
+export type { AvatarProps, AvatarSize, AvatarStackProps, AvatarStackItem } from './Avatar';
+
+// Tabs (barre d'onglets ARIA, focus roving)
+export { Tabs, tabButtonId, tabPanelId, tabPanelProps } from './Tabs';
+export type { TabsProps, TabDescriptor } from './Tabs';
+
+// EmptyState (état vide qui dit quoi faire — son action est un `Button`)
+export {
+  EmptyState,
+  EmptyFileIcon,
+  EmptyFolderIcon,
+  EmptyChartIcon,
+  EmptyInboxIcon,
+  EmptyLockIcon,
+  EmptyUploadIcon,
+  EmptyBellIcon,
+} from './EmptyState/EmptyState';

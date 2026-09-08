@@ -1,0 +1,249 @@
+/**
+ * Les trois modèles — feuille de style du SÉLECTEUR et du langage visuel qu'ils
+ * partagent.
+ *
+ * Zéro couleur en dur : le produit a neuf thèmes, une valeur hexadécimale posée
+ * ici serait juste sur l'un d'eux et fausse sur les huit autres.
+ */
+
+/* ==================== Le sélecteur ==================== */
+
+.home-preset__hint {
+  margin: 0 0 var(--spacing-4) 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+/**
+ * Trois cartes de front quand la place le permet, une colonne sinon. Les cartes
+ * de géométrie n'ont d'intérêt QUE côte à côte : c'est la comparaison qui dit
+ * lequel des trois est dense et lequel est aéré.
+ */
+.home-preset__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-4);
+}
+
+.home-preset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.home-preset:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-surface-hover);
+}
+
+/* Le modèle en place se signale par sa bordure ET par son étiquette : la
+   couleur seule ne dit rien à qui ne la distingue pas. */
+.home-preset--active {
+  border-color: var(--color-primary-500);
+}
+
+.home-preset__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.home-preset__name {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.home-preset__badge {
+  padding: 0 var(--spacing-2);
+  border-radius: var(--radius-badge, 4px);
+  background: color-mix(in srgb, var(--color-primary-500) 16%, transparent);
+  color: var(--color-primary-600);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.home-preset__description {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+/* ==================== Le langage des modèles ==================== */
+
+/**
+ * LA COLONNE D'« ESSENTIEL ».
+ *
+ * La grille s'étend sur toute la largeur de la page ; le texte, lui, ne doit pas
+ * — une ligne de 1400 px se relit en tournant la tête. Les blocs d'« Essentiel »
+ * se bornent donc EUX-MÊMES et se centrent, ce qui donne la colonne unique quel
+ * que soit le sous-ensemble de blocs posé.
+ *
+ * ⚠ ÉCART ASSUMÉ : la conception demandait que la PAGE passe à 880 px sous ce
+ * modèle. Le conteneur de l'accueil est fixé à 1400 px dans `Home.tsx`, hors du
+ * périmètre de ce chantier ; le résultat visuel est le même (une colonne centrée
+ * de 880 px), mais la zone de dépôt de la grille, elle, reste large.
+ */
+.home-column {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+}
+
+/**
+ * LE RYTHME VERTICAL. 40 px entre deux éléments d'un même bloc — la trame du
+ * produit est à 8 px, 40 en est le cinquième multiple. Les rangées de la grille
+ * (88 px) commandent l'espace ENTRE les blocs ; ceci commande l'intérieur.
+ */
+.home-rhythm {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/**
+ * UNE LIGNE, PAS UNE CARTE. « Essentiel » n'a aucune carte à bordure : le
+ * repère est le filet qui sépare deux lignes, et le survol allume un fond, pas
+ * un contour. Une liste de cinq cartes à bordure fait cinq boîtes qu'on compte ;
+ * cinq lignes font une liste qu'on lit.
+ */
+.home-line {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-2);
+  border: 0;
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.home-line + .home-line {
+  box-shadow: inset 0 1px 0 0 var(--color-border);
+}
+
+.home-line:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ==================== Le langage du « Tableau de bord » ==================== */
+
+/**
+ * LA SURFACE. Une seule : fond de surface, bordure neutre, `--shadow-sm` au
+ * maximum. Aucune bordure colorée, aucun dégradé — c'est ce qui empêche un
+ * tableau de bord de devenir un sapin de Noël au bout de trois blocs.
+ */
+.home-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  height: 100%;
+  min-height: 0;
+  padding: var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/**
+ * TOUT LIBELLÉ EST EN PETITES MAJUSCULES ESPACÉES. Une seule classe pour toute
+ * la page : c'est la règle la plus facile à enfreindre sans le voir, parce que
+ * chaque bloc a l'air correct isolément.
+ */
+.home-card__label {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/**
+ * TOUTE VALEUR NUMÉRIQUE A LA MÊME GRAISSE ET LA MÊME TAILLE. Un chiffre plus
+ * gros qu'un autre est une hiérarchie, et une hiérarchie qu'aucune donnée ne
+ * justifie fait lire « ceci compte plus » à propos de rien.
+ *
+ * `tabular-nums` en prime : sans lui, un compteur qui passe de 8 à 9 déplace
+ * tout ce qui le suit.
+ */
+.home-metric {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-2xl, 1.5rem);
+  font-weight: var(--font-weight-semibold, 600);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==================== LES CADRES DE BLOC ====================
+ *
+ * Quatre variantes de `.home-card`, chacune pour une situation de composition
+ * précise. Elles ne redéfinissent QUE ce qui les distingue : la géométrie
+ * (colonne, gouttières, hauteur, débordement) reste celle de `.home-card`, et
+ * dupliquer ces sept propriétés quatre fois aurait garanti qu'elles divergent.
+ */
+
+/* NU — le contenu flotte sur la page. À poser sous un titre de section, qui
+   annonce déjà le bloc : un cadre de plus n'annoncerait rien de nouveau. */
+.home-card--plain {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding: var(--spacing-2);
+}
+
+/* CONTOUR — un trait, pas de fond. Sur un décor animé, une surface pleine
+   bouche l'image ; le contour tient le bloc en la laissant voir. */
+.home-card--outline {
+  background: transparent;
+  box-shadow: none;
+  border-color: var(--color-border-strong);
+}
+
+/* VERRE — translucide et flouté.
+   `backdrop-filter` ne coûte QUE s'il y a quelque chose derrière : sur un fond
+   uni, ce cadre se confond avec une carte, et c'est le comportement voulu — il
+   ne fabrique pas d'effet là où il n'y a rien à voir. */
+.home-card--glass {
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  border-color: color-mix(in srgb, var(--color-border-strong) 60%, transparent);
+}
+
+/* ACCENT — la barre de couleur à gauche.
+   Le bloc qu'on veut voir EN PREMIER. La barre est posée en `box-shadow`
+   interne et non en `border-left` : une bordure asymétrique décalerait le
+   contenu de trois pixels par rapport aux blocs voisins, et la grille ne
+   s'alignerait plus. */
+.home-card--accent {
+  background: color-mix(in srgb, var(--color-primary-500) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary-500) 30%, var(--color-border));
+  box-shadow:
+    inset 3px 0 0 0 var(--color-primary-500),
+    var(--shadow-sm);
+}
+
+.home-card--accent .home-card__label {
+  color: var(--color-primary-700);
+}

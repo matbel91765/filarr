@@ -1,0 +1,668 @@
+/**
+ * PluginEditorShell — la coquille, et le RETHÉMAGE du greffon depuis l'hôte.
+ *
+ * ── POURQUOI LE THÈME SE POSE ICI ET PAS DANS LE GREFFON ───────────────────
+ * Le greffon docs est VENDORISÉ : il arrive tel quel, il injecte sa propre
+ * feuille de style dans le conteneur qu'on lui donne, et Filarr « n'impose ni
+ * ne reçoit aucune feuille de style » (son en-tête le dit). On ne le modifie
+ * donc pas. Mais il monte dans le DOM de l'hôte : ses sélecteurs `.fdocs-*`
+ * pèsent une classe, les nôtres en pèsent une de plus dès qu'on les préfixe de
+ * `.plugin-editor-shell__stage`. La spécificité gagne, à tous les coups, sans
+ * un seul `!important` et sans dépendre de l'ordre d'insertion — ce qui compte,
+ * puisque la feuille du greffon est injectée APRÈS le bundle de l'application
+ * et remporterait toute égalité.
+ *
+ * RÈGLE DE SÛRETÉ : chaque règle ci-dessous DOIT commencer par
+ * `.plugin-editor-shell__stage`. Une seule oubliée, et c'est une égalité de
+ * spécificité — donc la règle du greffon qui l'emporte, silencieusement.
+ *
+ * ── LE COUPLE BUREAU / PAGE ────────────────────────────────────────────────
+ * Le bureau prend `--color-background-secondary`, la page
+ * `--color-background-elevated`. Ce n'est pas le couple « secondary / surface »
+ * qu'on écrirait d'instinct : dans QUATRE thèmes livrés (dark, crépuscule,
+ * forêt, minuit) `--color-surface` VAUT `--color-background-secondary` — la
+ * feuille aurait disparu dans son bureau, exactement le défaut qu'on répare.
+ * `--color-background-elevated` est plus clair que `--color-background-secondary`
+ * dans les douze thèmes, clairs comme sombres : c'est le seul couple universel.
+ */
+
+.plugin-editor-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+
+/* ===== LA barre haute — une seule, et c'est tout le chrome de l'hôte ===== */
+
+.plugin-editor-shell__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  flex-shrink: 0;
+  /* Le padding PROPRE de la barre, auquel `.chrome-safe-bar` AJOUTE la
+     réserve native. 20 px plutôt que 12 : c'est l'écart qui sépare la
+     dernière commande de l'hôte du premier bouton de l'OS, et 12 px les
+     laissaient se toucher au point de paraître appartenir au même groupe.
+     Surtout PAS le raccourci `padding` — il réinitialiserait
+     padding-left/right et effacerait la réserve sans un mot. */
+  --chrome-bar-pad: 20px;
+  padding-top: 0;
+  padding-bottom: 0;
+  background: var(--color-background);
+  border-bottom: var(--border-width-1, 1px) solid var(--color-border-light);
+}
+
+.plugin-editor-shell__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.plugin-editor-shell__back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.plugin-editor-shell__back:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.plugin-editor-shell__back:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.plugin-editor-shell__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Dérivé de .note-editor__title — même geste (on tape dans le titre), même
+   sobriété, à une échelle de barre d'outils. */
+.plugin-editor-shell__title {
+  width: 100%;
+  max-width: 520px;
+  min-width: 0;
+  border: var(--border-width-1, 1px) solid transparent;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  font-family: var(--font-family-base);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-primary);
+  padding: 5px 8px;
+  margin: 0;
+  outline: none;
+  text-overflow: ellipsis;
+}
+
+.plugin-editor-shell__title:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+}
+
+.plugin-editor-shell__title:focus {
+  background: var(--color-background-elevated);
+  border-color: var(--color-border);
+}
+
+.plugin-editor-shell__title:focus-visible {
+  box-shadow: var(--shadow-focus);
+}
+
+.plugin-editor-shell__title:disabled {
+  color: var(--color-text-primary);
+  opacity: 1;
+  cursor: default;
+  /* Un titre non modifiable ne doit pas AVOIR L'AIR d'un champ éteint : il
+     n'est pas désactivé, il est simplement en lecture. */
+}
+
+/* ===== La pastille d'état — le langage visuel de .note-editor__save-state ===
+
+   Ses classes ne sont PAS réutilisées telles quelles : elles vivent dans
+   NoteEditor.css, une feuille que rien ne garantit chargée quand l'éditeur de
+   documents s'ouvre depuis l'explorateur. Une pastille sans style est pire
+   qu'une pastille absente — elle ment sur l'enregistrement. */
+
+.plugin-editor-shell__save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  user-select: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.plugin-editor-shell__save-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.plugin-editor-shell__save-dot--synced {
+  background: #22c55e;
+}
+
+.plugin-editor-shell__save-dot--saving {
+  background: #3b82f6;
+  animation: plugin-editor-shell-pulse 1.2s ease-in-out infinite;
+}
+
+.plugin-editor-shell__save-dot--pending {
+  background: #f59e0b;
+}
+
+.plugin-editor-shell__save-dot--error {
+  background: #ef4444;
+}
+
+.plugin-editor-shell__save--synced {
+  opacity: 0.7;
+}
+
+.plugin-editor-shell__save--saving {
+  color: var(--color-primary-600, #4682b4);
+}
+
+.plugin-editor-shell__save--pending {
+  color: #b45309;
+}
+
+.plugin-editor-shell__save--error {
+  color: #b91c1c;
+}
+
+@keyframes plugin-editor-shell-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plugin-editor-shell__save-dot--saving {
+    animation: none;
+  }
+}
+
+.plugin-editor-shell__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* La barre de présence vient de l'éditeur de notes de coffre, où elle occupe
+   une ligne entière. Dans une barre de 48 px elle doit tenir sur UNE rangée :
+   son `flex-wrap` doublerait la hauteur dès le troisième participant. */
+.plugin-editor-shell__actions .vault-collab-presence {
+  flex-wrap: nowrap;
+  max-width: 340px;
+  overflow: hidden;
+  padding: 3px 8px;
+  gap: 0.5rem;
+}
+
+/* ===== La scène — le « bureau » sur lequel repose la feuille ===== */
+
+.plugin-editor-shell__stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* Le bureau est le fond secondaire ASSOMBRI de 10 %, et cette poignée de
+     pour-cent n'est pas une coquetterie : mesuré dans Chromium sur les douze
+     thèmes, le couple brut « secondary / elevated » tombe à 1,00:1 en aurora
+     (#0e1b2e contre #111b2e) — la feuille disparaissait dans son bureau. Un
+     assombrissement relatif creuse l'écart dans TOUS les thèmes, clairs comme
+     sombres, sans supposer lequel est lequel. */
+  background: color-mix(in srgb, var(--color-background-secondary) 90%, #000 10%);
+  /* LE CROCHET DORMANT DU GREFFON. `.fdocs-page{background:var(--fdocs-page-bg,
+     Canvas)}` attendait cette variable depuis le premier jour ; personne ne la
+     posait, et la page tombait sur les couleurs UA — blanche sous un thème
+     sombre, ou pire, noire selon le color-scheme du système. */
+  --fdocs-page-bg: var(--color-background-elevated);
+}
+
+/* Les bandeaux de l'HÔTE (montage impossible, version trop récente, conflit,
+   document trop gros pour la salle).
+
+   EN FLUX, PAS EN SURIMPRESSION — et c'est délibéré. Un bandeau posé en absolu
+   en haut de la scène recouvrirait la barre d'outils du greffon ET son panneau
+   de recherche, dont l'hôte ne connaît ni la hauteur ni l'état. On préfère
+   pousser la scène de quelques dizaines de pixels, le temps qu'un incident
+   dure, plutôt que masquer les commandes qui permettent d'en sortir.
+   Le conteneur du greffon, lui, reste un FRÈRE STABLE : il n'est jamais rendu
+   conditionnellement, donc jamais démonté quand un bandeau apparaît. */
+.plugin-editor-shell__banners {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 12px 24px 0;
+  width: 100%;
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+/* Aucun bandeau ⇒ aucune bande. Sans cette règle, un hôte qui passe un
+   fragment aux branches toutes fausses laisserait 12 px de vide en haut de la
+   scène — un décalage permanent pour un incident qui n'a pas lieu. */
+.plugin-editor-shell__banners:empty {
+  display: none;
+}
+
+.plugin-editor-shell__banner {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-md, 8px);
+  border: var(--border-width-1, 1px) solid var(--color-border-light);
+  background: var(--color-background-elevated);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.plugin-editor-shell__banner--warning {
+  color: var(--color-warning-700, #b45309);
+  background: var(--color-warning-50, #fffbeb);
+}
+
+.plugin-editor-shell__banner--error {
+  color: var(--color-error-600, #dc2626);
+  background: var(--color-error-50, #fef2f2);
+}
+
+.plugin-editor-shell__banner-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.plugin-editor-shell__banner-detail {
+  margin: 4px 0 0;
+  font-family: var(--font-family-mono);
+  word-break: break-all;
+  opacity: 0.85;
+}
+
+/* Le point d'ancrage du greffon — NŒUD REACT STABLE, jamais conditionnel. */
+.plugin-editor-shell__mount {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.plugin-editor-shell__container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Le voile d'attente / d'échec de lecture : il RECOUVRE la scène au lieu de
+   remplacer le conteneur — remplacer, c'était démonter, et démonter en pleine
+   collaboration coûte la salle. */
+.plugin-editor-shell__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  /* Même fond que la scène, calculé pareil : un voile plus clair d'un pouce
+     ferait un rectangle visible au chargement. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: color-mix(in srgb, var(--color-background-secondary) 90%, #000 10%);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.plugin-editor-shell__veil--error {
+  color: var(--color-error-600, #dc2626);
+}
+
+/* ==========================================================================
+   LE RETHÉMAGE DU GREFFON — tout ce qui suit vise `.fdocs-*` DEPUIS l'hôte.
+   Chaque sélecteur est préfixé : c'est ce préfixe qui gagne la spécificité.
+   ========================================================================== */
+
+/* La racine du greffon prend la place que la scène lui laisse. `height:100%`
+   sur un enfant de flexbox dépend d'une hauteur définie du parent ; `flex:1`
+   n'en dépend pas. */
+.plugin-editor-shell__container > .fdocs-root {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  gap: 0;
+}
+
+/* ── (c) La barre d'outils : centrée, propre, d'UNE seule rangée ─────────── */
+
+.plugin-editor-shell__stage .fdocs-toolbar {
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  background: var(--color-background);
+  border-bottom: var(--border-width-1, 1px) solid var(--color-border-light);
+  /* nowrap : quatre rangées de boutons qui se replient, c'était la moitié de
+     l'écran mangée par le chrome. Au-delà de la largeur, on fait défiler —
+     le geste attendu d'une barre d'outils. */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.plugin-editor-shell__stage .fdocs-toolbar::-webkit-scrollbar {
+  height: 0;
+}
+
+.plugin-editor-shell__stage .fdocs-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.plugin-editor-shell__stage .fdocs-toolbar button:hover:not(:disabled) {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.plugin-editor-shell__stage .fdocs-toolbar button:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Trois classes + un élément : le `.fdocs-toolbar button.actif` du greffon en
+   pèse deux + un, et la règle générique ci-dessus deux + un elle aussi. Sans
+   ce troisième point d'appui, l'état actif serait un coup de dé.
+
+   `--color-selected` / `--color-link` PLUTÔT QUE le couple primary-50 /
+   primary-600 de `.note-editor__toolbar-btn.is-active` : mesuré dans Chromium,
+   ce couple-là donne en thème sombre une pastille QUASI BLANCHE (#f0f9ff) sur
+   une barre noire — `--color-primary-50` n'est pas redéclaré par le thème
+   sombre, seulement par space, sky et terracotta. Les deux jetons choisis ici,
+   eux, basculent avec le thème dans les deux sens. */
+.plugin-editor-shell__stage .fdocs-toolbar button.actif {
+  background: var(--color-selected);
+  color: var(--color-link);
+}
+
+.plugin-editor-shell__stage .fdocs-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.plugin-editor-shell__stage .fdocs-toolbar button.fdocs-swatch {
+  min-width: 22px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: var(--border-width-1, 1px) solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+}
+
+.plugin-editor-shell__stage .fdocs-sep {
+  width: 1px;
+  align-self: center;
+  height: 18px;
+  flex-shrink: 0;
+  margin: 0 6px;
+  background: var(--color-border-light);
+}
+
+/* ── (b) La feuille, façon traitement de texte ───────────────────────────── */
+
+.plugin-editor-shell__stage .fdocs-corps {
+  gap: 0;
+}
+
+.plugin-editor-shell__stage .fdocs-page-holder {
+  padding: 32px 24px 64px;
+}
+
+.plugin-editor-shell__stage .fdocs-page {
+  max-width: 850px;
+  padding: 72px 88px;
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+  /* `--color-border` et non `--color-border-light` : sous les thèmes très
+     sombres (aurora, crépuscule), l'écart bureau/feuille tombe à 1,03:1 et
+     l'ombre portée — noire sur presque noir — n'y délimite rien. Le liseré est
+     alors la SEULE chose qui dise où commence la feuille ; il lui faut le
+     jeton qui contraste, pas celui qui s'efface. */
+  border: var(--border-width-1, 1px) solid var(--color-border);
+  /* Le greffon fige `color:CanvasText` à côté de son crochet de fond : sans
+     cette ligne, une page enfin sombre garderait un texte noir de UA. */
+  color: var(--color-text-primary);
+}
+
+.plugin-editor-shell__stage .fdocs-page .ProseMirror {
+  color: var(--color-text-primary);
+}
+
+.plugin-editor-shell__stage .fdocs-page .ProseMirror a {
+  color: var(--color-link);
+}
+
+.plugin-editor-shell__stage .fdocs-page .ProseMirror th,
+.plugin-editor-shell__stage .fdocs-page .ProseMirror td {
+  border-color: var(--color-border);
+}
+
+/* ── (d) Le plan : une colonne, pas une boîte ────────────────────────────── */
+
+.plugin-editor-shell__stage .fdocs-outline {
+  flex: 0 0 240px;
+  border: none;
+  background: transparent;
+  padding: 32px 10px 24px 20px;
+  font-family: var(--font-family-base);
+  color: var(--color-text-secondary);
+}
+
+.plugin-editor-shell__stage .fdocs-outline-titre {
+  margin: 0 0 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+.plugin-editor-shell__stage .fdocs-outline-item {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-family-base);
+  color: var(--color-text-secondary);
+}
+
+.plugin-editor-shell__stage .fdocs-outline-item:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.plugin-editor-shell__stage .fdocs-outline-vide {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+/* ── (e) Recherche, bulle de lien : des surfaces du thème ────────────────── */
+
+.plugin-editor-shell__stage .fdocs-search {
+  width: min(760px, calc(100% - 48px));
+  margin: 12px auto 0;
+  padding: 8px 10px;
+  border: var(--border-width-1, 1px) solid var(--color-border-light);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-background-elevated);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+}
+
+.plugin-editor-shell__stage .fdocs-search-input,
+.plugin-editor-shell__stage .fdocs-link-input {
+  border: var(--border-width-1, 1px) solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  padding: 5px 8px;
+}
+
+.plugin-editor-shell__stage .fdocs-search-input:focus,
+.plugin-editor-shell__stage .fdocs-link-input:focus {
+  outline: none;
+  border-color: var(--color-focus-ring);
+}
+
+.plugin-editor-shell__stage .fdocs-search-count {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+.plugin-editor-shell__stage .fdocs-search button,
+.plugin-editor-shell__stage .fdocs-link-bubble button {
+  border: none;
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-base);
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.plugin-editor-shell__stage .fdocs-search button:hover,
+.plugin-editor-shell__stage .fdocs-link-bubble button:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.plugin-editor-shell__stage .fdocs-search button.actif {
+  background: var(--color-selected);
+  color: var(--color-link);
+}
+
+.plugin-editor-shell__stage .fdocs-link-bubble {
+  border: var(--border-width-1, 1px) solid var(--color-border-light);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-background-elevated);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-family-base);
+}
+
+.plugin-editor-shell__stage .fdocs-link-href {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+
+/* Le bandeau que le GREFFON pose lui-même (montage solo, versions mêlées) —
+   centré sur la scène comme les nôtres, pour qu'ils se lisent d'un même œil. */
+.plugin-editor-shell__stage .fdocs-solo-note {
+  width: min(760px, calc(100% - 48px));
+  margin: 12px auto 0;
+  padding: 7px 12px;
+  border: var(--border-width-1, 1px) solid var(--color-border-light);
+  border-radius: var(--radius-md, 8px);
+  font-family: var(--font-family-base);
+}
+
+/* ── (f) Le compteur : une pilule discrète, hors du flux ─────────────────── */
+
+.plugin-editor-shell__stage .fdocs-pied {
+  position: absolute;
+  right: 20px;
+  bottom: 16px;
+  z-index: 2;
+  padding: 3px 10px;
+  border: var(--border-width-1, 1px) solid var(--color-border-light);
+  border-radius: 999px;
+  background: var(--color-background-elevated);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-base);
+  font-size: 0.68rem;
+  opacity: 1;
+  /* Une pastille d'information ne doit jamais intercepter un clic destiné au
+     texte qu'elle survole. */
+  pointer-events: none;
+}
+
+/* ===== Fenêtres étroites ===== */
+
+@media (max-width: 900px) {
+  .plugin-editor-shell__stage .fdocs-outline {
+    display: none;
+  }
+
+  .plugin-editor-shell__stage .fdocs-page {
+    padding: 40px 32px;
+  }
+
+  .plugin-editor-shell__stage .fdocs-page-holder {
+    padding: 16px 12px 48px;
+  }
+
+  .plugin-editor-shell__stage .fdocs-toolbar {
+    justify-content: flex-start;
+  }
+
+  .plugin-editor-shell__save-label {
+    display: none;
+  }
+}

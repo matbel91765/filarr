@@ -19,6 +19,7 @@ import {
   removeTagFromFile,
   selectFileTags,
   createTag,
+  setFileTags,
 } from '../../../store/slices/tagsSlice';
 import { Input } from '../ui/Input/Input';
 import Button from '../ui/Button/Button';
@@ -65,6 +66,20 @@ const CloseIcon: FC = () => (
 
 interface TagPickerProps {
   fileId: string;
+  /**
+   * LE DOSSIER QUI PORTE LES ÉTIQUETTES — et donc CE QUI LES FAIT DURER.
+   *
+   * Les étiquettes d'un fichier vivent dans `Folder.fileTags`, persisté dans
+   * `metadata.json` et synchronisé (`services/tags/fileTags`). Sans cette prop,
+   * ce sélecteur retombe sur l'ancien comportement : une écriture EN MÉMOIRE
+   * SEULEMENT, effacée au rechargement. C'est ce que faisaient TOUTES les
+   * écritures avant — l'étiquetage avait l'air de marcher et se perdait.
+   *
+   * Elle est optionnelle parce qu'un hôte peut ne pas savoir dans quel dossier
+   * il se trouve (un résultat de recherche global, un aperçu détaché). Mieux
+   * vaut alors une étiquette de session qu'une exception.
+   */
+  folderId?: string;
   className?: string;
   onTagsChange?: (tagIds: string[]) => void;
   disabled?: boolean;
@@ -76,6 +91,7 @@ interface TagPickerProps {
 
 const TagPicker: FC<TagPickerProps> = ({
   fileId,
+  folderId,
   className,
   onTagsChange,
   disabled = false,
@@ -94,7 +110,7 @@ const TagPicker: FC<TagPickerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const fileTagIds = useMemo(() => fileTags.map(t => t.id), [fileTags]);
+  const fileTagIds = useMemo(() => fileTags.map((t) => t.id), [fileTags]);
 
   // Filter tags based on search
   const filteredTags = useMemo(() => {
@@ -103,18 +119,16 @@ const TagPicker: FC<TagPickerProps> = ({
     }
     const query = searchQuery.toLowerCase().trim();
     return allTags.filter(
-      tag =>
+      (tag) =>
         tag.name.toLowerCase().includes(query) ||
-        tag.aliases.some(a => a.toLowerCase().includes(query))
+        tag.aliases.some((a) => a.toLowerCase().includes(query))
     );
   }, [allTags, searchQuery]);
 
   // Check if exact match exists (for quick create)
   const exactMatchExists = useMemo(() => {
     if (!searchQuery.trim()) return true;
-    return allTags.some(
-      tag => tag.name.toLowerCase() === searchQuery.trim().toLowerCase()
-    );
+    return allTags.some((tag) => tag.name.toLowerCase() === searchQuery.trim().toLowerCase());
   }, [allTags, searchQuery]);
 
   // Close dropdown when clicking outside
@@ -142,7 +156,7 @@ const TagPicker: FC<TagPickerProps> = ({
   // Handlers
   const handleToggleOpen = useCallback(() => {
     if (!disabled) {
-      setIsOpen(prev => !prev);
+      setIsOpen((prev) => !prev);
       if (!isOpen) {
         setLocalSearchQuery('');
       }
@@ -153,40 +167,66 @@ const TagPicker: FC<TagPickerProps> = ({
     setLocalSearchQuery(e.target.value);
   }, []);
 
+  /**
+   * UNE SEULE ÉCRITURE, DEUX DESTINATIONS.
+   *
+   * Avec un `folderId`, la liste part dans `Folder.fileTags` : persistée,
+   * synchronisée, relisible par le téléphone. Sans lui, on retombe sur les
+   * anciennes actions de session — un hôte qui ne sait pas d'où vient le
+   * fichier ne peut pas écrire dans son dossier, et une étiquette éphémère vaut
+   * mieux qu'une exception sous les doigts.
+   *
+   * L'ÉTAT LOCAL N'EST PAS ÉCRIT À LA MAIN dans le premier cas : `updateFolder`
+   * fait bouger `folders.byId`, et l'hydratation de la tranche en redescend le
+   * résultat. Écrire des deux côtés serait le moyen le plus sûr de les faire
+   * diverger.
+   */
+  const commitTags = useCallback(
+    async (nextTagIds: string[], previous: string[]) => {
+      if (folderId) {
+        await dispatch(setFileTags({ folderId, fileId, tags: nextTagIds })).unwrap();
+        return;
+      }
+      const added = nextTagIds.filter((id) => !previous.includes(id));
+      const removed = previous.filter((id) => !nextTagIds.includes(id));
+      for (const tagId of removed) {
+        await dispatch(removeTagFromFile({ fileId, tagId })).unwrap();
+      }
+      for (const tagId of added) {
+        await dispatch(addTagToFile({ fileId, tagId })).unwrap();
+      }
+    },
+    [dispatch, fileId, folderId]
+  );
+
   const handleToggleTag = useCallback(
     async (tagId: string) => {
       const isSelected = fileTagIds.includes(tagId);
-
+      const newTagIds = isSelected
+        ? fileTagIds.filter((id) => id !== tagId)
+        : [...fileTagIds, tagId];
       try {
-        if (isSelected) {
-          await dispatch(removeTagFromFile({ fileId, tagId })).unwrap();
-        } else {
-          await dispatch(addTagToFile({ fileId, tagId })).unwrap();
-        }
-
-        const newTagIds = isSelected
-          ? fileTagIds.filter(id => id !== tagId)
-          : [...fileTagIds, tagId];
+        await commitTags(newTagIds, fileTagIds);
         onTagsChange?.(newTagIds);
       } catch (err) {
         error('Erreur lors de la modification des tags');
       }
     },
-    [dispatch, fileId, fileTagIds, onTagsChange, error]
+    [commitTags, fileTagIds, onTagsChange, error]
   );
 
   const handleRemoveTag = useCallback(
     async (e: React.MouseEvent, tagId: string) => {
       e.stopPropagation();
+      const newTagIds = fileTagIds.filter((id) => id !== tagId);
       try {
-        await dispatch(removeTagFromFile({ fileId, tagId })).unwrap();
-        const newTagIds = fileTagIds.filter(id => id !== tagId);
+        await commitTags(newTagIds, fileTagIds);
         onTagsChange?.(newTagIds);
       } catch (err) {
         error('Erreur lors de la suppression du tag');
       }
     },
-    [dispatch, fileId, fileTagIds, onTagsChange, error]
+    [commitTags, fileTagIds, onTagsChange, error]
   );
 
   const handleQuickCreate = useCallback(async () => {
@@ -201,9 +241,8 @@ const TagPicker: FC<TagPickerProps> = ({
       ).unwrap();
 
       // Add the new tag to the file
-      await dispatch(addTagToFile({ fileId, tagId: result.id })).unwrap();
-
       const newTagIds = [...fileTagIds, result.id];
+      await commitTags(newTagIds, fileTagIds);
       onTagsChange?.(newTagIds);
 
       setLocalSearchQuery('');
@@ -213,7 +252,16 @@ const TagPicker: FC<TagPickerProps> = ({
     } finally {
       setIsCreating(false);
     }
-  }, [dispatch, fileId, searchQuery, exactMatchExists, fileTagIds, onTagsChange, success, error]);
+  }, [
+    dispatch,
+    commitTags,
+    searchQuery,
+    exactMatchExists,
+    fileTagIds,
+    onTagsChange,
+    success,
+    error,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -260,11 +308,7 @@ const TagPicker: FC<TagPickerProps> = ({
         ) : (
           <div className="tag-picker__tags">
             {displayedTags.map((tag) => (
-              <span
-                key={tag.id}
-                className="tag-picker__tag"
-                style={{ backgroundColor: tag.color }}
-              >
+              <span key={tag.id} className="tag-picker__tag" style={{ backgroundColor: tag.color }}>
                 <span className="tag-picker__tag-name">{tag.name}</span>
                 {!disabled && (
                   <button
@@ -277,9 +321,7 @@ const TagPicker: FC<TagPickerProps> = ({
                 )}
               </span>
             ))}
-            {hiddenCount > 0 && (
-              <span className="tag-picker__more">+{hiddenCount}</span>
-            )}
+            {hiddenCount > 0 && <span className="tag-picker__more">+{hiddenCount}</span>}
           </div>
         )}
       </div>

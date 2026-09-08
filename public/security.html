@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Security — Filarr Web</title>
+  <link href="./fonts/fonts.css" rel="stylesheet" />
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; padding: 2.5rem 1.25rem 4rem;
+      font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+      line-height: 1.65; color: #1f2937; background: #f8fafc;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e5e7eb; background: #0f172a; }
+      .card { background: #1e293b !important; border-color: #334155 !important; }
+      th, td { border-color: #334155 !important; }
+      h1, h2 { color: #f1f5f9 !important; }
+    }
+    main { max-width: 46rem; margin: 0 auto; }
+    h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.9rem; margin: 0 0 .4rem; color: #0f172a; }
+    h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; margin: 2.2rem 0 .6rem; color: #0f172a; }
+    .lead { font-size: 1.05rem; opacity: .85; margin-bottom: 2rem; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.1rem 1.3rem; margin: 1rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+    th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    th { font-family: 'Space Grotesk', sans-serif; }
+    code { font-size: .88em; background: rgba(100,116,139,.14); padding: .1em .35em; border-radius: 4px; }
+    a { color: #2563eb; }
+    .muted { opacity: .7; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>How Filarr Web protects your data</h1>
+    <p class="lead">
+      This page states exactly what the web app guarantees — and what it cannot.
+      No superlatives: the threat model, as it is.
+    </p>
+
+    <h2>What is true everywhere</h2>
+    <div class="card">
+      <p>
+        Your files and notes are encrypted (AES-256-GCM) with a key derived from your
+        password, <strong>before</strong> they leave your device. Our servers store and
+        carry ciphertext only: we cannot read your content, cannot decrypt it for a third
+        party, and cannot recover it if you lose both your password and your recovery
+        phrase.
+      </p>
+    </div>
+
+    <h2>Two clients, two levels of trust</h2>
+    <div class="card">
+      <table>
+        <tr><th></th><th>Desktop app</th><th>Web app</th></tr>
+        <tr>
+          <td>The code you run</td>
+          <td>Installed once, inspectable, updated explicitly</td>
+          <td><strong>Served by our servers on every load</strong></td>
+        </tr>
+        <tr>
+          <td>Key at rest</td>
+          <td>Sealed in the system keychain (safeStorage)</td>
+          <td>Nothing by default; optionally sealed under a non-extractable
+              browser session key (14 days)</td>
+        </tr>
+        <tr>
+          <td>The honest consequence</td>
+          <td>Verifiable zero-knowledge: even our servers, fully compromised,
+              cannot read your files</td>
+          <td>Encrypted in your browser: a compromised server cannot read your
+              <em>stored</em> data, but could serve modified code to a future
+              session. That is the structural limit of every web application —
+              ours and our peers' alike.</td>
+        </tr>
+      </table>
+    </div>
+    <p>
+      Put plainly: the web app gives you end-to-end encryption with the convenience of a
+      browser; the desktop app additionally gives you an execution base we cannot alter
+      after the fact. For the strongest posture, use the desktop app day to day and the
+      web as a secondary access point.
+    </p>
+
+    <h2>What the web app does to reduce that risk</h2>
+    <div class="card">
+      <ul>
+        <li>Strict Content-Security-Policy: no third-party scripts, no CDN, no external
+            origin — fonts and code served exclusively from
+            <code>app.filarr.com</code>, API pinned to <code>api.filarr.com</code>.</li>
+        <li>No key in the clear at rest: the encryption key lives in session memory;
+            the "Stay unlocked" option seals it under a <em>non-extractable</em> key
+            managed by the browser — stealing local storage is not enough to obtain it.</li>
+        <li>Your password is never sent for decryption: the key is derived locally
+            (PBKDF2-SHA-512, 600,000 iterations).</li>
+        <li>Two server relays, two SEPARATE agreements, each refused by default and each
+            with its own switch in Settings → Privacy → Security. Accepting one never
+            turns on the other.
+            <ul>
+              <li><strong>Link previews</strong> (⚡ fill from a link, titles of pasted
+                  links, bookmark previews): only the page URL transits.</li>
+              <li><strong>Source lookups</strong> (⚡ button of inline databases when a
+                  books/anime/TV/movies source is selected): only the few words searched
+                  transit, plus your TMDB key if you have set one.</li>
+            </ul>
+            In both cases your note content never transits, and nothing going through
+            these relays is logged or kept.</li>
+        <li>Session revoked at the first doubt: signing out purges the key and the session.</li>
+      </ul>
+    </div>
+
+    <h2>What we do not promise</h2>
+    <div class="card">
+      <p>
+        We do not promise that a web app equals an installed client — that claim is false
+        everywhere. We do not promise to recover your data without your secrets — that is
+        the price of real encryption. And we never claim "zero-knowledge" for the web
+        without this page next to it.
+      </p>
+    </div>
+
+    <p class="muted">
+      Desktop app: <a href="https://filarr.com">filarr.com</a>.
+      En français : <a href="./securite.html">version française de cette page</a>.
+    </p>
+  </main>
+</body>
+</html>

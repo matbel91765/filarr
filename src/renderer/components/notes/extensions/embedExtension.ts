@@ -8,6 +8,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { EmbedNodeView } from './EmbedNodeView';
+import { embedIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -31,6 +32,11 @@ export const EmbedExtension = Node.create({
       embedType: { default: 'link' }, // 'youtube' | 'vimeo' | 'twitter' | 'link'
       embedId: { default: '' },
     };
+  },
+
+  /** Titre + URL : ce dont on se souvient d'une vidéo qu'on a incrustée. */
+  renderText({ node }) {
+    return embedIndexText(node.attrs);
   },
 
   parseHTML() {

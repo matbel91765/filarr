@@ -1,4 +1,4 @@
-appId: com.filarr.app
+appId: fr.belouar.pruvot.filarr
 productName: Filarr
 directories:
   output: dist
@@ -13,11 +13,27 @@ files:
 asar: true
 asarUnpack:
   - "node_modules/argon2/**"
+afterPack: ./scripts/afterPack.js
 extraResources:
   - from: "src"
     to: "src"
     filter:
       - "**/*"
+# Schéma d'URL personnalisé — sans cette clé, electron-builder n'écrit ni
+# CFBundleURLTypes dans l'Info.plist macOS ni MimeType x-scheme-handler dans le
+# .desktop Linux, si bien que app.setAsDefaultProtocolClient('filarr') échouait
+# partout sauf sous Windows (où l'enregistrement HKCU se fait au démarrage), et
+# l'échec était avalé en avertissement non fatal.
+protocols:
+  - name: Filarr
+    schemes:
+      - filarr
+
+publish:
+  - provider: github
+    owner: matbel91765
+    repo: filarr
+    private: true
 icon: build/icon.png
 win:
   icon: build/icon.ico
@@ -25,6 +41,7 @@ win:
     - sha256
   target:
     - nsis
+  # appx removed — requires certificate signing in CI
 mac:
   icon: build/icon.png
   target:
@@ -34,6 +51,7 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  notarize: true
 mas:
   entitlements: build/entitlements.mas.plist
   entitlementsInherit: build/entitlements.mas.inherit.plist

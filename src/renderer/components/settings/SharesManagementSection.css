@@ -1,0 +1,359 @@
+/**
+ * SharesManagementSection styles
+ *
+ * Theme-aware via CSS variables — adapts to light/dark and accent color.
+ */
+
+.shares-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.shares-section__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+}
+
+.shares-section__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.shares-section__subtitle {
+  margin: var(--spacing-1) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.shares-section__error {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-error-700, var(--color-error-600));
+  background-color: var(
+    --color-error-50,
+    color-mix(in srgb, var(--color-error-500) 12%, transparent)
+  );
+  border: var(--border-width-1) solid color-mix(in srgb, var(--color-error-500) 30%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.shares-section__empty {
+  padding: var(--spacing-6);
+  text-align: center;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background-color: var(--color-background-secondary);
+  border: var(--border-width-1) dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* ===== Group (active / inactive) ===== */
+.shares-section__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.shares-section__group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin: 0;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.shares-section__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 var(--spacing-1);
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-inverted);
+  background-color: var(--color-primary-500);
+  border-radius: var(--radius-full, 999px);
+  text-transform: none;
+}
+
+/* ===== List & rows ===== */
+.shares-section__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.shares-section__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  background-color: var(--color-surface);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-color);
+}
+
+.shares-section__row:hover {
+  background-color: var(--color-surface-hover);
+}
+
+.shares-section__row--muted {
+  opacity: 0.65;
+}
+
+.shares-section__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.shares-section__row-id {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1-5);
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.shares-section__row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2) var(--spacing-3); /* row gap × column gap */
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.shares-section__row-meta > span {
+  white-space: nowrap;
+}
+
+/* Inline separators between meta items. Rendered as 2px-wide dots with
+ * proper breathing room rather than narrow middots butting against text
+ * (which was the look in the previous spacing). The dots inherit color
+ * from the secondary text so they fade visually next to the active stats. */
+.shares-section__row-meta > [aria-hidden='true'] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4px;
+  height: 4px;
+  padding: 0;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.4;
+  /* Hide the literal "·" character we pass in — we use the styled dot
+   * instead, but the original glyph stays in the DOM for screen readers
+   * that don't honor aria-hidden. */
+  text-indent: -9999px;
+  overflow: hidden;
+}
+
+/* ===== Stat chips (visits / downloads) ===== */
+.shares-section__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.shares-section__stat svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.shares-section__stat--accent {
+  color: var(--color-primary-600);
+  font-weight: var(--font-weight-semibold);
+}
+
+.shares-section__row-actions {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-shrink: 0;
+}
+
+.shares-section__badge {
+  font-size: var(--font-size-xs);
+}
+
+.shares-section__reason {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.shares-section__hint {
+  flex-basis: 100%;
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background-color: var(--color-background-secondary);
+  border-radius: var(--radius-sm);
+}
+
+/* ===== Audit log expansion ===== */
+.shares-section__views {
+  flex-basis: 100%;
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-3);
+  background-color: var(--color-background-secondary);
+  border-radius: var(--radius-sm);
+  border: var(--border-width-1) solid var(--color-border);
+}
+
+.shares-section__views-loading,
+.shares-section__views-empty {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: var(--spacing-2);
+}
+
+.shares-section__views-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.shares-section__views-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-1) var(--spacing-2);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+}
+
+.shares-section__views-item:nth-child(odd) {
+  background-color: var(--color-surface);
+}
+
+.shares-section__views-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.shares-section__views-loc {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--color-text-secondary);
+}
+
+.shares-section__views-ip {
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  padding: 1px 4px;
+  background-color: var(--color-background-elevated);
+  border-radius: var(--radius-sm);
+}
+
+.shares-section__views-note {
+  margin-top: var(--spacing-2);
+  padding-top: var(--spacing-2);
+  border-top: var(--border-width-1) dashed var(--color-border);
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* ── Clé de garde : bannière et noms de partage (D3) ───────────────────────
+ *
+ * La bannière n'est pas une alerte : elle décrit un état durable (« coffre
+ * verrouillé »), et une couleur d'erreur la ferait lire comme une panne. Seule
+ * `--unavailable` — le serveur injoignable — emprunte l'accent d'avertissement.
+ */
+
+.shares-section__custody {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background-color: var(--color-background-secondary);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.shares-section__custody-text {
+  flex: 1 1 220px;
+}
+
+.shares-section__custody--unavailable {
+  border-color: color-mix(in srgb, var(--color-warning-500, #b45309) 40%, transparent);
+}
+
+.shares-section__custody--unlocked {
+  border-color: color-mix(in srgb, var(--color-success-500, #16a34a) 35%, transparent);
+}
+
+/* Le NOM du partage. Il prend la place du titre ; l'identifiant tronqué
+ * s'efface sous lui sans disparaître — voir le composant. */
+.shares-section__row-name {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.shares-section__row-name + .shares-section__row-id {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+}
+
+.shares-section__row-client {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+}
+
+/* Les deux fenêtres (déverrouillage, renommage) partagent leur texte
+ * d'introduction : une phrase, du gris, au-dessus du premier champ. */
+.custody-dialog__intro {
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.custody-dialog__warning {
+  margin: var(--spacing-2) 0 0;
+  padding: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background-color: var(--color-background-secondary);
+  border-left: 3px solid color-mix(in srgb, var(--color-warning-500, #b45309) 60%, transparent);
+  border-radius: var(--radius-sm);
+}

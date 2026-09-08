@@ -1,0 +1,179 @@
+/**
+ * Édition vivante — barre de présence et curseurs distants.
+ *
+ * Tout passe par les jetons du design system : la barre suit le thème, et les
+ * curseurs de CollaborationCaret restent lisibles en clair comme en sombre.
+ * Seule la teinte par participant est une valeur inline (elle vient de
+ * l'awareness, donc du réseau, pas de la feuille de style).
+ */
+
+.collab-presence {
+  --collab-avatar-size: 20px;
+  --collab-avatar-ring: var(--color-surface, #fff);
+  --collab-on-hue: #fff;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.collab-presence--compact {
+  --collab-avatar-size: 18px;
+  gap: 6px;
+}
+
+/* ---- Avatars ---- */
+
+.collab-presence__avatars {
+  display: inline-flex;
+  align-items: center;
+}
+
+.collab-presence__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--collab-avatar-size);
+  height: var(--collab-avatar-size);
+  border-radius: var(--radius-avatar, 9999px);
+  border: var(--border-width-2, 2px) solid var(--collab-avatar-ring);
+  margin-left: calc(var(--collab-avatar-size) / -3);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--collab-on-hue);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+  cursor: default;
+  transition: transform var(--duration-fast, 150ms) var(--ease-out, ease);
+}
+
+.collab-presence__avatar:first-child {
+  margin-left: 0;
+}
+
+.collab-presence__avatar:hover {
+  transform: translateY(-1px);
+  z-index: 1;
+}
+
+/* L'appareil courant : anneau plus marqué, pas de teinte supplémentaire. */
+.collab-presence__avatar--self {
+  border-color: var(--color-border-strong, #cbd5e1);
+}
+
+.collab-presence__avatar--overflow {
+  background-color: var(--color-surface-active, #e2e8f0) !important;
+  color: var(--color-text-secondary, #475569);
+  text-shadow: none;
+  font-weight: 600;
+}
+
+/* ---- État du canal ---- */
+
+.collab-presence__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.collab-presence__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full, 9999px);
+  background: var(--color-text-disabled, #94a3b8);
+  flex: none;
+}
+
+.collab-presence[data-status='connected'] .collab-presence__dot {
+  background: var(--color-success-500);
+}
+
+.collab-presence[data-status='offline'] .collab-presence__dot {
+  background: var(--color-warning-500);
+}
+
+.collab-presence[data-status='connecting'] .collab-presence__dot {
+  background: var(--color-info-500);
+  animation: collab-presence-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes collab-presence-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collab-presence[data-status='connecting'] .collab-presence__dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+.collab-presence--compact .collab-presence__status-text {
+  /* En-tête replié : le point suffit, le libellé reste pour les lecteurs d'écran. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==================== Curseurs distants (CollaborationCaret) ==================== */
+
+/* La teinte arrive en style inline (border-color / background-color) depuis
+   l'awareness ; tout le reste — épaisseur, rayon, typo, liseré — vient d'ici. */
+.ProseMirror .collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: var(--border-width-1, 1px) solid;
+  border-right: var(--border-width-1, 1px) solid;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.ProseMirror .collaboration-carets__label {
+  position: absolute;
+  top: -1.45em;
+  left: -1px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, 4px);
+  border-bottom-left-radius: 0;
+  font-family: var(--font-family-base, inherit);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  /* Le liseré reprend la couleur de l'éditeur : l'étiquette reste détachée du
+     fond, quel que soit le thème. */
+  box-shadow:
+    0 0 0 1px var(--ss-editor-bg, var(--color-surface)),
+    var(--shadow-sm);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.95;
+}
+
+/* Sélection distante : y-prosemirror pose déjà la teinte à 44 % d'opacité
+   (`background-color: #RRGGBB70`), lisible sur clair comme sur sombre. On ne
+   touche donc pas à l'alpha, seulement à la forme. */
+.ProseMirror .ProseMirror-yjs-selection {
+  border-radius: 2px;
+}

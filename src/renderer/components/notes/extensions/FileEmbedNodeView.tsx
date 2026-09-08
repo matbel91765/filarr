@@ -7,6 +7,14 @@
 
 import React, { useCallback, useRef, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
+import { NoteImageContextMenu } from '../NoteImageContextMenu';
+import { copyNoteImage, saveNoteImageAs } from '../../../../services/notes/noteImageClipboard';
+import {
+  notifyImageCopied,
+  notifyImageCopyFailed,
+  notifyImageSaveFailed,
+  notifyImageSaved,
+} from './fileEmbedFeedback';
 
 interface FileEmbedNodeViewProps {
   node: {
@@ -42,6 +50,24 @@ export const FileEmbedNodeView: React.FC<FileEmbedNodeViewProps> = ({
   const isImage = /^image\//i.test(fileType || '');
   const containerRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
+
+  const handleCopy = useCallback(() => {
+    if (!src) return;
+    void copyNoteImage(src, fileName).then((ok) => {
+      if (ok) notifyImageCopied();
+      else notifyImageCopyFailed();
+    });
+  }, [src, fileName]);
+
+  const handleSaveAs = useCallback(() => {
+    if (!src) return;
+    void saveNoteImageAs(src, fileName).then((outcome) => {
+      // « cancelled » n'est pas un échec : l'utilisateur a fermé le dialogue.
+      if (outcome === 'saved') notifyImageSaved();
+      else if (outcome === 'failed') notifyImageSaveFailed();
+    });
+  }, [src, fileName]);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -83,6 +109,15 @@ export const FileEmbedNodeView: React.FC<FileEmbedNodeViewProps> = ({
           className={`file-embed file-embed--image ${selected ? 'file-embed--selected' : ''} ${isResizing ? 'file-embed--resizing' : ''}`}
           style={width ? { width: `${width}px` } : undefined}
           data-file-embed=""
+          // `stopPropagation` : sans ça, le gestionnaire de clic droit du
+          // corps de l'éditeur (menu « lien vers ce bloc ») verrait aussi
+          // l'évènement. Et sans `preventDefault`, Electron n'affiche RIEN —
+          // il n'a pas de menu contextuel natif.
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMenuAt({ x: e.clientX, y: e.clientY });
+          }}
         >
           <img src={src} alt={fileName} className="file-embed__img" draggable={false} />
           <span className="file-embed__caption">{fileName}</span>
@@ -99,6 +134,16 @@ export const FileEmbedNodeView: React.FC<FileEmbedNodeViewProps> = ({
             </svg>
           </div>
         </div>
+
+        {menuAt && (
+          <NoteImageContextMenu
+            x={menuAt.x}
+            y={menuAt.y}
+            onCopy={handleCopy}
+            onSaveAs={handleSaveAs}
+            onClose={() => setMenuAt(null)}
+          />
+        )}
       </NodeViewWrapper>
     );
   }

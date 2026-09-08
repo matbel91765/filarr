@@ -11,8 +11,10 @@ import { Button } from '../ui/Button/Button';
 import './FilePreviewPanel.css';
 
 export interface VideoPreviewProps {
-  /** Video data as ArrayBuffer */
-  data: ArrayBuffer;
+  /** Video data as ArrayBuffer (buffered mode; ignored when streamUrl is set) */
+  data?: ArrayBuffer;
+  /** Direct media URL (e.g. filarr-stream://…) — streamed, no blob URL created */
+  streamUrl?: string;
   /** File name */
   fileName: string;
   /** MIME type of the video */
@@ -23,56 +25,152 @@ export interface VideoPreviewProps {
 
 // SVG Icons
 const PlayIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width="24" height="24">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+  >
     <path d="M8 5v14l11-7z" />
   </svg>
 );
 
 const PauseIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width="24" height="24">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+  >
     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
   </svg>
 );
 
 const VolumeHighIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+    />
   </svg>
 );
 
 const VolumeMuteIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+    />
   </svg>
 );
 
 const FullscreenIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m10.5-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-10.5 10.5v-4.5m0 4.5h4.5m-4.5 0L9 15m10.5 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m10.5-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-10.5 10.5v-4.5m0 4.5h4.5m-4.5 0L9 15m10.5 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15"
+    />
   </svg>
 );
 
 const SkipBackIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z"
+    />
   </svg>
 );
 
 const SkipForwardIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062A1.125 1.125 0 013 16.811V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062A1.125 1.125 0 013 16.811V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z"
+    />
   </svg>
 );
 
 const PictureInPictureIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+    />
   </svg>
 );
 
 const SpeedIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+    />
   </svg>
 );
 
@@ -97,6 +195,7 @@ const formatTime = (seconds: number): string => {
 
 export const VideoPreview: React.FC<VideoPreviewProps> = ({
   data,
+  streamUrl,
   fileName,
   mimeType,
   className,
@@ -118,18 +217,30 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const speedMenuRef = useRef<HTMLDivElement>(null);
 
-  // Convert ArrayBuffer to blob URL
-  const videoUrl = useMemo(() => {
+  // Media source: direct streaming URL when provided (filarr-stream://…),
+  // otherwise a blob URL built from the in-memory ArrayBuffer.
+  const { videoUrl, objectUrl } = useMemo((): {
+    videoUrl: string | null;
+    objectUrl: string | null;
+  } => {
+    if (streamUrl) {
+      return { videoUrl: streamUrl, objectUrl: null };
+    }
+    if (!data) {
+      return { videoUrl: null, objectUrl: null };
+    }
     const blob = new Blob([data], { type: mimeType });
-    return URL.createObjectURL(blob);
-  }, [data, mimeType]);
+    const url = URL.createObjectURL(blob);
+    return { videoUrl: url, objectUrl: url };
+  }, [data, mimeType, streamUrl]);
 
-  // Cleanup blob URL on unmount
+  // Cleanup on unmount — only revoke blob URLs we created (never the stream URL)
   useEffect(() => {
+    if (!objectUrl) return undefined;
     return () => {
-      URL.revokeObjectURL(videoUrl);
+      URL.revokeObjectURL(objectUrl);
     };
-  }, [videoUrl]);
+  }, [objectUrl]);
 
   // Handle video loaded
   const handleLoadedMetadata = useCallback(() => {
@@ -184,21 +295,24 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
   }, [isMuted]);
 
   // Handle volume change
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
+  const handleVolumeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newVolume = parseFloat(e.target.value);
+      setVolume(newVolume);
 
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      if (newVolume === 0) {
-        setIsMuted(true);
-        videoRef.current.muted = true;
-      } else if (isMuted) {
-        setIsMuted(false);
-        videoRef.current.muted = false;
+      if (videoRef.current) {
+        videoRef.current.volume = newVolume;
+        if (newVolume === 0) {
+          setIsMuted(true);
+          videoRef.current.muted = true;
+        } else if (isMuted) {
+          setIsMuted(false);
+          videoRef.current.muted = false;
+        }
       }
-    }
-  }, [isMuted]);
+    },
+    [isMuted]
+  );
 
   // Handle seek
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,7 +379,7 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
 
   // Toggle speed menu
   const toggleSpeedMenu = useCallback(() => {
-    setShowSpeedMenu(prev => !prev);
+    setShowSpeedMenu((prev) => !prev);
   }, []);
 
   // Close speed menu when clicking outside
@@ -330,13 +444,13 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
         skipForward();
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setVolume(prev => Math.min(prev + 0.1, 1));
+        setVolume((prev) => Math.min(prev + 0.1, 1));
         if (videoRef.current) {
           videoRef.current.volume = Math.min(volume + 0.1, 1);
         }
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setVolume(prev => Math.max(prev - 0.1, 0));
+        setVolume((prev) => Math.max(prev - 0.1, 0));
         if (videoRef.current) {
           videoRef.current.volume = Math.max(volume - 0.1, 0);
         }
@@ -359,12 +473,14 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
     className
   );
 
-  if (error) {
+  if (error || !videoUrl) {
     return (
       <div className={containerClasses}>
         <div className="video-preview__error">
           <span>Impossible de charger la video</span>
-          <p className="video-preview__error-message">{error}</p>
+          <p className="video-preview__error-message">
+            {error ?? 'Aucune source video disponible'}
+          </p>
         </div>
       </div>
     );
@@ -409,7 +525,11 @@ export const VideoPreview: React.FC<VideoPreviewProps> = ({
       </div>
 
       {/* Controls */}
-      <div className={clsx('video-preview__controls', { 'video-preview__controls--visible': showControls })}>
+      <div
+        className={clsx('video-preview__controls', {
+          'video-preview__controls--visible': showControls,
+        })}
+      >
         {/* Progress bar */}
         <div className="video-preview__progress-container">
           <input

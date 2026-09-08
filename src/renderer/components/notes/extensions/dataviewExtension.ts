@@ -8,6 +8,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { DataviewNodeView } from './DataviewNodeView';
+import { dataviewIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -30,6 +31,11 @@ export const DataviewExtension = Node.create({
         default: 'TABLE title, wordCount, updatedAt\nFROM notes\nSORT updatedAt DESC\nLIMIT 10',
       },
     };
+  },
+
+  /** La requête est le seul texte écrit à la main dans ce bloc ; les résultats, eux, vivent dans leurs notes. */
+  renderText({ node }) {
+    return dataviewIndexText(node.attrs);
   },
 
   parseHTML() {

@@ -3,24 +3,23 @@
 <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="%PUBLIC_URL%/favicon-64.png" />
+    <!-- viewport-fit=cover : env(safe-area-inset-*) devient non nul sous les
+         encoches iOS. interactive-widget=resizes-content : le clavier virtuel
+         rétrécit le viewport au lieu de faire glisser la page sous lui. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#4a90e2" />
     <meta name="description" content="Filarr - Gestionnaire de fichiers et notes chiffrees" />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <!-- Polices auto-hébergées (offline desktop + CSP web sans origine tierce). -->
+    <link href="%PUBLIC_URL%/fonts/fonts.css" rel="stylesheet">
     <title>Filarr</title>
 </head>
 <body>
-    <script>
-      // Apply theme before first paint to avoid flash
-      try {
-        var t = localStorage.getItem('theme');
-        if (t) document.documentElement.setAttribute('data-theme', t);
-      } catch(e) {}
-    </script>
+    <script src="%PUBLIC_URL%/theme-preload.js"></script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
     <!--

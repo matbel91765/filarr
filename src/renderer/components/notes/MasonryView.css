@@ -1,11 +1,83 @@
 /* ==================== Masonry View ==================== */
 
+.masonry-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.masonry-view__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border-light, var(--color-border));
+  background: var(--color-surface, var(--color-background));
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.masonry-view__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.masonry-view__field-label {
+  font-weight: 500;
+}
+
+.masonry-view__field select,
+.masonry-view__toolbar select {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.masonry-view__dir-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.masonry-view__dir-btn:hover {
+  background: var(--color-surface-secondary, rgba(0, 0, 0, 0.04));
+}
+
+.masonry-view__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.masonry-view__count {
+  margin-left: auto;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
 .masonry-view {
   column-count: 3;
   column-gap: 12px;
   padding: 16px;
   overflow-y: auto;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 900px) {

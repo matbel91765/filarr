@@ -36,23 +36,74 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
-export const deleteProfile = createAsyncThunk(
-  'profiles/delete',
-  async (profileId: string) => {
-    await window.electron.ipcRenderer.invoke('profile:delete', profileId);
-    return profileId;
-  }
-);
-
-export const activateProfile = createAsyncThunk(
-  'profiles/activate',
-  async (profileId: string) => {
-    if (window.electron?.ipcRenderer) {
-      await window.electron.ipcRenderer.invoke('profile:activate', profileId);
+/**
+ * Supprimer un profil — SUR CET APPAREIL ET DANS LE NUAGE.
+ *
+ * La suppression n'effaçait que le disque local. Tant que rien ne restaurait les
+ * profils, cela ne se voyait pas : la ligne `profiles_sync` et les octets R2
+ * survivaient, payés pour un contenu que plus rien n'atteignait. Depuis que la
+ * connexion ramène les profils du compte, le même oubli est devenu une boucle —
+ * on supprimait, et le profil revenait à la connexion suivante.
+ *
+ * LE DISQUE D'ABORD, LE NUAGE ENSUITE — et l'ordre inverse serait le pire des
+ * deux.
+ *
+ * `profileManager.deleteProfile` LÈVE dans deux cas : profil introuvable, et
+ * dernier profil restant. En purgeant le nuage avant, un de ces refus détruirait
+ * définitivement le contenu distant tout en laissant le profil à l'écran — une
+ * perte de données sur un geste qui vient d'échouer. L'écran masque bien le
+ * bouton sur le dernier profil, mais faire dépendre l'intégrité des données
+ * d'une condition d'affichage n'est pas une garantie.
+ *
+ * Dans cet ordre, le pire cas est bénin : si le nettoyage distant échoue, le
+ * profil disparaît de cette machine et revient à la prochaine connexion. Rien
+ * n'est perdu — son contenu est précisément resté dans le nuage.
+ *
+ * L'échec du nettoyage distant NE BLOQUE DONC PAS la suppression locale. Hors
+ * ligne ou déconnecté, on doit pouvoir retirer un profil de sa propre machine.
+ */
+export const deleteProfile = createAsyncThunk('profiles/delete', async (profileId: string) => {
+  await window.electron.ipcRenderer.invoke('profile:delete', profileId);
+  try {
+    const out = (await window.electron.ipcRenderer.invoke('sync:deleteCloudProfile', profileId)) as
+      | { success?: boolean; error?: string }
+      | undefined;
+    // LE REFUS DU SERVEUR NE LÈVE PAS : les deux canaux résolvent
+    // `{success:false}`. Le `catch` ne couvrait donc qu'une panne de transport,
+    // et un 429 ou un 401 ne laissait aucune trace nulle part — le profil
+    // revenait à la connexion suivante sans que rien n'ait pu l'expliquer.
+    if (out && out.success === false) {
+      console.warn(
+        `[profiles] purge nuage refusée pour ${profileId} : ${out.error ?? 'raison inconnue'} — le profil reviendra à la prochaine connexion`
+      );
     }
-    return profileId;
+  } catch (err) {
+    console.warn(`[profiles] purge nuage injoignable pour ${profileId} :`, err);
   }
-);
+  return profileId;
+});
+
+export const activateProfile = createAsyncThunk('profiles/activate', async (profileId: string) => {
+  // Wipe the outgoing profile's FEK from memory BEFORE the IPC so that if
+  // the renderer starts rendering list views before auth rehydrate lands,
+  // it can't accidentally encrypt/decrypt with a stale key from the
+  // previous profile.
+  try {
+    const { clearHybridCrypto } = await import('../../services/auth/hybridCrypto');
+    clearHybridCrypto();
+    // Le profil sortant emporte ses clés de salle, ses sessions vivantes et
+    // ses documents CRDT : rien de tout cela n'a de sens dans le suivant.
+    const { purgeCollabOnKeyLoss } = await import('../../services/collab/collabSession');
+    purgeCollabOnKeyLoss();
+  } catch {
+    /* non-fatal if module isn't loaded */
+  }
+
+  if (window.electron?.ipcRenderer) {
+    await window.electron.ipcRenderer.invoke('profile:activate', profileId);
+  }
+  return profileId;
+});
 
 export const reorderProfiles = createAsyncThunk(
   'profiles/reorder',

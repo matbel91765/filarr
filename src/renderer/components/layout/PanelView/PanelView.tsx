@@ -16,6 +16,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../store';
 import { focusPanel } from '../../../../store/slices/tabsSlice';
 import { PanelProvider } from '../../../../contexts/PanelContext';
+import { selectTabBarVisible } from '../../../../store/selectors/uiSelectors';
 import { TabBar } from '../TabBar/TabBar';
 import { RouteContent } from '../RouteContent/RouteContent';
 
@@ -28,6 +29,9 @@ export const PanelView: React.FC<PanelViewProps> = ({ panelId }) => {
   const panel = useSelector((state: RootState) => state.tabs.panels.find((p) => p.id === panelId));
   const focusedPanelId = useSelector((state: RootState) => state.tabs.focusedPanelId);
   const isSplit = useSelector((state: RootState) => state.tabs.panels.length > 1);
+  // Reglage « Affichage des barres » : la TabBar vit dans le panneau, c'est
+  // donc ici qu'elle se masque (et non dans Layout comme le Header).
+  const tabBarVisible = useSelector(selectTabBarVisible);
   const isFocused = panelId === focusedPanelId;
 
   const handleFocus = useCallback(() => {
@@ -58,7 +62,7 @@ export const PanelView: React.FC<PanelViewProps> = ({ panelId }) => {
         style={panelStyle}
         onMouseDown={handleFocus}
       >
-        <TabBar panelId={panelId} />
+        {tabBarVisible && <TabBar panelId={panelId} />}
         {activeTab ? (
           <RouteContent route={activeTab.route} panelId={panelId} />
         ) : (

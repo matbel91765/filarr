@@ -1,0 +1,79 @@
+/**
+ * SharesView styles — page chrome around SharesManagementSection
+ */
+
+.shares-view {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--color-background);
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+.shares-view__container {
+  max-width: 1024px;
+  margin: 0 auto;
+}
+
+.shares-view__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
+  border-bottom: var(--border-width-1) solid var(--color-border);
+}
+
+.shares-view__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-600);
+}
+
+.shares-view__title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.shares-view__subtitle {
+  margin: var(--spacing-2) 0 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 60ch;
+  line-height: 1.5;
+}
+
+/* ===== Empty / local-mode CTA ===== */
+.shares-view__empty {
+  padding: var(--spacing-8) var(--spacing-6);
+  text-align: center;
+  background-color: var(--color-surface);
+  border: var(--border-width-1) dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.shares-view__empty-title {
+  margin: 0 0 var(--spacing-2) 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.shares-view__empty-body {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 60ch;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}

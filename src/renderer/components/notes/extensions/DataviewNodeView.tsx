@@ -8,6 +8,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
+import { useBlockResize } from './useBlockResize';
 import { useSelector, useDispatch } from 'react-redux';
 import { setEditingNote } from '../../../../store/slices/notesSlice';
 
@@ -50,8 +51,10 @@ interface DataviewQuery {
 }
 
 interface DataviewNodeViewProps {
-  node: { attrs: { query: string } };
+  node: { attrs: { query: string; blockWidthPx?: number | null; blockHeightPx?: number | null } };
   updateAttributes: (attrs: Record<string, unknown>) => void;
+  /** Fourni par TipTap à toute vue de nœud ; `isEditable` distingue les surfaces en lecture seule. */
+  editor?: { isEditable: boolean };
   selected: boolean;
 }
 
@@ -298,7 +301,20 @@ export const DataviewNodeView: React.FC<DataviewNodeViewProps> = ({
   node,
   updateAttributes,
   selected,
+  editor,
 }) => {
+  // Le schéma est monté par QUATRE surfaces (éditeur, rendu de version, README
+  // de dossier, coffre partagé), dont certaines en lecture seule : sans cette
+  // garde, la poignée s'offrirait sur un rendu qu'on ne peut pas modifier.
+  const readOnly = editor ? !editor.isEditable : false;
+  const resize = useBlockResize(
+    node.attrs.blockWidthPx,
+    node.attrs.blockHeightPx,
+    updateAttributes,
+    {
+      disabled: readOnly,
+    }
+  );
   const dispatch = useDispatch();
   const notesById = useSelector((state: any) => state.notes.byId) as Record<string, Note>;
   const allNotes = useMemo(() => Object.values(notesById), [notesById]);
@@ -332,15 +348,18 @@ export const DataviewNodeView: React.FC<DataviewNodeViewProps> = ({
 
   return (
     <NodeViewWrapper
-      className={`dataview-node ${selected ? 'dataview-node--selected' : ''}`}
+      ref={resize.ref}
+      className={`dataview-node ${resize.className} ${selected ? 'dataview-node--selected' : ''}`}
       style={{
         border: '1px solid var(--color-border)',
         borderRadius: 8,
         margin: '8px 0',
         overflow: 'hidden',
         background: 'var(--color-background-secondary)',
+        ...resize.style,
       }}
     >
+      {resize.grip}
       {/* Header bar */}
       <div
         style={{

@@ -109,7 +109,7 @@ export function useRubberBandSelection({
     const contBounds = container.getBoundingClientRect();
     const map = new Map<string, CachedItem>();
 
-    items.forEach(item => {
+    items.forEach((item) => {
       const id = item.getAttribute(itemAttribute);
       if (!id) return;
       const b = item.getBoundingClientRect();
@@ -147,7 +147,7 @@ export function useRubberBandSelection({
     const combined = new Set([...baseIds, ...newIds]);
 
     // Remove class from items no longer selected
-    prev.forEach(id => {
+    prev.forEach((id) => {
       if (!combined.has(id)) {
         const cached = cachedItems.current.get(id);
         if (cached) cached.element.classList.remove(RB_CLASS);
@@ -155,7 +155,7 @@ export function useRubberBandSelection({
     });
 
     // Add class to newly selected items
-    combined.forEach(id => {
+    combined.forEach((id) => {
       if (!prev.has(id)) {
         const cached = cachedItems.current.get(id);
         if (cached) cached.element.classList.add(RB_CLASS);
@@ -167,7 +167,7 @@ export function useRubberBandSelection({
 
   /** Remove all visual selection classes */
   const clearVisualSelection = useCallback(() => {
-    visualSelectionRef.current.forEach(id => {
+    visualSelectionRef.current.forEach((id) => {
       const cached = cachedItems.current.get(id);
       if (cached) cached.element.classList.remove(RB_CLASS);
     });
@@ -190,139 +190,158 @@ export function useRubberBandSelection({
   }, []);
 
   /** Handle mousedown on the container */
-  const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!enabled || e.button !== 0) return;
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!enabled || e.button !== 0) return;
 
-    const target = e.target as HTMLElement;
+      const target = e.target as HTMLElement;
 
-    // Don't start rubber-band if clicking on an item or interactive element
-    if (target.closest(`[${itemAttribute}]`)) return;
-    if (target.closest('input, button, a, select, textarea, [role="button"], [role="menuitem"]')) return;
+      // Don't start rubber-band if clicking on an item or interactive element
+      if (target.closest(`[${itemAttribute}]`)) return;
+      if (target.closest('input, button, a, select, textarea, [role="button"], [role="menuitem"]'))
+        return;
+      // Une zone qui se déclare hors lasso (le bandeau de blocs d'un dossier : sa
+      // trame, sa barre d'édition, sa palette). Un mousedown sur ses vides passait
+      // le filtre et dessinait un rectangle de sélection du bandeau jusque dans la
+      // liste — un « drag and drop » qui n'avait rien à voir avec l'intention.
+      if (target.closest('[data-no-rubber-band]')) return;
 
-    const container = containerRef.current;
-    if (!container) return;
+      const container = containerRef.current;
+      if (!container) return;
 
-    e.preventDefault(); // Prevent text selection
+      e.preventDefault(); // Prevent text selection
 
-    const containerBounds = container.getBoundingClientRect();
-    startPoint.current = {
-      x: e.clientX - containerBounds.left + container.scrollLeft,
-      y: e.clientY - containerBounds.top + container.scrollTop,
-    };
-
-    ctrlHeld.current = e.ctrlKey || e.metaKey;
-    baseSelection.current = ctrlHeld.current ? [...currentSelectionRef.current] : [];
-    isDragging.current = true;
-    thresholdMet.current = false;
-
-    const onMouseMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
-
-      const cont = containerRef.current;
-      if (!cont) return;
-
-      // Use cached bounds (no getBoundingClientRect on every mousemove)
-      // scrollLeft/scrollTop are fast reads (no forced layout without prior writes)
-      const contBounds = cachedContBounds.current || cont.getBoundingClientRect();
-      const currentX = ev.clientX - contBounds.left + cont.scrollLeft;
-      const currentY = ev.clientY - contBounds.top + cont.scrollTop;
-
-      // Check drag threshold
-      const dx = Math.abs(currentX - startPoint.current.x);
-      const dy = Math.abs(currentY - startPoint.current.y);
-      if (!thresholdMet.current && dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
-
-      if (!thresholdMet.current) {
-        thresholdMet.current = true;
-        isSelectingRef.current = true;
-        // Cache all item positions + element refs once at drag start
-        cacheItemPositions();
-        // rb-drag-active: disables transitions, isolates paint, prevents text selection
-        cont.classList.add('rb-drag-active');
-        // Pre-highlight base selection items (for Ctrl+drag)
-        if (baseSelection.current.length > 0) {
-          const baseSet = new Set(baseSelection.current);
-          updateVisualSelection(new Set(), baseSet);
-        }
-      }
-
-      // Calculate rectangle (pure math, no DOM)
-      const rect: RubberBandRect = {
-        x: Math.min(startPoint.current.x, currentX),
-        y: Math.min(startPoint.current.y, currentY),
-        width: Math.abs(currentX - startPoint.current.x),
-        height: Math.abs(currentY - startPoint.current.y),
+      const containerBounds = container.getBoundingClientRect();
+      startPoint.current = {
+        x: e.clientX - containerBounds.left + container.scrollLeft,
+        y: e.clientY - containerBounds.top + container.scrollTop,
       };
 
-      // Capture mouse position relative to container viewport (for auto-scroll)
-      const mouseRelY = ev.clientY - contBounds.top;
-      const mouseRelX = ev.clientX - contBounds.left;
-      const contHeight = contBounds.height;
-      const contWidth = contBounds.width;
+      ctrlHeld.current = e.ctrlKey || e.metaKey;
+      baseSelection.current = ctrlHeld.current ? [...currentSelectionRef.current] : [];
+      isDragging.current = true;
+      thresholdMet.current = false;
 
-      // Batch ALL DOM work inside a single rAF — no reads/writes outside
-      if (scrollRAF.current) cancelAnimationFrame(scrollRAF.current);
-      scrollRAF.current = requestAnimationFrame(() => {
-        // Auto-scroll near edges (write-only, no DOM reads)
-        if (mouseRelY < SCROLL_MARGIN) {
-          cont.scrollTop -= SCROLL_SPEED;
-        } else if (mouseRelY > contHeight - SCROLL_MARGIN) {
-          cont.scrollTop += SCROLL_SPEED;
+      const onMouseMove = (ev: MouseEvent) => {
+        if (!isDragging.current) return;
+
+        const cont = containerRef.current;
+        if (!cont) return;
+
+        // Use cached bounds (no getBoundingClientRect on every mousemove)
+        // scrollLeft/scrollTop are fast reads (no forced layout without prior writes)
+        const contBounds = cachedContBounds.current || cont.getBoundingClientRect();
+        const currentX = ev.clientX - contBounds.left + cont.scrollLeft;
+        const currentY = ev.clientY - contBounds.top + cont.scrollTop;
+
+        // Check drag threshold
+        const dx = Math.abs(currentX - startPoint.current.x);
+        const dy = Math.abs(currentY - startPoint.current.y);
+        if (!thresholdMet.current && dx < DRAG_THRESHOLD && dy < DRAG_THRESHOLD) return;
+
+        if (!thresholdMet.current) {
+          thresholdMet.current = true;
+          isSelectingRef.current = true;
+          // Cache all item positions + element refs once at drag start
+          cacheItemPositions();
+          // rb-drag-active: disables transitions, isolates paint, prevents text selection
+          cont.classList.add('rb-drag-active');
+          // Pre-highlight base selection items (for Ctrl+drag)
+          if (baseSelection.current.length > 0) {
+            const baseSet = new Set(baseSelection.current);
+            updateVisualSelection(new Set(), baseSet);
+          }
         }
-        if (mouseRelX < SCROLL_MARGIN) {
-          cont.scrollLeft -= SCROLL_SPEED;
-        } else if (mouseRelX > contWidth - SCROLL_MARGIN) {
-          cont.scrollLeft += SCROLL_SPEED;
+
+        // Calculate rectangle (pure math, no DOM)
+        const rect: RubberBandRect = {
+          x: Math.min(startPoint.current.x, currentX),
+          y: Math.min(startPoint.current.y, currentY),
+          width: Math.abs(currentX - startPoint.current.x),
+          height: Math.abs(currentY - startPoint.current.y),
+        };
+
+        // Capture mouse position relative to container viewport (for auto-scroll)
+        const mouseRelY = ev.clientY - contBounds.top;
+        const mouseRelX = ev.clientX - contBounds.left;
+        const contHeight = contBounds.height;
+        const contWidth = contBounds.width;
+
+        // Batch ALL DOM work inside a single rAF — no reads/writes outside
+        if (scrollRAF.current) cancelAnimationFrame(scrollRAF.current);
+        scrollRAF.current = requestAnimationFrame(() => {
+          // Auto-scroll near edges (write-only, no DOM reads)
+          if (mouseRelY < SCROLL_MARGIN) {
+            cont.scrollTop -= SCROLL_SPEED;
+          } else if (mouseRelY > contHeight - SCROLL_MARGIN) {
+            cont.scrollTop += SCROLL_SPEED;
+          }
+          if (mouseRelX < SCROLL_MARGIN) {
+            cont.scrollLeft -= SCROLL_SPEED;
+          } else if (mouseRelX > contWidth - SCROLL_MARGIN) {
+            cont.scrollLeft += SCROLL_SPEED;
+          }
+
+          // Direct DOM update — no React re-render
+          showRect(rect);
+
+          // Use cached positions — no DOM queries or forced reflows
+          const intersecting = getIntersectingIds(rect);
+          const baseSet = ctrlHeld.current ? new Set(baseSelection.current) : new Set<string>();
+
+          // Toggle CSS classes directly on DOM elements (no React state updates)
+          updateVisualSelection(intersecting, baseSet);
+        });
+      };
+
+      const onMouseUp = () => {
+        const cont = containerRef.current;
+
+        isDragging.current = false;
+        isSelectingRef.current = false;
+        hideRect();
+
+        // Remove transition-disabling class from container
+        if (cont) cont.classList.remove('rb-drag-active');
+
+        if (scrollRAF.current) {
+          cancelAnimationFrame(scrollRAF.current);
+          scrollRAF.current = null;
         }
 
-        // Direct DOM update — no React re-render
-        showRect(rect);
+        // Commit final selection to React state (single update)
+        if (thresholdMet.current) {
+          const finalSelection = [...visualSelectionRef.current];
+          clearVisualSelection();
+          onSelectionChangeRef.current(finalSelection);
+        } else if (!ctrlHeld.current) {
+          // Click on empty space without dragging → clear selection
+          onSelectionChangeRef.current([]);
+        }
 
-        // Use cached positions — no DOM queries or forced reflows
-        const intersecting = getIntersectingIds(rect);
-        const baseSet = ctrlHeld.current ? new Set(baseSelection.current) : new Set<string>();
+        // Clear cache
+        cachedItems.current.clear();
+        cachedContBounds.current = null;
 
-        // Toggle CSS classes directly on DOM elements (no React state updates)
-        updateVisualSelection(intersecting, baseSet);
-      });
-    };
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
 
-    const onMouseUp = () => {
-      const cont = containerRef.current;
-
-      isDragging.current = false;
-      isSelectingRef.current = false;
-      hideRect();
-
-      // Remove transition-disabling class from container
-      if (cont) cont.classList.remove('rb-drag-active');
-
-      if (scrollRAF.current) {
-        cancelAnimationFrame(scrollRAF.current);
-        scrollRAF.current = null;
-      }
-
-      // Commit final selection to React state (single update)
-      if (thresholdMet.current) {
-        const finalSelection = [...visualSelectionRef.current];
-        clearVisualSelection();
-        onSelectionChangeRef.current(finalSelection);
-      } else if (!ctrlHeld.current) {
-        // Click on empty space without dragging → clear selection
-        onSelectionChangeRef.current([]);
-      }
-
-      // Clear cache
-      cachedItems.current.clear();
-      cachedContBounds.current = null;
-
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  }, [enabled, itemAttribute, containerRef, getIntersectingIds, cacheItemPositions, updateVisualSelection, clearVisualSelection, showRect, hideRect]);
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [
+      enabled,
+      itemAttribute,
+      containerRef,
+      getIntersectingIds,
+      cacheItemPositions,
+      updateVisualSelection,
+      clearVisualSelection,
+      showRect,
+      hideRect,
+    ]
+  );
 
   // Cleanup on unmount
   useEffect(() => {

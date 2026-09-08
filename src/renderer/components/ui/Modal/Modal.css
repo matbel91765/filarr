@@ -28,6 +28,7 @@
   box-shadow: var(--shadow-modal);
   z-index: var(--z-index-modal);
   max-height: calc(100vh - var(--spacing-8));
+  max-height: calc(100dvh - var(--spacing-8));
   display: flex;
   flex-direction: column;
   animation: scaleIn var(--duration-normal) var(--ease-out);
@@ -53,6 +54,55 @@
 .modal--xl {
   width: 100%;
   max-width: 1000px;
+}
+
+/**
+ * Plein écran — un espace de travail, plus une boîte de dialogue.
+ *
+ * POURQUOI `position: fixed` PLUTÔT QU'UNE ANNULATION DU PADDING DU BACKDROP.
+ * Le fond applique `padding: var(--spacing-4)` à TOUTES ses fenêtres ; le
+ * retirer pour ce seul cas demanderait soit `:has()` sur le parent, soit une
+ * classe posée sur le backdrop — donc une prop de plus à ne pas oublier.
+ * Sortie du flux et calée sur les quatre bords du viewport, la fenêtre ignore
+ * simplement le padding de son parent : rien à annuler, rien à coordonner.
+ *
+ * `dvh` avant tout, `vh` en repli pour les moteurs qui l'ignorent — même
+ * discipline que la règle mobile plus bas.
+ */
+.modal--full {
+  /**
+   * chrome:aware — LA FENÊTRE COUVRE TOUT, ET SA BARRE RÉSERVE LES BOUTONS.
+   *
+   * Deux conceptions ont été essayées ; celle-ci est la bonne, et l'autre a
+   * été vue à l'écran avant d'être écartée.
+   *
+   * FAIRE COMMENCER LA FENÊTRE SOUS LA BANDE laisse le bandeau de
+   * l'application VISIBLE au-dessus — mais recouvert par le fond de la
+   * modale, donc éteint. L'utilisateur voit une barre d'application complète
+   * qui ne répond à aucun clic, et 40 px de hauteur partent en pure perte.
+   * Une commande visible et morte est pire qu'une commande absente.
+   *
+   * On couvre donc TOUT, et c'est la barre de la fenêtre qui réserve la place
+   * des boutons natifs (`chrome-safe-bar`). Les boutons de l'OS se posent
+   * alors dans une portion VIDE de cette barre — le motif de VS Code et
+   * d'Obsidian — et aucune commande de l'application ne les approche.
+   */
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  /* `scaleIn` plutôt que fondu, sur une fenêtre qui couvre l'écran, montre le
+     bureau de l'application par les quatre bords pendant toute l'animation —
+     et, le temps qu'elle dure, la transformation fait de la fenêtre le bloc
+     conteneur de ses descendants `position:fixed`. Un fondu ne fait ni l'un
+     ni l'autre. */
+  animation: fadeIn var(--duration-normal) var(--ease-out);
 }
 
 /* ===== Modal Header ===== */
@@ -156,16 +206,42 @@
     padding: 0;
   }
 
+  /* dvh : sur téléphone la barre d'URL mange une partie de 100vh, ce qui
+     poussait le pied de page de la modale hors de l'écran. 100vh reste juste
+     avant comme repli pour les moteurs qui ignorent dvh. */
   .modal {
     width: 100%;
     max-width: 100%;
     max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
+  /**
+   * SOUS 640 px, TOUTE FENÊTRE TITRÉE DEVIENT PLEIN ÉCRAN — et sa croix
+   * tombait alors sous les boutons de la fenêtre.
+   *
+   * Le fond perd son padding et la fenêtre passe en `min-height: 100vh` :
+   * elle démarre donc à y=0, comme une surface plein écran, sans jamais
+   * porter `position: fixed`. C'est précisément l'angle mort du garde-fou,
+   * qui ne reconnaît une surface collée au bord haut qu'à `position: fixed`.
+   * La croix (32x32) se retrouvait à y 16..48 / x W-48..W-16, donc
+   * intégralement dans le rectangle des boutons natifs : la fermer quittait
+   * Filarr. Cela touchait l'éditeur de notes de coffre et les trois éditeurs
+   * de formulaire (règle, collection intelligente, étiquette).
+   *
+   * On croit ce cas hors d'atteinte sur un bureau — `minWidth: 800`
+   * (electron/main.ts) empêcherait la requête de s'appliquer. C'est faux : le
+   * zoom de l'application change les pixels CSS, et à 150 % une fenêtre de
+   * 800 px physiques n'en fait plus que 533.
+   */
   .modal-header {
     padding: var(--spacing-4);
+    padding-top: calc(var(--spacing-4) + var(--chrome-inset-top));
+    padding-right: calc(var(--spacing-4) + var(--chrome-inset-right));
+    padding-left: calc(var(--spacing-4) + var(--chrome-inset-left));
   }
 
   .modal-body {
@@ -202,28 +278,28 @@
 }
 
 /* ===== Dark Mode Support ===== */
-[data-theme="dark"] .modal {
+[data-theme='dark'] .modal {
   background-color: var(--color-background-elevated);
   border-color: var(--color-border);
 }
 
-[data-theme="dark"] .modal-header {
+[data-theme='dark'] .modal-header {
   border-bottom-color: var(--color-border);
 }
 
-[data-theme="dark"] .modal-footer {
+[data-theme='dark'] .modal-footer {
   border-top-color: var(--color-border);
 }
 
-[data-theme="dark"] .modal-body::-webkit-scrollbar-track {
+[data-theme='dark'] .modal-body::-webkit-scrollbar-track {
   background: var(--color-background-secondary);
 }
 
-[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb {
+[data-theme='dark'] .modal-body::-webkit-scrollbar-thumb {
   background: var(--color-border-strong);
 }
 
-[data-theme="dark"] .modal-body::-webkit-scrollbar-thumb:hover {
+[data-theme='dark'] .modal-body::-webkit-scrollbar-thumb:hover {
   background: var(--color-neutral-500);
 }
 

@@ -1,0 +1,143 @@
+/**
+ * ProtectedItemsSection — « Mes fichiers protégés (sur place) ».
+ * Tokens uniquement (thèmes clair/sombre/terracotta automatiques) ; même
+ * langage visuel que les rangées de Settings (px-6 py-4, hover surface).
+ */
+
+.protected-items {
+  padding: 16px 24px 20px;
+}
+
+.protected-items__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.protected-items__header-text {
+  min-width: 0;
+}
+
+.protected-items__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.protected-items__subtitle {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-tertiary);
+}
+
+.protected-items__header-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.protected-items__empty {
+  margin: 0;
+  padding: 18px 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+}
+
+.protected-items__empty--error {
+  color: var(--color-error-500);
+  border-color: color-mix(in srgb, var(--color-error-500) 40%, transparent);
+}
+
+.protected-items__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.protected-items__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 14px;
+  transition: background-color 0.12s ease;
+}
+
+.protected-items__row + .protected-items__row {
+  border-top: 1px solid var(--color-border);
+}
+
+.protected-items__row:hover {
+  background: var(--color-surface-hover);
+}
+
+.protected-items__row--missing .protected-items__row-icon,
+.protected-items__row--missing .protected-items__row-name {
+  opacity: 0.5;
+}
+
+.protected-items__row--missing .protected-items__row-path {
+  color: var(--color-warning-500);
+}
+
+.protected-items__row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 10%, transparent);
+}
+
+.protected-items__row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.protected-items__row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.protected-items__row-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.protected-items__row-size {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.protected-items__row-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
