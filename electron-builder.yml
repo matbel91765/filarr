@@ -19,6 +19,16 @@ extraResources:
     to: "src"
     filter:
       - "**/*"
+# Schéma d'URL personnalisé — sans cette clé, electron-builder n'écrit ni
+# CFBundleURLTypes dans l'Info.plist macOS ni MimeType x-scheme-handler dans le
+# .desktop Linux, si bien que app.setAsDefaultProtocolClient('filarr') échouait
+# partout sauf sous Windows (où l'enregistrement HKCU se fait au démarrage), et
+# l'échec était avalé en avertissement non fatal.
+protocols:
+  - name: Filarr
+    schemes:
+      - filarr
+
 publish:
   - provider: github
     owner: matbel91765

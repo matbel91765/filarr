@@ -8,6 +8,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { TocNodeView } from './TocNodeView';
+import { tocIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -23,6 +24,14 @@ export const TocExtension = Node.create({
   atom: true,
   selectable: true,
   draggable: true,
+
+  /**
+   * Volontairement VIDE : le sommaire ne fait que refléter des titres déjà
+   * indexés à leur place. L'indexer compterait chaque titre deux fois.
+   */
+  renderText() {
+    return tocIndexText();
+  },
 
   parseHTML() {
     return [{ tag: 'div[data-toc]' }];

@@ -8,6 +8,9 @@
 
 import type { Note, NoteTemplate, Backlink, LinkSuggestion, WikiLinkType } from '../../types/notes';
 import { extractNoteLinks, extractFileLinks, extractFolderLinks } from './noteLinkParser';
+import { getProjectTemplates } from './projectTemplates';
+import { getGeneralTemplates } from './generalTemplates';
+import i18n from '../../i18n/config';
 
 // ==================== ID GENERATION ====================
 
@@ -62,6 +65,54 @@ export function createDailyNote(date: string): Note {
 // ==================== LINK RESOLUTION ====================
 
 /**
+ * Clé canonique de résolution d'un lien wiki : `toLowerCase()` brut.
+ *
+ * POURQUOI une fonction pour une ligne : cette clé est le SEUL contrat qui
+ * dit « [[cible]] désigne-t-il cette note ? ». La vue graphe doit poser
+ * exactement la même question pour décider si une cible est un fantôme ;
+ * dès que les deux normalisations divergent, un lien peut tomber dans
+ * l'angle mort — resolveLinks échoue (pas d'arête) alors que le graphe le
+ * croit résolu (pas de nœud fantôme) : le lien DISPARAÎT silencieusement.
+ * Une seule définition partagée rend cette divergence impossible.
+ *
+ * Volontairement NON normalisante au-delà de la casse : ni repli des
+ * espaces, ni retrait du fragment `#ancre`. C'est le comportement
+ * historique, et il est cohérent avec les autres consommateurs de liens
+ * (ouverture d'un [[lien]] dans l'éditeur, aperçu au survol, propagation
+ * de renommage) qui comparent tous `title.toLowerCase()`. Élargir ici
+ * seulement rendrait le graphe plus permissif que le reste de l'app.
+ */
+export function linkResolutionKey(nameOrTarget: string): string {
+  return nameOrTarget.toLowerCase();
+}
+
+/**
+ * Index « clé canonique → id de note », construit avec `linkResolutionKey`.
+ *
+ * Exporté pour que la vue graphe teste l'existence d'une cible avec
+ * EXACTEMENT l'index de `resolveLinks` (même fonction, même construction)
+ * au lieu de réimplémenter une normalisation parallèle.
+ *
+ * Prend un itérable plutôt qu'un `Record` : le service passe
+ * `Object.values(byId)`, le graphe passe sa liste de notes visibles
+ * (hors corbeille) sans allocation intermédiaire.
+ */
+export function buildNoteTitleIndex(notes: Iterable<Note>): Map<string, string> {
+  const index = new Map<string, string>();
+  for (const note of notes) {
+    const key = linkResolutionKey(note.title || '');
+    // CHANGEMENT DE COMPORTEMENT ASSUMÉ de resolveLinks (avant, toutes les
+    // notes étaient indexées, titre vide compris). Une note sans titre ne
+    // peut être la cible d'aucun [[lien]], et l'indexer sous la clé vide
+    // ouvrait un vrai piège : `parseWikiLinks` fait `target.trim()`, donc
+    // `[[ ]]` produit une cible VIDE qui résolvait alors vers la dernière
+    // note sans titre rencontrée — une arête vers une note au hasard.
+    if (key) index.set(key, note.id);
+  }
+  return index;
+}
+
+/**
  * Resolve outgoing links from a note's plain text.
  * Returns arrays of IDs found by matching names against known items.
  */
@@ -75,8 +126,7 @@ export function resolveLinks(
   const fileNames = extractFileLinks(plainText);
   const folderNames = extractFolderLinks(plainText);
 
-  const noteIndex = new Map<string, string>();
-  Object.values(notesById).forEach((n) => noteIndex.set(n.title.toLowerCase(), n.id));
+  const noteIndex = buildNoteTitleIndex(Object.values(notesById));
 
   const fileIndex = new Map<string, string>();
   Object.values(filesById).forEach((f) => fileIndex.set(f.name.toLowerCase(), f.id));
@@ -85,9 +135,15 @@ export function resolveLinks(
   Object.values(foldersById).forEach((f) => folderIndex.set(f.name.toLowerCase(), f.id));
 
   return {
-    linkedNoteIds: [...new Set(noteNames.map((n) => noteIndex.get(n.toLowerCase())).filter(Boolean))] as string[],
-    linkedFileIds: [...new Set(fileNames.map((n) => fileIndex.get(n.toLowerCase())).filter(Boolean))] as string[],
-    linkedFolderIds: [...new Set(folderNames.map((n) => folderIndex.get(n.toLowerCase())).filter(Boolean))] as string[],
+    linkedNoteIds: [
+      ...new Set(noteNames.map((n) => noteIndex.get(linkResolutionKey(n))).filter(Boolean)),
+    ] as string[],
+    linkedFileIds: [
+      ...new Set(fileNames.map((n) => fileIndex.get(n.toLowerCase())).filter(Boolean)),
+    ] as string[],
+    linkedFolderIds: [
+      ...new Set(folderNames.map((n) => folderIndex.get(n.toLowerCase())).filter(Boolean)),
+    ] as string[],
   };
 }
 
@@ -106,9 +162,10 @@ export function findBacklinks(targetNoteId: string, notesById: Record<string, No
       const idx = note.plainText.toLowerCase().indexOf(linkText.toLowerCase());
       const contextStart = Math.max(0, idx - 40);
       const contextEnd = Math.min(note.plainText.length, idx + linkText.length + 40);
-      const context = idx >= 0
-        ? '...' + note.plainText.slice(contextStart, contextEnd).trim() + '...'
-        : note.plainText.slice(0, 80) + '...';
+      const context =
+        idx >= 0
+          ? '...' + note.plainText.slice(contextStart, contextEnd).trim() + '...'
+          : note.plainText.slice(0, 80) + '...';
 
       backlinks.push({
         sourceNoteId: note.id,
@@ -207,203 +264,38 @@ export function countWords(text: string): number {
 
 // ==================== TEMPLATES ====================
 
-/** Helper: create a paragraph with text */
-const p = (text: string) => text
-  ? { type: 'paragraph' as const, content: [{ type: 'text' as const, text }] }
-  : { type: 'paragraph' as const };
+/**
+ * Nom AFFICHE d'un modele.
+ *
+ * Les modeles integres portent deja un libelle traduit (i18n a la
+ * construction) ; cette cle-ci permet en plus a un changement de langue en
+ * cours de session de se voir sans redemarrer. Un modele fait par
+ * l'utilisateur porte le nom QU'IL a choisi : le repli rend exactement
+ * `template.name`, donc rien ne bouge pour lui.
+ */
+export function getTemplateName(template: NoteTemplate): string {
+  if (!template.isBuiltIn) return template.name;
+  return i18n.t(`notes.templates.${template.id}.name`, { defaultValue: template.name });
+}
 
-/** Helper: create a heading */
-const h = (level: number, text: string) => ({
-  type: 'heading' as const, attrs: { level }, content: [{ type: 'text' as const, text }],
-});
+export function getTemplateDescription(template: NoteTemplate): string {
+  if (!template.isBuiltIn) return template.description;
+  return i18n.t(`notes.templates.${template.id}.description`, {
+    defaultValue: template.description,
+  });
+}
 
-/** Helper: create a bold + normal text paragraph */
-const boldP = (bold: string, text: string) => ({
-  type: 'paragraph' as const,
-  content: [
-    { type: 'text' as const, marks: [{ type: 'bold' as const }], text: bold },
-    { type: 'text' as const, text },
-  ],
-});
-
-/** Helper: create a bullet list with items */
-const bullets = (...items: string[]) => ({
-  type: 'bulletList' as const,
-  content: items.map((t) => ({
-    type: 'listItem' as const,
-    content: [p(t)],
-  })),
-});
-
-/** Helper: create a task list with items */
-const tasks = (...items: string[]) => ({
-  type: 'taskList' as const,
-  content: items.map((t) => ({
-    type: 'taskItem' as const,
-    attrs: { checked: false },
-    content: [p(t)],
-  })),
-});
-
-const doc = (...content: any[]) => JSON.stringify({ type: 'doc', content });
-
-const BUILT_IN_TEMPLATES: NoteTemplate[] = [
-  {
-    id: 'tpl-meeting',
-    name: 'Meeting Notes',
-    description: 'Template for meeting notes with agenda and action items',
-    icon: '\uD83E\uDD1D', // 🤝
-    content: doc(
-      h(1, '{{title}}'),
-      boldP('Date: ', '{{date}}'),
-      h(2, 'Participants'),
-      bullets('Participant 1', 'Participant 2'),
-      h(2, 'Agenda'),
-      bullets('Topic 1', 'Topic 2'),
-      h(2, 'Notes'),
-      p(''),
-      h(2, 'Action Items'),
-      tasks('Action item 1', 'Action item 2'),
-    ),
-    variables: [
-      { name: 'title', label: 'Meeting Title', type: 'text', defaultValue: 'Meeting' },
-      { name: 'date', label: 'Date', type: 'date' },
-    ],
-    isBuiltIn: true,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tpl-project',
-    name: 'Project Brief',
-    description: 'Template for project planning and documentation',
-    icon: '\uD83D\uDCCB', // 📋
-    content: doc(
-      h(1, '{{title}}'),
-      h(2, 'Objective'),
-      p('Describe the project goal here.'),
-      h(2, 'Key Results'),
-      tasks('Key result 1', 'Key result 2', 'Key result 3'),
-      h(2, 'Resources'),
-      bullets('Resource 1'),
-      h(2, 'Timeline'),
-      p('Start: TBD | End: TBD'),
-    ),
-    variables: [
-      { name: 'title', label: 'Project Name', type: 'text', defaultValue: 'New Project' },
-    ],
-    isBuiltIn: true,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tpl-review',
-    name: 'File Review',
-    description: 'Template for reviewing and annotating a document',
-    icon: '\uD83D\uDD0D', // 🔍
-    content: doc(
-      h(1, 'Review: {{title}}'),
-      boldP('Document: ', '{{title}}'),
-      boldP('Date: ', '{{date}}'),
-      h(2, 'Summary'),
-      p('Brief overview of the document.'),
-      h(2, 'Key Points'),
-      bullets('Point 1', 'Point 2'),
-      h(2, 'Questions / Concerns'),
-      bullets('Question 1'),
-      h(2, 'Action Items'),
-      tasks('Follow-up item 1'),
-    ),
-    variables: [
-      { name: 'title', label: 'Document Name', type: 'text' },
-      { name: 'date', label: 'Date', type: 'date' },
-    ],
-    isBuiltIn: true,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tpl-decision',
-    name: 'Decision Log',
-    description: 'Record and track important decisions',
-    icon: '\u2696\uFE0F', // ⚖️
-    content: doc(
-      h(1, 'Decision: {{title}}'),
-      boldP('Date: ', '{{date}}'),
-      boldP('Status: ', 'Pending'),
-      h(2, 'Context'),
-      p('What situation or problem prompted this decision?'),
-      h(2, 'Options Considered'),
-      bullets('Option A: ...', 'Option B: ...', 'Option C: ...'),
-      h(2, 'Decision'),
-      p('Which option was chosen and why.'),
-      h(2, 'Consequences'),
-      bullets('Expected outcome 1', 'Expected outcome 2'),
-      h(2, 'Follow-up'),
-      tasks('Implement decision', 'Communicate to stakeholders', 'Review in 2 weeks'),
-    ),
-    variables: [
-      { name: 'title', label: 'Decision Title', type: 'text', defaultValue: 'Decision' },
-      { name: 'date', label: 'Date', type: 'date' },
-    ],
-    isBuiltIn: true,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tpl-weekly',
-    name: 'Weekly Review',
-    description: 'End-of-week reflection and planning',
-    icon: '\uD83D\uDCC6', // 📆
-    content: doc(
-      h(1, 'Week of {{date}}'),
-      h(2, 'Accomplishments'),
-      tasks('Completed item 1', 'Completed item 2'),
-      h(2, 'Challenges'),
-      bullets('Challenge 1'),
-      h(2, 'Lessons Learned'),
-      p('What went well? What could improve?'),
-      h(2, 'Next Week Goals'),
-      tasks('Goal 1', 'Goal 2', 'Goal 3'),
-      h(2, 'Notes'),
-      p(''),
-    ),
-    variables: [
-      { name: 'date', label: 'Week Start', type: 'date' },
-    ],
-    isBuiltIn: true,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'tpl-brainstorm',
-    name: 'Brainstorm',
-    description: 'Capture and organize ideas freely',
-    icon: '\uD83D\uDCA1', // 💡
-    content: doc(
-      h(1, '{{title}}'),
-      boldP('Date: ', '{{date}}'),
-      h(2, 'Problem / Topic'),
-      p('What are we brainstorming about?'),
-      h(2, 'Ideas'),
-      bullets('Idea 1', 'Idea 2', 'Idea 3'),
-      h(2, 'Promising Ideas'),
-      tasks('Explore idea X further', 'Prototype idea Y'),
-      h(2, 'Next Steps'),
-      p(''),
-    ),
-    variables: [
-      { name: 'title', label: 'Topic', type: 'text', defaultValue: 'Brainstorm' },
-      { name: 'date', label: 'Date', type: 'date' },
-    ],
-    isBuiltIn: true,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-];
-
+/**
+ * Les modeles integres, CONSTRUITS a l'appel.
+ *
+ * Ils l'etaient autrefois a l'evaluation du module, en anglais fige : un
+ * utilisateur francais se retrouvait avec « Meeting Notes » et « Action
+ * Items » dans ses notes. Ils passent desormais tous par i18n, et se servent
+ * des blocs que l'editeur sait faire (encadres, colonnes, tableaux, blocs
+ * depliables) au lieu d'une suite de titres et de puces.
+ */
 export function getBuiltInTemplates(): NoteTemplate[] {
-  return BUILT_IN_TEMPLATES;
+  return [...getGeneralTemplates(), ...getProjectTemplates()];
 }
 
 /**

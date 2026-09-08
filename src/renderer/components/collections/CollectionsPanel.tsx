@@ -838,6 +838,7 @@ export const CollectionsPanel: React.FC<CollectionsPanelProps> = ({
       {contextMenuPosition && contextMenuCollection && (
         <>
           <div
+          // chrome:free — voile de rejet uniforme : tout point referme.
             className="fixed inset-0 z-[999]"
             onClick={closeContextMenu}
           />

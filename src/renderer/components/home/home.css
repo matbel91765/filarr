@@ -1,0 +1,229 @@
+/**
+ * Accueil modulaire — la feuille de style des blocs.
+ *
+ * ── LOI Nº1, EN CSS ─────────────────────────────────────────────────────────
+ *
+ * `.home-widget` au repos ne pose AUCUNE propriété visible : pas de `background`,
+ * pas de `border`, pas de `box-shadow`, pas de `border-radius`. Ce n'est pas un
+ * oubli à combler un jour : un accueil non personnalisé doit être indiscernable
+ * d'un accueil écrit à la main, et le moindre liseré systématique ferait
+ * ressembler tous les accueils du produit entre eux.
+ *
+ * Zéro couleur en dur : le produit a neuf thèmes, une valeur hexadécimale posée
+ * ici serait juste sur l'un d'eux et fausse sur les huit autres.
+ */
+
+/* ==================== La page ==================== */
+
+:root {
+  /**
+   * Le plafond du mode « Centré ».
+   *
+   * Il n'est pas dans les jetons du produit parce qu'il ne décrit pas un
+   * espacement mais une LARGEUR DE LECTURE : au-delà, une ligne de texte cesse
+   * d'être lisible, et un accueil qui porte des noms de fichiers et des extraits
+   * de notes en vit. C'est pour ça que le centrage reste le défaut.
+   *
+   * `HOME_PAGE_MAX_WIDTH` (`homeConfig.ts`) DOUBLE cette valeur : le JavaScript
+   * en dérive la largeur de case de référence. Changer l'une sans l'autre
+   * décale le témoin de dépôt d'une demi-case.
+   */
+  --home-page-max-width: 1400px;
+}
+
+/**
+ * « Centré » — le défaut, et le comportement d'avant le réglage de largeur.
+ */
+.home-page--centered {
+  max-width: var(--home-page-max-width);
+  margin-inline: auto;
+}
+
+/**
+ * « Pleine largeur » — la grille prend toute la fenêtre.
+ *
+ * Aucune règle : la page est déjà en `w-full`, et les marges latérales usuelles
+ * (`px-6`) sont posées dans les deux modes. La classe existe quand même, parce
+ * qu'un état qui ne se nomme pas ne se lit pas dans l'inspecteur — et parce que
+ * c'est là que viendra la prochaine règle propre à ce mode, s'il en faut une.
+ */
+
+/* ==================== Le bloc ==================== */
+
+.home-widget {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/**
+ * Le corps prend toute la place restante et SCROLLE si son contenu déborde. Le
+ * moteur de grille travaille en rangées de hauteur fixe : sans ce garde-fou, un
+ * bloc dont le contenu grandit (trente dossiers dans « Tous les dossiers »)
+ * recouvrirait le bloc d'en dessous au lieu de rester dans sa case.
+ */
+.home-widget__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ==================== Le menu du bloc ==================== */
+
+/**
+ * L'UNIQUE affordance permanente : invisible tant que la souris est ailleurs.
+ *
+ * `pointer-events: none` au repos n'est pas cosmétique — sans lui, une cible de
+ * 24 px totalement transparente traînerait dans le coin de CHAQUE bloc et
+ * volerait les clics destinés au contenu (le bouton « Nouveau » du bloc des
+ * dossiers, par exemple). Le focus clavier, lui, n'est pas bloqué par
+ * `pointer-events` : `:focus-within` rallume donc le menu pour qui navigue au
+ * clavier, et c'est ce qui l'empêche d'être un piège à focus invisible.
+ */
+.home-widget .home-widget__menu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.home-widget:hover .home-widget__menu,
+.home-widget .home-widget__menu:focus-within,
+.home-widget--editing .home-widget__menu {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.home-widget__menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-text-tertiary);
+  background: transparent;
+}
+
+.home-widget .home-widget__menu:hover .home-widget__menu-button {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+.home-widget__menu-glyph {
+  width: 16px;
+  height: 16px;
+}
+
+/* ==================== Édition ==================== */
+
+/**
+ * En édition SEULEMENT : une bordure de 1 px et le nom du bloc.
+ *
+ * Nécessaire, pas décoratif — un bloc qui n'a rien à afficher ce jour-là (aucune
+ * note sans dossier, aucun coffre partagé) n'occupe aucun pixel : sans bordure
+ * ni nom, on ne pourrait ni le voir, ni le saisir, ni le retirer. La poignée de
+ * déplacement et la prise d'angle viennent du moteur de grille (`GridItem`) : ce
+ * cadre ne les redessine pas.
+ */
+.home-widget--editing {
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-2);
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+}
+
+.home-widget__label {
+  margin: 0 0 var(--spacing-2) 0;
+  /* Le nom laisse la place au menu, qui est permanent en édition. */
+  padding-right: 28px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/**
+ * En édition, le contenu ne réagit plus : on range des blocs, on ne clique pas
+ * dedans. Ça évite d'ouvrir un dossier en essayant d'attraper son bloc — et ça
+ * neutralise le glisser-déposer de fichiers, qui entrerait en collision avec le
+ * glissement de la grille.
+ */
+.home-widget--editing .home-widget__body {
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* ==================== En-tête d'un bloc ==================== */
+
+/**
+ * Les blocs qui posent leurs propres contrôles en haut à droite (bascule de vue,
+ * « Nouveau »…) réservent la place du menu du cadre : les deux occupent le même
+ * coin, et sans cette gouttière ils se recouvriraient au survol.
+ */
+.home-widget__header {
+  padding-right: 28px;
+}
+
+/* ==================== Personnalisation en cours ==================== */
+
+/**
+ * Le bandeau d'édition. Discret et TEMPORAIRE : il n'existe que pendant la
+ * personnalisation, donc il n'ajoute rien à un accueil au repos.
+ */
+.home-edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border: var(--border-width-1) dashed var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background: var(--color-background-elevated);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.home-edit-bar__hint {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* ==================== Bloc inconnu ==================== */
+
+/**
+ * Un type que CE binaire ne connaît pas. Il n'est jamais retiré du document :
+ * une disposition rangée sur une version plus récente puis rouverte sur une plus
+ * ancienne doit repartir intacte. Au repos il n'affiche donc rien du tout ; en
+ * édition, une trace pour qu'on sache qu'une case est occupée.
+ */
+.home-widget__unknown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--spacing-3);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+/* ==================== Mouvement réduit ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-widget .home-widget__menu {
+    transition: none;
+  }
+}

@@ -9,6 +9,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { MathNodeView } from './MathNodeView';
+import { mathIndexText, mathInlineIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -34,6 +35,11 @@ export const MathBlockExtension = Node.create({
     return {
       latex: { default: '' },
     };
+  },
+
+  /** La formule saisie est le seul texte du noeud : sans ceci, elle est perdue pour l'index. */
+  renderText({ node }) {
+    return mathIndexText(node.attrs);
   },
 
   parseHTML() {
@@ -75,6 +81,11 @@ export const MathInlineExtension = Node.create({
     return {
       latex: { default: '' },
     };
+  },
+
+  /** Nœud INLINE : le texte rendu est bordé d'espaces, sinon il souderait les mots voisins. */
+  renderText({ node }) {
+    return mathInlineIndexText(node.attrs);
   },
 
   parseHTML() {

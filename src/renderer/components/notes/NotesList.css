@@ -35,6 +35,58 @@
   font-weight: 700;
   color: var(--color-text-primary);
   margin: 0;
+  /* Le titre porte desormais le nom de la portee, qui peut etre long : il se
+     coupe, il ne pousse pas les actions hors de la colonne. */
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Le retour vers « parcourir ». Colle au titre (marge negative) pour que la
+   fleche soit alignee sur le bord du panneau, comme la barre de titre le fait
+   partout ailleurs. */
+.notes-list__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 28px;
+  margin-left: -6px;
+  margin-right: 2px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+  transition: all 0.15s;
+}
+
+.notes-list__back:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+/* L'issue de la recherche bornee a une portee. Pleine largeur et discrete :
+   c'est un secours, pas une action courante. */
+.notes-list__search-widen {
+  margin: 0 12px 8px;
+  padding: 5px 8px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.notes-list__search-widen:hover {
+  border-color: var(--color-primary-400, #87ceeb);
+  color: var(--color-text-primary);
 }
 
 .notes-list__actions {
@@ -63,12 +115,12 @@
 
 .notes-list__action-btn--new {
   background: var(--color-primary-600, #4682b4);
-  color: white;
+  color: var(--color-text-inverted, #fff);
 }
 
 .notes-list__action-btn--new:hover {
   background: var(--color-primary-700, #36648b);
-  color: white;
+  color: var(--color-text-inverted, #fff);
 }
 
 /* ---- Search ---- */
@@ -208,8 +260,8 @@
 }
 
 .notes-list__card--selected {
-  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
-  border-color: var(--color-primary-200, rgba(135, 206, 235, 0.3));
+  background: var(--color-selected);
+  border-color: var(--color-selected-border);
 }
 
 .notes-list__card--pinned {
@@ -257,7 +309,8 @@
 }
 
 .notes-list__card:hover .notes-list__card-actions,
-.notes-list__card--selected .notes-list__card-actions {
+.notes-list__card--selected .notes-list__card-actions,
+.notes-list__card:focus-within .notes-list__card-actions {
   opacity: 1;
 }
 
@@ -365,7 +418,7 @@
   border: none;
   border-radius: var(--radius-md, 8px);
   background: var(--color-primary-600, #4682b4);
-  color: white;
+  color: var(--color-text-inverted, #fff);
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -659,7 +712,8 @@
   text-align: right;
 }
 
-.notes-list__notebook-delete {
+.notes-list__notebook-delete,
+.notes-list__notebook-add-child {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -675,8 +729,15 @@
   transition: all 0.12s;
 }
 
-.notes-list__notebook-item:hover .notes-list__notebook-delete {
+.notes-list__notebook-item:hover .notes-list__notebook-delete,
+.notes-list__notebook-item:hover .notes-list__notebook-add-child {
   opacity: 0.6;
+}
+
+.notes-list__notebook-add-child:hover {
+  opacity: 1 !important;
+  color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 10%, transparent);
 }
 
 .notes-list__notebook-delete:hover {
@@ -687,6 +748,32 @@
 
 .notes-list__notebook-new {
   padding: 2px 4px;
+}
+
+/* Manual-reorder drop indicator: a line on the edge the note will land on. */
+.notes-list__card--drop-above,
+.notes-list__card--drop-below {
+  position: relative;
+}
+
+.notes-list__card--drop-above::before,
+.notes-list__card--drop-below::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-primary-500);
+  pointer-events: none;
+}
+
+.notes-list__card--drop-above::before {
+  top: -1px;
+}
+
+.notes-list__card--drop-below::after {
+  bottom: -1px;
 }
 
 .notes-list__notebook-input {
@@ -843,7 +930,7 @@
 /* ---- Context Menu ---- */
 
 .note-context-menu {
-  background: #ffffff;
+  background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   box-shadow:
@@ -933,4 +1020,416 @@
 [data-theme='dark'] .notes-list__card--selected {
   background: rgba(135, 206, 235, 0.15);
   border-color: rgba(135, 206, 235, 0.3);
+}
+
+/* ==================== Notes Trash ==================== */
+
+.notes-list__trash-entry {
+  padding: 4px 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--color-border-light, rgba(0, 0, 0, 0.06));
+}
+
+.notes-list__trash-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.notes-trash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.notes-trash-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-surface, #fff);
+}
+
+.notes-trash-list__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notes-trash-list__title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-trash-list__date {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary, #999);
+}
+
+.notes-trash-list__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .notes-trash-list__item {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Nettoyage des notes parasites (NotesCleanupModal) ────────────────────── */
+
+.notes-cleanup__empty {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  padding: 24px 0;
+}
+
+.notes-cleanup__intro {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-warning-500) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-warning-500) 32%, transparent);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin: 0 0 16px;
+}
+
+.notes-cleanup__scope {
+  margin: 8px 0 16px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+.notes-cleanup__group {
+  margin-bottom: 20px;
+}
+
+.notes-cleanup__group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.notes-cleanup__group-heading {
+  min-width: 0;
+}
+
+.notes-cleanup__group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.notes-cleanup__group-count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-active);
+  border-radius: var(--radius-full, 999px);
+  padding: 1px 8px;
+}
+
+.notes-cleanup__group-hint {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+.notes-cleanup__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notes-cleanup__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-light);
+  border-left: 3px solid color-mix(in srgb, var(--color-success-500) 60%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* Ce qui n'est pas prouvé redondant se distingue à l'œil, pas seulement à la case. */
+.notes-cleanup__item--keep {
+  border-left-color: color-mix(in srgb, var(--color-warning-500) 75%, transparent);
+  background: color-mix(in srgb, var(--color-warning-500) 5%, var(--color-surface));
+}
+
+.notes-cleanup__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notes-cleanup__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notes-cleanup__title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La teinte est MÉLANGÉE au texte courant plutôt que figée en clair/sombre :
+   l'application compte huit thèmes, un bloc [data-theme='dark'] en raterait six. */
+.notes-cleanup__badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 7px;
+  border-radius: var(--radius-full, 999px);
+  color: color-mix(in srgb, var(--color-success-500) 55%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-success-500) 16%, transparent);
+}
+
+.notes-cleanup__badge--keep {
+  color: color-mix(in srgb, var(--color-warning-500) 55%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-warning-500) 20%, transparent);
+}
+
+.notes-cleanup__excerpt {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notes-cleanup__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+}
+
+/* Le pied porte la bannière d'irréversibilité : au bas du corps qui défile,
+   personne ne la voyait avant de cliquer. */
+.modal-footer.notes-cleanup__footer {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.notes-cleanup__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--spacing-3);
+}
+
+.notes-cleanup__warning {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--color-error-500) 45%, var(--color-text-primary));
+  background: color-mix(in srgb, var(--color-error-500) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error-500) 40%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.notes-cleanup__count {
+  margin-right: auto;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary);
+}
+
+/* ── Les notes des coffres partagés ────────────────────────────────────────
+   Une section À PART, sous les notes locales. Elle emprunte l'ossature de
+   `notes-list__pinned` (même repli, même ligne, même densité) : la séparation
+   se voit au GROUPE par coffre et au décalage, pas à un second vocabulaire
+   visuel qui aurait fait passer ces notes pour une autre application. */
+
+.notes-list__vault-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+/* Le nom du coffre — déchiffré, ou « Verrouillé » quand la clé manque. */
+.notes-list__vault-group-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 2px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Les lignes du groupe sont décalées sous leur coffre : c'est ce retrait qui
+   dit « ces notes appartiennent à celui-ci », sans une bordure de plus. */
+.notes-list__vault-group .notes-list__pinned-item {
+  padding-left: 18px;
+}
+
+/* Ce qu'on DIT à la place d'une liste : verrouillé, époque en retard, en cours
+   de lecture, illisible. Jamais « aucune note » pour un silence — d'où le ton
+   d'information, distinct d'une ligne cliquable. */
+.notes-list__vault-note-hint {
+  padding: 3px 8px 3px 18px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+  white-space: normal;
+}
+
+/* Un avertissement de déchiffrement n'est pas une note manquante : il se
+   distingue, sans crier. */
+.notes-list__vault-note-hint[role='alert'] {
+  color: var(--color-warning-700, #92400e);
+  opacity: 0.9;
+}
+
+.notes-list__vault-note-date {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  opacity: 0.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==================== CHARGEMENT ET ÉCHEC D'UN COFFRE ====================
+ *
+ * ── POURQUOI LE CHARGEMENT S'ANIME ──────────────────────────────────────────
+ *
+ * « Chargement des notes… » écrit en dur est indiscernable d'un chargement
+ * BLOQUÉ — et c'est précisément le doute que ce texte vient de coûter, quand
+ * un échec sans état d'échec le laissait affiché pour toujours. Trois points
+ * qui respirent disent « ça travaille » ; leur immobilité dirait le contraire.
+ *
+ * L'animation s'arrête sous `prefers-reduced-motion` : les points restent, à
+ * opacité pleine, et le texte suffit. On ne remplace pas une information par
+ * du mouvement — on l'accompagne.
+ */
+
+.vault-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vault-loading__dots {
+  display: inline-flex;
+  gap: 3px;
+  flex: none;
+}
+
+.vault-loading__dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-text-tertiary);
+  animation: vault-loading-pulse 1.1s ease-in-out infinite;
+}
+
+/* Le décalage est ce qui fait l'onde. Sans lui, trois points qui pulsent
+   ENSEMBLE ne se lisent pas comme une progression mais comme un clignotement. */
+.vault-loading__dots i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.vault-loading__dots i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes vault-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vault-loading__dots i {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* ── L'échec ──
+ *
+ * Il porte une REPRISE, parce qu'un aveu sans geste n'est qu'un reproche : la
+ * cause la plus fréquente (un réseau parti puis revenu) se répare d'un clic. */
+.vault-failed {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--color-warning-on-background);
+}
+
+.vault-failed__retry {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-link);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.vault-failed__retry:hover {
+  color: var(--color-link-hover);
 }

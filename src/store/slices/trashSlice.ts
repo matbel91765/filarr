@@ -258,7 +258,12 @@ export const emptyTrash = createAsyncThunk<
 
       const remainingItems =
         olderThanDays > 0
-          ? items.filter((item) => new Date(item.deletedAt).getTime() > cutoffDate)
+          ? items.filter((item) => {
+              // Keep anything newer than the cutoff. A malformed deletedAt parses to NaN — RETAIN it
+              // (never delete data we can't age); matches purgeExpiredTrashedNotes' guard.
+              const t = new Date(item.deletedAt).getTime();
+              return !Number.isFinite(t) || t > cutoffDate;
+            })
           : [];
 
       const deletedCount = items.length - remainingItems.length;

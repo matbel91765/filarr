@@ -1,18 +1,25 @@
 /**
  * TocNodeView — Filarr Notes
  *
- * React NodeView for the inline Table of Contents block.
- * Extracts headings live from the editor document.
+ * NodeView React du bloc « sommaire » inline. Les titres sont lus en direct
+ * dans le document de l'éditeur.
+ *
+ * CE BLOC NE FAIT PLUS SA PROPRE CUISINE. Il portait auparavant sa propre
+ * extraction (rang compté sur les seuls titres NON VIDES) et sa propre ancre
+ * (`querySelectorAll('h1..h6')[index]`, qui rend TOUS les titres, vides et
+ * transclus compris). Le sommaire latéral et le bloc /toc de la MÊME note
+ * pouvaient donc sauter à deux endroits différents pour le même titre. Les
+ * deux passent maintenant par `extractHeadings` et `outlineNavigation`.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
-
-interface HeadingItem {
-  text: string;
-  level: number;
-  index: number;
-}
+import { extractHeadings } from '../../../../services/notes/transclusionHelpers';
+import {
+  toOutlineItems,
+  scrollToOutlineItem,
+  type OutlineItem,
+} from '../outlineNavigation';
 
 interface TocNodeViewProps {
   editor: any;
@@ -20,22 +27,14 @@ interface TocNodeViewProps {
 }
 
 export const TocNodeView: React.FC<TocNodeViewProps> = ({ editor, selected }) => {
-  const [headings, setHeadings] = useState<HeadingItem[]>([]);
+  const [headings, setHeadings] = useState<OutlineItem[]>([]);
 
-  // Extract headings from editor doc
+  // Les titres viennent du JSON du document, via l'extracteur partagé : même
+  // parcours récursif que le sommaire latéral (un titre dans un encadré ou une
+  // colonne compte), et même convention de rang (les titres vides comptent).
   const updateHeadings = useCallback(() => {
     if (!editor) return;
-    const items: HeadingItem[] = [];
-    let idx = 0;
-    editor.state.doc.descendants((node: any) => {
-      if (node.type.name === 'heading') {
-        const text = node.textContent;
-        if (text.trim()) {
-          items.push({ text: text.trim(), level: node.attrs.level, index: idx++ });
-        }
-      }
-    });
-    setHeadings(items);
+    setHeadings(toOutlineItems(extractHeadings(editor.getJSON())));
   }, [editor]);
 
   useEffect(() => {
@@ -45,20 +44,11 @@ export const TocNodeView: React.FC<TocNodeViewProps> = ({ editor, selected }) =>
     return () => { editor.off('update', updateHeadings); };
   }, [editor, updateHeadings]);
 
-  const scrollToHeading = useCallback(
-    (index: number) => {
-      const editorEl = document.querySelector('.note-editor__body .ProseMirror');
-      if (!editorEl) return;
-      const hEls = editorEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      const target = hEls[index];
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        target.classList.add('outline-highlight');
-        setTimeout(() => target.classList.remove('outline-highlight'), 1500);
-      }
-    },
-    []
-  );
+  // Même résolution que le sommaire latéral : titres transclus écartés,
+  // niveau + texte vérifiés, repli par occurrence.
+  const scrollToHeading = useCallback((item: OutlineItem) => {
+    scrollToOutlineItem(item);
+  }, []);
 
   return (
     <NodeViewWrapper className={`toc-block ${selected ? 'toc-block--selected' : ''}`} data-toc="">
@@ -75,9 +65,9 @@ export const TocNodeView: React.FC<TocNodeViewProps> = ({ editor, selected }) =>
         <div className="toc-block__list">
           {headings.map((h) => (
             <button
-              key={h.index}
+              key={h.id}
               className={`toc-block__item toc-block__item--h${h.level}`}
-              onClick={() => scrollToHeading(h.index)}
+              onClick={() => scrollToHeading(h)}
             >
               {h.text}
             </button>

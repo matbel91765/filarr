@@ -7,6 +7,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { DateNodeView } from './DateNodeView';
+import { inlineDateIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -27,6 +28,11 @@ export const DateExtension = Node.create({
     return {
       date: { default: new Date().toISOString().slice(0, 10) },
     };
+  },
+
+  /** Nœud atomique : sans ça, la date est invisible pour la recherche locale. */
+  renderText({ node }) {
+    return inlineDateIndexText(node.attrs);
   },
 
   parseHTML() {

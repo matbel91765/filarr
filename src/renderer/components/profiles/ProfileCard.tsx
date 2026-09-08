@@ -54,6 +54,8 @@ const CLOUD_CHIP_COLORS: Record<string, { bg: string; text: string; label: strin
   free: { bg: 'var(--color-neutral-100)', text: 'var(--color-neutral-600)', label: 'Free' },
   solo: { bg: '#dbeafe', text: '#1d4ed8', label: 'Solo' },
   pro: { bg: '#ede9fe', text: '#7c3aed', label: 'Pro' },
+  teams: { bg: '#dcfce7', text: '#15803d', label: 'Teams' },
+  enterprise: { bg: '#fef3c7', text: '#b45309', label: 'Enterprise' },
 };
 
 const DOT_COLORS: Record<NonNullable<SyncDotState>, { bg: string; tooltip: string }> = {

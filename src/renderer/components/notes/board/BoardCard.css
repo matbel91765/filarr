@@ -1,0 +1,377 @@
+/* ==================== Board Card — Atelier ==================== */
+
+/**
+ * Tout est en TOKENS : la carte doit tenir sur les neuf thèmes (papier plat,
+ * minuit doré, sakura clair…). La seule couleur « à elle » est la teinte hachée,
+ * et encore : seule la TEINTE vient du composant, la saturation et la luminosité
+ * sont des variables que les thèmes tempèrent plus bas.
+ */
+.board-card {
+  --board-tint-s: 62%;
+  --board-tint-l: 52%;
+  --board-tint: hsl(var(--board-tint-h, 210) var(--board-tint-s) var(--board-tint-l));
+
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-light);
+  border-left: 3px solid var(--board-tint);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  cursor: grab;
+  user-select: none;
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease,
+    border-color 180ms ease;
+}
+
+.board-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: color-mix(in srgb, var(--board-tint) 40%, var(--color-border));
+  border-left-color: var(--board-tint);
+  transform: translateY(-2px);
+  z-index: 10;
+}
+
+.board-card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  z-index: 10;
+}
+
+/* Pendant le geste, aucune transition : le retard de 180 ms sur la transformée
+   se lit comme de la latence, pas comme du raffinement. */
+.board-card--dragging {
+  cursor: grabbing;
+  transition: none;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-xl);
+  z-index: 100;
+}
+
+.board-card--resizing {
+  transition: none;
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 2px color-mix(in srgb, var(--board-tint) 70%, transparent);
+  z-index: 100;
+}
+
+/**
+ * SÉLECTIONNÉE (cadre de sélection, clic, Ctrl+clic).
+ *
+ * Le contour passe par `box-shadow` et non par `outline` ou `border` : une
+ * bordure changerait la boîte, donc la position apparente de la carte, à
+ * l'instant précis où l'utilisateur la sélectionne pour la déplacer. L'ombre,
+ * elle, est peinte hors flux — la géométrie ne bouge pas d'un pixel.
+ *
+ * La teinte vient de la rampe PRIMAIRE et non de la teinte hachée de la carte :
+ * la sélection est un état de l'application, elle doit se lire pareil sur
+ * douze cartes de douze couleurs différentes.
+ */
+.board-card--selected {
+  box-shadow:
+    var(--shadow-card-hover),
+    0 0 0 2px var(--color-primary-500);
+  z-index: 20;
+}
+
+.board-card--selected:hover {
+  box-shadow:
+    var(--shadow-card-hover),
+    0 0 0 2px var(--color-primary-400);
+}
+
+/* Pendant le glissement de groupe, l'ombre de prise l'emporte sur celle de la
+   sélection — sinon la carte tenue serait moins « décollée » que ses voisines. */
+.board-card--selected.board-card--dragging {
+  box-shadow:
+    var(--shadow-xl),
+    0 0 0 2px var(--color-primary-400);
+}
+
+/* ---- Bandeau de couverture ---- */
+
+.board-card__cover {
+  flex: none;
+  margin: -12px -14px 10px -14px;
+  aspect-ratio: 21 / 9;
+  max-height: 38%;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+/* ---- Tête (icône + titre) ---- */
+
+.board-card__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.board-card__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm, 5px);
+  background: color-mix(in srgb, var(--board-tint) 14%, transparent);
+  color: var(--color-text-primary);
+}
+
+.board-card__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* « Affiche » : la note que l'utilisateur a AGRANDIE mérite un titre display —
+   c'est elle qu'il veut lire de loin, pas ses voisines. */
+.board-card--poster {
+  padding: 16px 18px;
+}
+.board-card--poster .board-card__cover {
+  margin: -16px -18px 14px -18px;
+}
+.board-card--poster .board-card__title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.board-card--poster .board-card__text {
+  font-size: 0.8125rem;
+}
+
+/* Note nue et courte : moins de chrome, plus d'air. */
+.board-card--compact {
+  padding: 10px 12px;
+}
+
+/* ---- Corps ---- */
+
+.board-card__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: 7px;
+  overflow: hidden;
+}
+
+.board-card__text {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.board-card__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--color-surface));
+}
+
+/* ---- Puces de tags ---- */
+
+.board-card__tags {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  overflow: hidden;
+  max-height: 22px;
+}
+
+.board-card__tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: color-mix(
+    in srgb,
+    var(--board-tag-color, var(--color-primary-500)) 55%,
+    var(--color-text-primary)
+  );
+  background: color-mix(in srgb, var(--board-tag-color, var(--color-primary-500)) 14%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--board-tag-color, var(--color-primary-500)) 32%, transparent);
+}
+
+.board-card__tag--more {
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-light);
+}
+
+/* ---- Pied ---- */
+
+.board-card__footer {
+  flex: none;
+  margin-top: 8px;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+}
+
+/* ---- Poignée de redimensionnement ---- */
+
+.board-card__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  background-image: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 52%,
+    var(--color-text-tertiary) 52%,
+    var(--color-text-tertiary) 62%,
+    transparent 62%,
+    transparent 72%,
+    var(--color-text-tertiary) 72%,
+    var(--color-text-tertiary) 82%,
+    transparent 82%
+  );
+}
+.board-card:hover .board-card__resize,
+.board-card--resizing .board-card__resize {
+  opacity: 0.85;
+}
+
+/* ==================== Niveaux de détail (100 % CSS) ==================== */
+
+/**
+ * `data-lod` est posé UNE fois sur la fenêtre par la vue ; le coût est donc
+ * indépendant du nombre de cartes. Aucune carte ne calcule quoi que ce soit,
+ * aucune n'est re-rendue quand on dézoome — le navigateur recompose, c'est tout.
+ */
+
+/* --- « far » (zoom < 0,5) : le texte n'est plus lisible, le titre le devient --- */
+.sticky-notes-view[data-lod='far'] .board-card__body,
+.sticky-notes-view[data-lod='far'] .board-card__tags,
+.sticky-notes-view[data-lod='far'] .board-card__footer,
+.sticky-notes-view[data-lod='far'] .board-card__resize,
+.sticky-notes-view[data-lod='faraway'] .board-card__body,
+.sticky-notes-view[data-lod='faraway'] .board-card__tags,
+.sticky-notes-view[data-lod='faraway'] .board-card__footer,
+.sticky-notes-view[data-lod='faraway'] .board-card__resize {
+  display: none;
+}
+
+.sticky-notes-view[data-lod='far'] .board-card,
+.sticky-notes-view[data-lod='faraway'] .board-card {
+  padding: 10px 12px;
+}
+
+.sticky-notes-view[data-lod='far'] .board-card__head,
+.sticky-notes-view[data-lod='faraway'] .board-card__head {
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.sticky-notes-view[data-lod='far'] .board-card__title,
+.sticky-notes-view[data-lod='faraway'] .board-card__title {
+  flex: none;
+  max-width: 100%;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-align: center;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* La variante « affiche » n'a plus de raison d'être à cette distance : toutes
+   les cartes parlent la même langue, un titre centré. La règle ci-dessus la
+   couvre déjà (attribut + deux classes l'emportent sur `--poster .__title`). */
+
+/* --- « faraway » (zoom < 0,35) : plus qu'une tache de couleur et un titre --- */
+.sticky-notes-view[data-lod='faraway'] .board-card__cover,
+.sticky-notes-view[data-lod='faraway'] .board-card__icon {
+  display: none;
+}
+
+.sticky-notes-view[data-lod='faraway'] .board-card {
+  background: color-mix(in srgb, var(--board-tint) 34%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--board-tint) 50%, transparent);
+  border-left-color: var(--board-tint);
+  box-shadow: none;
+}
+
+.sticky-notes-view[data-lod='faraway'] .board-card__title {
+  font-size: 2.375rem;
+  -webkit-line-clamp: 2;
+}
+
+/* ==================== Thèmes ==================== */
+
+/* Papier : chrome plat, teintes assourdies — le liseré porte seul l'identité. */
+[data-theme='papier'] .board-card {
+  --board-tint-s: 38%;
+  --board-tint-l: 44%;
+}
+
+/* Thèmes sombres : une teinte à 52 % de luminosité sur un fond quasi noir
+   « bave » ; on remonte légèrement pour que le liseré reste net. */
+[data-theme='dark'] .board-card,
+[data-theme='space'] .board-card,
+[data-theme='aurora'] .board-card,
+[data-theme='crepuscule'] .board-card,
+[data-theme='foret'] .board-card,
+[data-theme='minuit'] .board-card {
+  --board-tint-s: 58%;
+  --board-tint-l: 60%;
+}
+
+/* ==================== Mouvement réduit ==================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .board-card {
+    transition: box-shadow 180ms ease;
+  }
+  .board-card:hover {
+    transform: none;
+  }
+  .board-card--dragging {
+    transform: none;
+  }
+}

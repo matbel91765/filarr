@@ -15,9 +15,24 @@ import type { RootState, AppDispatch } from '../store';
 import type { FileItem, Folder } from '../types';
 import shortcutsService from '../services/platform/shortcutsService';
 import { setCurrentFolder } from '../store/slices/foldersSlice';
-import { toggleSidebar, setViewMode, setTheme, openModal } from '../store/slices/uiSlice';
+import {
+  toggleSidebar,
+  setViewMode,
+  setTheme,
+  openModal,
+  setNotesFocusMode,
+} from '../store/slices/uiSlice';
 import { showWidget as showPomodoroWidget } from '../store/slices/pomodoroSlice';
 import { selectFavorites, selectRecentFiles, addRecentFile } from '../store/slices/favoritesSlice';
+import { setNotesFilterShared } from '../store/slices/notesSlice';
+import { vaultRefOf } from '../store/selectors/fileShortcutSelectors';
+import { vaultFolderRoute } from '../renderer/components/layout/RouteContent/routeCompat';
+
+// L'événement fenêtre qu'écoute `NoteShareButton` (éditeur de notes). Le nom
+// est RECOPIÉ plutôt qu'importé : un crochet qui importe un composant (et, à
+// travers lui, le design system et ses feuilles de style) inverserait le sens
+// des dépendances de l'application.
+const SHARE_CURRENT_NOTE_EVENT = 'filarr-share-current-note';
 
 // Types pour les commandes
 export type CommandCategory = 'files' | 'actions' | 'settings' | 'navigation' | 'recent';
@@ -43,6 +58,10 @@ export interface CommandPaletteState {
 // Clé de stockage pour l'historique
 const HISTORY_STORAGE_KEY = 'filarr_command_palette_history';
 const MAX_HISTORY_ITEMS = 20;
+
+// Site public : certaines fonctionnalités (demandes de fichiers, offres) n'ont
+// pas d'écran local et vivent dans le compte web.
+const WEBSITE_BASE_URL = 'https://filarr.com';
 
 // Icônes SVG pour les catégories
 const CATEGORY_ICONS: Record<CommandCategory, string> = {
@@ -75,6 +94,11 @@ export function useCommandPalette() {
   const currentFolderId = useSelector((state: RootState) => state.folders.currentFolderId);
   const viewMode = useSelector((state: RootState) => state.ui.viewMode);
   const theme = useSelector((state: RootState) => state.ui.theme);
+  // Les gestes de partage des notes : la note OUVERTE (garde de « partager la
+  // note ») et le mode de compte — hors nuage, le partage n'existe pas et ses
+  // commandes ne sont pas proposées (règle du dépôt).
+  const editingNoteId = useSelector((state: RootState) => state.notes.editingNoteId);
+  const accountMode = useSelector((state: RootState) => state.auth.accountMode);
 
   // Get favorites and recent files from store
   const favorites = useSelector(selectFavorites);
@@ -321,14 +345,14 @@ export function useCommandPalette() {
         },
       },
       {
-        id: 'nav-calendar',
-        name: t('commandPalette.commands.calendar'),
-        description: t('commandPalette.commands.calendarDesc'),
+        id: 'nav-reminders',
+        name: t('commandPalette.commands.reminders'),
+        description: t('commandPalette.commands.remindersDesc'),
         category: 'navigation',
-        keywords: ['calendar', 'date', 'rappels'],
+        keywords: ['reminder', 'rappel', 'calendar', 'calendrier', 'date', 'échéance'],
         priority: 8,
         action: () => {
-          navigate('/calendar');
+          navigate('/reminders');
         },
       },
       {
@@ -418,6 +442,29 @@ export function useCommandPalette() {
         },
       },
       {
+        id: 'settings-toggle-focus-mode',
+        name: t('commandPalette.commands.toggleFocusMode'),
+        description: t('commandPalette.commands.toggleFocusModeDesc'),
+        category: 'settings',
+        shortcut: getShortcutForAction('view:toggle-focus') || ['Ctrl', 'Shift', 'F'],
+        // Mots-clés DISJOINTS de `action-focus-timer`, qui occupe déjà « focus »
+        // et « concentration » : deux entrées se disputant la même recherche,
+        // l'une lançant un chronomètre et l'autre épurant l'écran, se
+        // marcheraient dessus.
+        keywords: [
+          'zen',
+          'distraction',
+          'sans distraction',
+          'distraction-free',
+          'épuré',
+          'immersif',
+        ],
+        priority: 5,
+        action: () => {
+          dispatch(setNotesFocusMode(true));
+        },
+      },
+      {
         id: 'settings-security',
         name: t('commandPalette.commands.security'),
         description: t('commandPalette.commands.securityDesc'),
@@ -430,6 +477,9 @@ export function useCommandPalette() {
       },
 
       // Extended navigation — feature pages
+      // Les demandes de fichiers n'ont pas d'écran local : la fonctionnalité
+      // vit entièrement dans le compte web. On ouvre le navigateur plutôt que
+      // de proposer une commande qui atterrit sur un 404.
       {
         id: 'nav-file-requests',
         name: t('commandPalette.commands.fileRequests'),
@@ -438,29 +488,7 @@ export function useCommandPalette() {
         keywords: ['file request', 'upload link', 'demande', 'lien'],
         priority: 7,
         action: () => {
-          navigate('/file-requests');
-        },
-      },
-      {
-        id: 'nav-data-rooms',
-        name: t('commandPalette.commands.dataRooms'),
-        description: t('commandPalette.commands.dataRoomsDesc'),
-        category: 'navigation',
-        keywords: ['data room', 'secure', 'sécurisé', 'NDA'],
-        priority: 7,
-        action: () => {
-          navigate('/data-rooms');
-        },
-      },
-      {
-        id: 'nav-vault',
-        name: t('commandPalette.commands.vault'),
-        description: t('commandPalette.commands.vaultDesc'),
-        category: 'navigation',
-        keywords: ['vault', 'coffre', 'chiffré', 'encrypted', 'secret'],
-        priority: 7,
-        action: () => {
-          navigate('/vault');
+          openExternal(`${WEBSITE_BASE_URL}/account/requests`);
         },
       },
       {
@@ -497,28 +525,6 @@ export function useCommandPalette() {
         },
       },
       {
-        id: 'nav-duplicates',
-        name: t('commandPalette.commands.duplicates'),
-        description: t('commandPalette.commands.duplicatesDesc'),
-        category: 'navigation',
-        keywords: ['duplicate', 'doublon', 'copie', 'identique'],
-        priority: 6,
-        action: () => {
-          navigate('/duplicates');
-        },
-      },
-      {
-        id: 'nav-admin',
-        name: t('commandPalette.commands.admin'),
-        description: t('commandPalette.commands.adminDesc'),
-        category: 'navigation',
-        keywords: ['admin', 'administration', 'gestion', 'manage'],
-        priority: 7,
-        action: () => {
-          navigate('/admin');
-        },
-      },
-      {
         id: 'nav-share-links',
         name: t('commandPalette.commands.shareLinks'),
         description: t('commandPalette.commands.shareLinksDesc'),
@@ -526,42 +532,54 @@ export function useCommandPalette() {
         keywords: ['share', 'link', 'partage', 'lien', 'public'],
         priority: 6,
         action: () => {
-          navigate('/share-links');
+          navigate('/shares');
         },
       },
-      {
-        id: 'nav-api-keys',
-        name: t('commandPalette.commands.apiKeys'),
-        description: t('commandPalette.commands.apiKeysDesc'),
-        category: 'navigation',
-        keywords: ['api', 'key', 'clé', 'token', 'access'],
-        priority: 5,
-        action: () => {
-          navigate('/api-keys');
-        },
-      },
-      {
-        id: 'nav-msp-portal',
-        name: t('commandPalette.commands.mspPortal'),
-        description: t('commandPalette.commands.mspPortalDesc'),
-        category: 'navigation',
-        keywords: ['msp', 'tenant', 'multi', 'organisation', 'portal'],
-        priority: 5,
-        action: () => {
-          navigate('/msp-portal');
-        },
-      },
-      {
-        id: 'nav-permissions',
-        name: t('commandPalette.commands.permissions'),
-        description: t('commandPalette.commands.permissionsDesc'),
-        category: 'navigation',
-        keywords: ['permission', 'role', 'droit', 'accès', 'matrix'],
-        priority: 5,
-        action: () => {
-          navigate('/permissions');
-        },
-      },
+      // Partager la note OUVERTE : la palette ne connaît pas l'éditeur. Elle
+      // navigue vers les notes, puis lance l'événement fenêtre qu'écoute
+      // `NoteShareButton` — après le tour de rendu, pour qu'un éditeur qui
+      // vient d'être monté par la navigation soit déjà à l'écoute.
+      ...(accountMode === 'cloud' && editingNoteId
+        ? [
+            {
+              id: 'note-share-to-vault',
+              name: t('commandPalette.commands.shareNoteToVault', 'Share this note to a vault'),
+              description: t(
+                'commandPalette.commands.shareNoteToVaultDesc',
+                'Copy or move the open note into a shared vault'
+              ),
+              category: 'actions' as const,
+              keywords: ['share', 'vault', 'partager', 'coffre', 'note'],
+              priority: 6,
+              action: () => {
+                navigate('/notes');
+                window.setTimeout(
+                  () => window.dispatchEvent(new CustomEvent(SHARE_CURRENT_NOTE_EVENT)),
+                  0
+                );
+              },
+            },
+          ]
+        : []),
+      ...(accountMode === 'cloud'
+        ? [
+            {
+              id: 'nav-shared-notes',
+              name: t('commandPalette.commands.sharedNotes', 'Shared notes'),
+              description: t(
+                'commandPalette.commands.sharedNotesDesc',
+                'Notes that have a copy in a shared vault'
+              ),
+              category: 'navigation' as const,
+              keywords: ['shared', 'notes', 'vault', 'partagées', 'coffre'],
+              priority: 5,
+              action: () => {
+                navigate('/notes');
+                dispatch(setNotesFilterShared(true));
+              },
+            },
+          ]
+        : []),
       {
         id: 'nav-pricing',
         name: t('commandPalette.commands.pricing'),
@@ -570,7 +588,7 @@ export function useCommandPalette() {
         keywords: ['pricing', 'plan', 'tarif', 'prix', 'abonnement'],
         priority: 5,
         action: () => {
-          navigate('/pricing');
+          openExternal(`${WEBSITE_BASE_URL}/pricing`);
         },
       },
       {
@@ -581,13 +599,41 @@ export function useCommandPalette() {
         keywords: ['subscription', 'abonnement', 'billing', 'facturation'],
         priority: 5,
         action: () => {
-          navigate('/subscription');
+          navigate('/settings?cat=compte');
         },
       },
+      // Data Rooms / Vault / Duplicates / Admin / API Keys / MSP Portal /
+      // Permissions ont été retirés : aucun de ces écrans n'existe, ni ici ni
+      // sur le site. Les commandes menaient toutes au « 404 - Page non trouvee »
+      // de RouteContent.
     ];
 
     return commands;
-  }, [dispatch, navigate, currentFolderId, folders, getShortcutForAction, t]);
+  }, [
+    dispatch,
+    navigate,
+    currentFolderId,
+    folders,
+    getShortcutForAction,
+    t,
+    accountMode,
+    editingNoteId,
+  ]);
+
+  /**
+   * Un RACCOURCI (fichier dont les octets sont partis dans un coffre partagé)
+   * s'ouvre dans le coffre, directement sur l'élément — pas dans l'aperçu, qui
+   * n'aurait rien à montrer. Rend vrai s'il a pris la main.
+   */
+  const openShortcutIfAny = useCallback(
+    (file: unknown): boolean => {
+      const ref = vaultRefOf(file);
+      if (!ref) return false;
+      navigate(vaultFolderRoute(ref.vaultId, { itemId: ref.itemId }));
+      return true;
+    },
+    [navigate]
+  );
 
   // Commandes de fichiers générées à partir du store
   const fileCommands = useMemo((): Command[] => {
@@ -626,6 +672,9 @@ export function useCommandPalette() {
         keywords: ['file', 'fichier', extension],
         priority: 4,
         action: () => {
+          // Track as recent
+          dispatch(addRecentFile({ item: file as any }));
+          if (openShortcutIfAny(file)) return;
           // Open file preview modal
           dispatch(
             openModal({
@@ -633,14 +682,12 @@ export function useCommandPalette() {
               props: { fileId: file.id, fileName: file.name },
             })
           );
-          // Track as recent
-          dispatch(addRecentFile({ item: file as any }));
         },
       });
     });
 
     return commands;
-  }, [files, folders, dispatch, navigate]);
+  }, [files, folders, dispatch, navigate, openShortcutIfAny]);
 
   // Commands from favorites
   const favoriteCommands = useMemo((): Command[] => {
@@ -662,7 +709,7 @@ export function useCommandPalette() {
         if (fav.itemType === 'folder') {
           dispatch(setCurrentFolder(fav.itemId));
           navigate(`/folder/${fav.itemId}`);
-        } else {
+        } else if (!openShortcutIfAny(files[fav.itemId])) {
           dispatch(
             openModal({
               type: 'filePreview',
@@ -672,7 +719,7 @@ export function useCommandPalette() {
         }
       },
     }));
-  }, [favorites, dispatch, navigate]);
+  }, [favorites, files, dispatch, navigate, openShortcutIfAny]);
 
   // Commands from recent files
   const recentFileCommands = useMemo((): Command[] => {
@@ -691,7 +738,7 @@ export function useCommandPalette() {
         if (recent.itemType === 'folder') {
           dispatch(setCurrentFolder(recent.itemId));
           navigate(`/folder/${recent.itemId}`);
-        } else {
+        } else if (!openShortcutIfAny(files[recent.itemId])) {
           dispatch(
             openModal({
               type: 'filePreview',
@@ -701,7 +748,7 @@ export function useCommandPalette() {
         }
       },
     }));
-  }, [recentFiles, dispatch, navigate]);
+  }, [recentFiles, files, dispatch, navigate, openShortcutIfAny]);
 
   // Toutes les commandes combinées
   const allCommands = useMemo(() => {
@@ -847,6 +894,15 @@ export function useCommandPalette() {
     getCategoryIcon,
     getCategoryName,
   };
+}
+
+/**
+ * Ouvrir une URL dans le navigateur par défaut.
+ * Desktop : canal `open-external` (main valide le schéma avant shell.openExternal).
+ * Web : le dispatcher retombe sur window.open avec noopener.
+ */
+function openExternal(url: string): void {
+  window.electron?.ipcRenderer?.send('open-external', url);
 }
 
 /**

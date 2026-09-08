@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<!--
+  LA PAGE BAC À SABLE des greffons Filarr.
+
+  Chargée dans une iframe sandbox="allow-scripts" SANS allow-same-origin
+  (origine opaque : aucun accès au storage/DOM/cookies de l'app). Cette page
+  porte SA propre CSP — 'unsafe-eval' y est le MÉCANISME d'exécution du code
+  de greffon, pas une faiblesse : la page n'a aucun secret, aucune origine,
+  aucun réseau. Ne JAMAIS répondre à un problème d'héritage de CSP en
+  élargissant celle de l'APP (worker.js / _headers / electron main.ts) :
+  c'est ouvrir l'XSS sur toute l'application E2EE — la page servie est la
+  bonne réponse, c'est pour ça qu'elle existe.
+
+  `webrtc 'block'` est posé ICI AUSSI (pas seulement dans les en-têtes
+  serveur) : default-src/connect-src ne régissent PAS RTCPeerConnection — sans
+  ce token, la meta-CSP « filet de fond » laisserait ouvert le seul canal
+  réseau restant.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; form-action 'none'; base-uri 'none'; webrtc 'block'" />
+<title>Filarr — plugin isolé</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; }
+</style>
+</head>
+<body>
+<div id="plugin-root" style="position:fixed;inset:0"></div>
+<script>
+'use strict';
+(function () {
+  var VERSION = 1;
+  var BOOTSTRAP_TYPE = 'filarr-sandbox-bootstrap';
+  var MAX_BYTES = 64 * 1024 * 1024;
+
+  var port = null;
+  var instance = null;
+  var booted = false;
+
+  function post(msg, transfer) {
+    if (!port) return;
+    try { port.postMessage(msg, transfer || []); } catch (e) { /* port fermé */ }
+  }
+
+  function fatal(message) {
+    post({ kind: 'fatal', message: String(message || 'sandbox_error').slice(0, 2000) });
+  }
+
+  window.addEventListener('error', function (e) { fatal(e && e.message); });
+  window.addEventListener('unhandledrejection', function (e) {
+    fatal(e && e.reason && e.reason.message ? e.reason.message : 'unhandled_rejection');
+  });
+
+  // Le bootstrap : UN message, du parent seulement, portant UN MessagePort.
+  window.addEventListener('message', function (event) {
+    if (booted) return;
+    if (event.source !== window.parent) return;
+    if (!event.data || event.data.type !== BOOTSTRAP_TYPE) return;
+    if (!event.ports || !event.ports[0]) return;
+    booted = true;
+    port = event.ports[0];
+    port.onmessage = function (ev) { handleHostMessage(ev.data); };
+    post({ kind: 'ready', version: VERSION });
+  });
+
+  function handleHostMessage(data) {
+    if (!data || typeof data !== 'object') return;
+    if (data.kind === 'init') { onInit(data); return; }
+    if (data.kind === 'get-bytes') { onGetBytes(data); return; }
+    if (data.kind === 'save-result') { onSaveResult(data); return; }
+    if (data.kind === 'destroy') {
+      try { if (instance) instance.destroy(); } catch (e) { /* déjà mort */ }
+      instance = null;
+      try { if (port) port.close(); } catch (e) { /* déjà fermé */ }
+      return;
+    }
+  }
+
+  // saveBytes corrélé : la promesse du greffon attend save-result.
+  var nextSaveId = 1;
+  var pendingSaves = {};
+  function onSaveResult(data) {
+    var pending = pendingSaves[data.requestId];
+    if (!pending) return;
+    delete pendingSaves[data.requestId];
+    if (data.ok) pending.resolve();
+    else pending.reject(new Error(String(data.errorMessage || 'save_failed')));
+  }
+
+  function onInit(data) {
+    try {
+      if (data.version !== VERSION) { fatal('sandbox_version_mismatch'); return; }
+      if (typeof data.code !== 'string' || !(data.bytes instanceof ArrayBuffer)) {
+        fatal('sandbox_bad_init'); return;
+      }
+      if (data.bytes.byteLength > MAX_BYTES) { fatal('sandbox_bytes_too_large'); return; }
+
+      // Exécution du bundle : IIFE qui pose globalThis.filarrSandboxedPlugin.
+      new Function('globalThis', data.code)(globalThis);
+      var plugin = globalThis.filarrSandboxedPlugin;
+      if (!plugin || !plugin.editors) { fatal('sandbox_no_plugin'); return; }
+      var editor = null;
+      for (var i = 0; i < plugin.editors.length; i++) {
+        if (plugin.editors[i].id === data.editorId) { editor = plugin.editors[i]; break; }
+      }
+      if (!editor) { fatal('sandbox_editor_not_found'); return; }
+
+      // Le miroir d'EditorHost — octets, sauvegarde, dirty. RIEN d'autre :
+      // jamais de jeton, d'identifiant de coffre, d'URL — par construction.
+      var host = {
+        container: document.getElementById('plugin-root'),
+        fileName: String(data.fileName),
+        readOnly: !!data.readOnly,
+        initialBytes: new Uint8Array(data.bytes),
+        saveBytes: function (bytes) {
+          return new Promise(function (resolve, reject) {
+            var requestId = nextSaveId++;
+            pendingSaves[requestId] = { resolve: resolve, reject: reject };
+            var copie = new Uint8Array(bytes).slice();
+            post({ kind: 'save-request', requestId: requestId, bytes: copie.buffer }, [copie.buffer]);
+          });
+        },
+        onDirty: function (d) { post({ kind: 'dirty', dirty: !!d }); },
+        collab: undefined
+      };
+
+      Promise.resolve(editor.mount(host)).then(function (inst) {
+        instance = inst;
+        post({ kind: 'mounted' });
+      }, function (e) {
+        post({ kind: 'mount-error', message: String((e && e.message) || 'mount_failed').slice(0, 2000) });
+      });
+    } catch (e) {
+      post({ kind: 'mount-error', message: String((e && e.message) || 'mount_failed').slice(0, 2000) });
+    }
+  }
+
+  function onGetBytes(data) {
+    try {
+      if (!instance) { fatal('sandbox_no_instance'); return; }
+      Promise.resolve(instance.getBytes()).then(function (bytes) {
+        var copie = new Uint8Array(bytes).slice();
+        post({ kind: 'bytes-result', requestId: data.requestId, bytes: copie.buffer }, [copie.buffer]);
+      }, function (e) {
+        fatal((e && e.message) || 'get_bytes_failed');
+      });
+    } catch (e) {
+      fatal((e && e.message) || 'get_bytes_failed');
+    }
+  }
+})();
+</script>
+</body>
+</html>

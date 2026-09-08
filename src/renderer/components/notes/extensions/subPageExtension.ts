@@ -9,6 +9,9 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { SubPageNodeView } from './SubPageNodeView';
+import { generateNoteId } from '../../../../services/notes/noteService';
+import { markMintedSubPage } from './subPageMint';
+import { subPageIndexText } from './indexText';
 
 export interface SubPageAttributes {
   noteId: string;
@@ -39,6 +42,11 @@ export const SubPageExtension = Node.create({
     };
   },
 
+  /** Le titre de la sous-page : le `noteId` est un identifiant, jamais un mot cherché. */
+  renderText({ node }) {
+    return subPageIndexText(node.attrs);
+  },
+
   parseHTML() {
     return [{ tag: 'div[data-sub-page]' }];
   },
@@ -61,10 +69,17 @@ export const SubPageExtension = Node.create({
       insertSubPage:
         (attrs?: Partial<SubPageAttributes>) =>
         ({ commands }) => {
+          // Id frappé ICI plutôt que laissé vide : un nœud sans id fait créer
+          // une note à CHAQUE appareil qui le reçoit (voir `subPageMint`).
+          let noteId = attrs?.noteId || '';
+          if (!noteId) {
+            noteId = generateNoteId();
+            markMintedSubPage(noteId);
+          }
           return commands.insertContent({
             type: this.name,
             attrs: {
-              noteId: attrs?.noteId || '',
+              noteId,
               title: attrs?.title || '',
               icon: attrs?.icon || '',
             },

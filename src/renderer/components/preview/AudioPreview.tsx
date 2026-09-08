@@ -11,8 +11,10 @@ import { Button } from '../ui/Button/Button';
 import './FilePreviewPanel.css';
 
 export interface AudioPreviewProps {
-  /** Audio data as ArrayBuffer */
-  data: ArrayBuffer;
+  /** Audio data as ArrayBuffer (buffered mode; ignored when streamUrl is set) */
+  data?: ArrayBuffer;
+  /** Direct media URL (e.g. filarr-stream://…) — streamed, no blob URL created */
+  streamUrl?: string;
   /** File name */
   fileName: string;
   /** MIME type of the audio */
@@ -23,56 +25,152 @@ export interface AudioPreviewProps {
 
 // SVG Icons
 const PlayIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width="32" height="32">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+    width="32"
+    height="32"
+  >
     <path d="M8 5v14l11-7z" />
   </svg>
 );
 
 const PauseIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width="32" height="32">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="currentColor"
+    viewBox="0 0 24 24"
+    width="32"
+    height="32"
+  >
     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
   </svg>
 );
 
 const VolumeHighIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+    />
   </svg>
 );
 
 const VolumeLowIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+    />
   </svg>
 );
 
 const VolumeMuteIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+    />
   </svg>
 );
 
 const RepeatIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"
+    />
   </svg>
 );
 
 const MusicNoteIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="64" height="64">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="64"
+    height="64"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z"
+    />
   </svg>
 );
 
 const SkipBackIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z"
+    />
   </svg>
 );
 
 const SkipForwardIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="20" height="20">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062A1.125 1.125 0 013 16.811V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="20"
+    height="20"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062A1.125 1.125 0 013 16.811V8.688zM12.75 8.688c0-.864.933-1.405 1.683-.977l7.108 4.062a1.125 1.125 0 010 1.953l-7.108 4.062a1.125 1.125 0 01-1.683-.977V8.688z"
+    />
   </svg>
 );
 
@@ -90,6 +188,7 @@ const formatTime = (seconds: number): string => {
 
 export const AudioPreview: React.FC<AudioPreviewProps> = ({
   data,
+  streamUrl,
   fileName,
   mimeType,
   className,
@@ -108,28 +207,53 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
 
-  // Convert ArrayBuffer to blob URL
-  const audioUrl = useMemo(() => {
+  // Media source: direct streaming URL when provided (filarr-stream://…),
+  // otherwise a blob URL built from the in-memory ArrayBuffer.
+  const { audioUrl, objectUrl } = useMemo((): {
+    audioUrl: string | null;
+    objectUrl: string | null;
+  } => {
+    if (streamUrl) {
+      return { audioUrl: streamUrl, objectUrl: null };
+    }
+    if (!data) {
+      return { audioUrl: null, objectUrl: null };
+    }
     const blob = new Blob([data], { type: mimeType });
-    return URL.createObjectURL(blob);
-  }, [data, mimeType]);
+    const url = URL.createObjectURL(blob);
+    return { audioUrl: url, objectUrl: url };
+  }, [data, mimeType, streamUrl]);
 
-  // Cleanup blob URL on unmount
+  // Cleanup on unmount — only revoke blob URLs we created (never the stream URL)
   useEffect(() => {
     return () => {
-      URL.revokeObjectURL(audioUrl);
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [audioUrl]);
+  }, [objectUrl]);
 
   // Generate waveform data from audio
   useEffect(() => {
+    if (!data) {
+      // Mode streaming : pas de decodage PCM complet possible sans tout
+      // re-bufferiser — on affiche une silhouette de substitution.
+      setWaveformData(
+        Array(100)
+          .fill(0)
+          .map(() => 0.3 + Math.random() * 0.7)
+      );
+      return;
+    }
+    const buffer = data;
+
     const generateWaveform = async () => {
       try {
         const audioContext = new AudioContext();
-        const audioBuffer = await audioContext.decodeAudioData(data.slice(0));
+        const audioBuffer = await audioContext.decodeAudioData(buffer.slice(0));
         const channelData = audioBuffer.getChannelData(0);
 
         // Sample the audio data to create waveform bars
@@ -148,14 +272,18 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
 
         // Normalize
         const max = Math.max(...waveform);
-        const normalized = waveform.map(val => val / max);
+        const normalized = waveform.map((val) => val / max);
 
         setWaveformData(normalized);
         audioContext.close();
       } catch (err) {
         console.warn('[AudioPreview] Could not generate waveform:', err);
         // Generate placeholder waveform
-        setWaveformData(Array(100).fill(0).map(() => 0.3 + Math.random() * 0.7));
+        setWaveformData(
+          Array(100)
+            .fill(0)
+            .map(() => 0.3 + Math.random() * 0.7)
+        );
       }
     };
 
@@ -251,21 +379,24 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
   }, [isMuted]);
 
   // Handle volume change
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVolume = parseFloat(e.target.value);
-    setVolume(newVolume);
+  const handleVolumeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newVolume = parseFloat(e.target.value);
+      setVolume(newVolume);
 
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume;
-      if (newVolume === 0) {
-        setIsMuted(true);
-        audioRef.current.muted = true;
-      } else if (isMuted) {
-        setIsMuted(false);
-        audioRef.current.muted = false;
+      if (audioRef.current) {
+        audioRef.current.volume = newVolume;
+        if (newVolume === 0) {
+          setIsMuted(true);
+          audioRef.current.muted = true;
+        } else if (isMuted) {
+          setIsMuted(false);
+          audioRef.current.muted = false;
+        }
       }
-    }
-  }, [isMuted]);
+    },
+    [isMuted]
+  );
 
   // Handle seek
   const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -277,18 +408,21 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
   }, []);
 
   // Handle waveform click
-  const handleWaveformClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas || !audioRef.current) return;
+  const handleWaveformClick = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      const canvas = canvasRef.current;
+      if (!canvas || !audioRef.current) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percent = x / rect.width;
-    const newTime = percent * duration;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percent = x / rect.width;
+      const newTime = percent * duration;
 
-    audioRef.current.currentTime = newTime;
-    setCurrentTime(newTime);
-  }, [duration]);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    },
+    [duration]
+  );
 
   // Skip forward/backward
   const skipForward = useCallback(() => {
@@ -349,13 +483,15 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
 
   const containerClasses = clsx('audio-preview', className);
 
-  if (error) {
+  if (error || !audioUrl) {
     return (
       <div className={containerClasses}>
         <div className="audio-preview__error">
           <MusicNoteIcon />
           <span>Impossible de charger l'audio</span>
-          <p className="audio-preview__error-message">{error}</p>
+          <p className="audio-preview__error-message">
+            {error ?? 'Aucune source audio disponible'}
+          </p>
         </div>
       </div>
     );
@@ -433,7 +569,9 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
         </Button>
 
         <button
-          className={clsx('audio-preview__play-btn', { 'audio-preview__play-btn--playing': isPlaying })}
+          className={clsx('audio-preview__play-btn', {
+            'audio-preview__play-btn--playing': isPlaying,
+          })}
           onClick={togglePlay}
           disabled={isLoading}
           title={isPlaying ? 'Pause (Espace)' : 'Lecture (Espace)'}
@@ -469,7 +607,9 @@ export const AudioPreview: React.FC<AudioPreviewProps> = ({
           onClick={toggleLoop}
           title={isLooping ? 'Desactiver la repetition (L)' : 'Activer la repetition (L)'}
           aria-label={isLooping ? 'Desactiver la repetition' : 'Activer la repetition'}
-          className={clsx('audio-preview__control-btn', { 'audio-preview__control-btn--active': isLooping })}
+          className={clsx('audio-preview__control-btn', {
+            'audio-preview__control-btn--active': isLooping,
+          })}
         >
           <RepeatIcon />
         </Button>

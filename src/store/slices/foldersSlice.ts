@@ -10,6 +10,22 @@ import { folderService } from '../../services';
 import errorService from '../../services/platform/errorService';
 import { addFileToFolder, deleteFile, renameFile } from './filesSlice';
 import type { Folder, FolderCreateData } from '../../types';
+import type { RootState } from '../index';
+
+/**
+ * Throw if `folderId` isn't part of the active profile's folder map.
+ *
+ * Defense-in-depth against cross-profile mutations: if a stale folder ID
+ * leaks into the UI (orphan tab, stale tooltip, etc.), refuse to forward
+ * the mutation to the IPC layer. After `resetAppData()` on profile switch,
+ * `state.folders.byId` only contains the active profile's folders, so any
+ * folderId not present here is foreign.
+ */
+function assertOwnedFolder(state: RootState, folderId: string, op: string): void {
+  if (!state.folders.byId[folderId]) {
+    throw new Error(`Refused ${op} on folder ${folderId}: not owned by the active profile`);
+  }
+}
 
 // Types pour l'état des dossiers
 export interface FoldersState {
@@ -140,9 +156,10 @@ export const createFolder = createAsyncThunk<
 export const updateFolder = createAsyncThunk<
   Folder,
   UpdateFolderParams,
-  { rejectValue: SerializedError }
->('folders/update', async ({ folderId, folderData }, { rejectWithValue }) => {
+  { rejectValue: SerializedError; state: RootState }
+>('folders/update', async ({ folderId, folderData }, { rejectWithValue, getState }) => {
   try {
+    assertOwnedFolder(getState(), folderId, 'updateFolder');
     // Convertir FolderCreateData en Partial<Folder> si nécessaire
     const folderUpdate: Partial<Folder> = {
       ...folderData,
@@ -170,29 +187,31 @@ export const updateFolder = createAsyncThunk<
 /**
  * Supprime un dossier
  */
-export const deleteFolder = createAsyncThunk<string, string, { rejectValue: SerializedError }>(
-  'folders/delete',
-  async (folderId, { rejectWithValue }) => {
-    try {
-      await folderService.deleteFolder(folderId);
+export const deleteFolder = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: SerializedError; state: RootState }
+>('folders/delete', async (folderId, { rejectWithValue, getState }) => {
+  try {
+    assertOwnedFolder(getState(), folderId, 'deleteFolder');
+    await folderService.deleteFolder(folderId);
 
-      return folderId;
-    } catch (error) {
-      const appError = errorService.createFromError(
-        error as Error,
-        `Impossible de supprimer le dossier ${folderId}`,
-        errorService.ErrorTypes.STORAGE
-      );
-      errorService.logError(appError, 'deleteFolder');
-      return rejectWithValue({
-        name: appError.name,
-        message: appError.message,
-        details: appError.metadata,
-        type: appError.type,
-      });
-    }
+    return folderId;
+  } catch (error) {
+    const appError = errorService.createFromError(
+      error as Error,
+      `Impossible de supprimer le dossier ${folderId}`,
+      errorService.ErrorTypes.STORAGE
+    );
+    errorService.logError(appError, 'deleteFolder');
+    return rejectWithValue({
+      name: appError.name,
+      message: appError.message,
+      details: appError.metadata,
+      type: appError.type,
+    });
   }
-);
+});
 
 // Slice
 const foldersSlice = createSlice({

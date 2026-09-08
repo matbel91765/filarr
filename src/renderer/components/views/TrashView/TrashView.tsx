@@ -25,6 +25,9 @@ import {
   selectTrashItemsByDate,
 } from '../../../../store/selectors/trashSelectors';
 import type { TrashItem } from '../../../../store/slices/trashSlice';
+import { selectCanUseTeamVaults } from '../../../../store/selectors/authSelectors';
+import { selectDeletedVaults } from '../../../../store/slices/vaultsSlice';
+import { VaultTrash } from '../../vaults/VaultTrash';
 import './TrashView.css';
 
 const TrashView: React.FC = () => {
@@ -48,6 +51,16 @@ const TrashView: React.FC = () => {
   const itemsCount = useSelector(selectTrashItemsCount);
   const totalSize = useSelector(selectTrashTotalSize);
   const itemsByDate = useSelector(selectTrashItemsByDate);
+  /**
+   * LA CORBEILLE DES COFFRES (lot A, C5). Les coffres partagés n'ont plus de
+   * page à eux : leur corbeille (cloud, 30 jours) vient en pied de celle-ci.
+   * `VaultTrash` charge et rend seul ; les deux sous-titres n'existent que
+   * pour que « local » et « cloud » ne se confondent jamais — un fichier
+   * restauré d'ici revient sur ce disque, un coffre restauré revient pour
+   * tous ses membres. Règle 13 : hors nuage, rien de tout cela.
+   */
+  const canUseTeamVaults = useSelector(selectCanUseTeamVaults);
+  const deletedVaultsCount = useSelector(selectDeletedVaults).length;
 
   // Charger les items au montage
   useEffect(() => {
@@ -395,6 +408,13 @@ const TrashView: React.FC = () => {
       )}
 
       <div className="trash-content">
+        {/* Le sous-titre « locale » n'a de sens que s'il y a une AUTRE
+            corbeille en dessous : hors nuage, la corbeille reste sans qualificatif. */}
+        {canUseTeamVaults && (
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)] m-0 mb-3">
+            {t('trash.localSection', 'Corbeille locale')}
+          </h2>
+        )}
         {isEmpty ? (
           <div className="trash-empty">
             <div className="empty-icon">
@@ -418,6 +438,20 @@ const TrashView: React.FC = () => {
           </div>
         ) : (
           <div className="trash-items-container">{renderGroupedItems()}</div>
+        )}
+
+        {/* Coffres partagés supprimés — `VaultTrash` est TOUJOURS monté (c'est
+            lui qui charge la liste) mais ne rend rien si elle est vide ; le
+            sous-titre suit la même règle, sinon il coifferait du vide. */}
+        {canUseTeamVaults && (
+          <section className={deletedVaultsCount > 0 ? 'mt-8' : ''}>
+            {deletedVaultsCount > 0 && (
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)] m-0 mb-1">
+                {t('trash.vaultSection', 'Coffres partagés supprimés (cloud, 30 jours)')}
+              </h2>
+            )}
+            <VaultTrash />
+          </section>
         )}
       </div>
 

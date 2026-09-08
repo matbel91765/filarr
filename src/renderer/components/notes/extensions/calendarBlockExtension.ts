@@ -9,6 +9,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { CalendarBlockNodeView } from './CalendarBlockNodeView';
+import { calendarIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -43,6 +44,15 @@ export const CalendarBlockExtension = Node.create({
       showNotes: { default: true },
       cellHeight: { default: 120 }, // resizable cell height in px
     };
+  },
+
+  /**
+   * Les évènements vivent en JSON dans `events` : sans ceci, un rendez-vous
+   * saisi dans un calendrier inline n'existe pour aucune recherche.
+   * On rend `date texte`, jamais le JSON (ni `id` ni `color`).
+   */
+  renderText({ node }) {
+    return calendarIndexText(node.attrs);
   },
 
   parseHTML() {

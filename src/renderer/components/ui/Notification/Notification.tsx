@@ -209,8 +209,8 @@ export const Notification: React.FC<NotificationProps> = ({
   return (
     <div
       className={notificationClasses}
-      role="alert"
-      aria-live="polite"
+      role={type === 'error' || type === 'warning' ? 'alert' : 'status'}
+      aria-live={type === 'error' || type === 'warning' ? 'assertive' : 'polite'}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -218,9 +218,7 @@ export const Notification: React.FC<NotificationProps> = ({
       <div className={`notification__indicator notification__indicator--${type}`} />
 
       {/* Icône */}
-      <div className={`notification__icon notification__icon--${type}`}>
-        {displayIcon}
-      </div>
+      <div className={`notification__icon notification__icon--${type}`}>{displayIcon}</div>
 
       {/* Contenu */}
       <div className="notification__content">

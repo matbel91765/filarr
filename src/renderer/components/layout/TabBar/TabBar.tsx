@@ -20,7 +20,18 @@ import {
   moveTabToPanel,
 } from '../../../../store/slices/tabsSlice';
 import { selectTotalTabCount, selectIsSplit } from '../../../../store/selectors/tabSelectors';
+import { selectTabBarTopmost } from '../../../../store/selectors/uiSelectors';
+import { isWebPlatform } from '../../../../services/platform/isWebPlatform';
 import type { TabInfo } from '../../../../store/slices/tabsSlice';
+
+// Sous Electron la fenêtre est frameless : les 140px de droite appartiennent
+// à l'overlay des contrôles natifs (réduire/agrandir/fermer) et les 40px du
+// haut à WindowDragRegion. Dans un navigateur, rien de tout cela n'existe.
+// Constante au chargement du module, comme headerRightPad dans Header.tsx.
+const IS_FRAMELESS_DESKTOP = !isWebPlatform();
+
+// -webkit-app-region n'est pas typé par React.
+const NO_DRAG_STYLE = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
 interface TabBarProps {
   panelId: string;
@@ -95,6 +106,18 @@ export const TabBar: React.FC<TabBarProps> = React.memo(function TabBar({ panelI
   const maxTabs = useSelector((state: RootState) => state.tabs.maxTabs);
   const isSplit = useSelector(selectIsSplit);
   const allPanels = useSelector((state: RootState) => state.tabs.panels);
+  // Vrai quand plus aucune barre supérieure ne tient le haut de la fenêtre :
+  // la TabBar entre alors en collision avec le chrome natif.
+  const isTopmost = useSelector(selectTabBarTopmost);
+
+  // Le split est toujours horizontal. Les boutons de fenêtre sont à DROITE
+  // sous Windows/Linux — seul le dernier panneau les subit ; les feux macOS
+  // sont à GAUCHE — c'est le PREMIER panneau. Deux bords, deux panneaux.
+  const isLastPanel = allPanels[allPanels.length - 1]?.id === panelId;
+  const isFirstPanel = allPanels[0]?.id === panelId;
+  const claimsTopBand = isTopmost && IS_FRAMELESS_DESKTOP;
+  const reserveWindowControls = claimsTopBand && isLastPanel;
+  const reserveTrafficLights = claimsTopBand && isFirstPanel;
 
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -247,13 +270,24 @@ export const TabBar: React.FC<TabBarProps> = React.memo(function TabBar({ panelI
 
   return (
     <>
-      <div className="flex items-stretch h-9 bg-[var(--color-surface)] border-b border-[var(--color-border)] select-none shrink-0">
+      {/* Le drop d'onglet est écouté sur le conteneur entier : quand la barre
+          tient le haut de la fenêtre, la piste d'onglets ne s'étire plus sur
+          toute la largeur (elle laisse une poignée de déplacement à droite). */}
+      <div
+        className={`flex items-stretch h-9 bg-[var(--color-surface)] border-b border-[var(--color-border)] select-none shrink-0 ${
+          reserveWindowControls ? 'chrome-safe-right' : ''
+        } ${reserveTrafficLights ? 'chrome-safe-left' : ''} ${
+          claimsTopBand ? 'chrome-band-height' : ''
+        }`}
+        onDragOver={handleContainerDragOver}
+        onDrop={handleContainerDrop}
+      >
         <div
           ref={tabsContainerRef}
-          className="flex flex-1 overflow-x-auto overflow-y-hidden min-w-0"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          onDragOver={handleContainerDragOver}
-          onDrop={handleContainerDrop}
+          className={`flex overflow-x-auto overflow-y-hidden min-w-0 ${
+            claimsTopBand ? '' : 'flex-1'
+          }`}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', ...NO_DRAG_STYLE }}
         >
           {tabs.map((tab) => {
             const isActive = tab.id === activeTabId;
@@ -313,6 +347,14 @@ export const TabBar: React.FC<TabBarProps> = React.memo(function TabBar({ panelI
         >
           <PlusIcon />
         </button>
+
+        {/* Motif VS Code : les onglets sont no-drag (sinon le glisser-déposer
+            d'onglet est capturé par le déplacement de FENÊTRE dans la bande
+            haute), et c'est cet espace vide qui reste la poignée de fenêtre.
+            Aucune propriété app-region ici : la zone de drag de
+            WindowDragRegion continue de s'y appliquer. min-w garantit qu'il
+            reste une prise même quand les onglets débordent. */}
+        {claimsTopBand && <div className="flex-1 min-w-[32px]" aria-hidden="true" />}
       </div>
 
       {contextMenu.visible && (

@@ -17,7 +17,12 @@ import {
   searchEmojis,
   type EmojiEntry,
 } from '../../../../services/notes/emojiCatalog';
+// The picker-panel styles live in IconSelector.css. Import them here so the
+// EmojiPicker is styled wherever it is used standalone (e.g. FolderStyleModal),
+// not only inside IconSelector/CoverSelector.
+import './IconSelector.css';
 
+import * as profileStorage from '../../../../services/core/profileStorage';
 const RECENTS_KEY = 'filarr.emoji.recents';
 const MAX_RECENTS = 18;
 
@@ -30,7 +35,7 @@ interface EmojiPickerProps {
 
 function readRecents(): string[] {
   try {
-    const raw = localStorage.getItem(RECENTS_KEY);
+    const raw = profileStorage.getItemWithLegacyFallback(RECENTS_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.slice(0, MAX_RECENTS) : [];
@@ -43,7 +48,7 @@ function pushRecent(emoji: string): void {
   try {
     const current = readRecents();
     const next = [emoji, ...current.filter((e) => e !== emoji)].slice(0, MAX_RECENTS);
-    localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+    profileStorage.setItem(RECENTS_KEY, JSON.stringify(next));
   } catch {
     /* quota exceeded or unavailable — silently ignore */
   }

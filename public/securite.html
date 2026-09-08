@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sécurité — Filarr Web</title>
+  <link href="./fonts/fonts.css" rel="stylesheet" />
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; padding: 2.5rem 1.25rem 4rem;
+      font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+      line-height: 1.65; color: #1f2937; background: #f8fafc;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { color: #e5e7eb; background: #0f172a; }
+      .card { background: #1e293b !important; border-color: #334155 !important; }
+      th, td { border-color: #334155 !important; }
+      h1, h2 { color: #f1f5f9 !important; }
+    }
+    main { max-width: 46rem; margin: 0 auto; }
+    h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.9rem; margin: 0 0 .4rem; color: #0f172a; }
+    h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; margin: 2.2rem 0 .6rem; color: #0f172a; }
+    .lead { font-size: 1.05rem; opacity: .85; margin-bottom: 2rem; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.1rem 1.3rem; margin: 1rem 0; }
+    table { width: 100%; border-collapse: collapse; font-size: .93rem; }
+    th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    th { font-family: 'Space Grotesk', sans-serif; }
+    code { font-size: .88em; background: rgba(100,116,139,.14); padding: .1em .35em; border-radius: 4px; }
+    a { color: #2563eb; }
+    .muted { opacity: .7; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Comment Filarr Web protège vos données</h1>
+    <p class="lead">
+      Cette page dit exactement ce que l'application web garantit — et ce qu'elle ne
+      peut pas garantir. Pas de superlatifs : le modèle de menace, tel qu'il est.
+    </p>
+
+    <h2>Ce qui est vrai partout</h2>
+    <div class="card">
+      <p>
+        Vos fichiers et vos notes sont chiffrés (AES-256-GCM) avec une clé dérivée de
+        votre mot de passe, <strong>avant</strong> de quitter votre appareil. Nos serveurs
+        ne stockent et ne transportent que du chiffré : nous ne pouvons ni lire vos
+        contenus, ni les déchiffrer pour un tiers, ni les récupérer si vous perdez à la
+        fois votre mot de passe et votre phrase de récupération.
+      </p>
+    </div>
+
+    <h2>Deux clients, deux niveaux de confiance</h2>
+    <div class="card">
+      <table>
+        <tr><th></th><th>Application de bureau</th><th>Application web</th></tr>
+        <tr>
+          <td>Le code que vous exécutez</td>
+          <td>Installé une fois, inspectable, mis à jour explicitement</td>
+          <td><strong>Servi par nos serveurs à chaque chargement</strong></td>
+        </tr>
+        <tr>
+          <td>Clé au repos</td>
+          <td>Scellée dans le trousseau du système (safeStorage)</td>
+          <td>Rien par défaut ; en option, scellée sous une clé de session
+              non-extractible du navigateur (14 jours)</td>
+        </tr>
+        <tr>
+          <td>Conséquence honnête</td>
+          <td>Zero-knowledge vérifiable : même nos serveurs compromis ne peuvent pas
+              lire vos fichiers</td>
+          <td>Chiffré dans votre navigateur : un serveur compromis ne peut pas lire
+              vos données <em>stockées</em>, mais pourrait servir un code modifié à une
+              session future. C'est la limite structurelle de toute application web —
+              la nôtre comme celle de nos pairs.</td>
+        </tr>
+      </table>
+    </div>
+    <p>
+      En clair : l'application web offre le chiffrement de bout en bout avec le confort du
+      navigateur ; l'application de bureau offre en plus un socle d'exécution que nous ne
+      pouvons pas altérer après coup. Pour la posture maximale, utilisez le bureau au
+      quotidien et le web comme accès d'appoint.
+    </p>
+
+    <h2>Ce que l'application web fait pour réduire ce risque</h2>
+    <div class="card">
+      <ul>
+        <li>Content-Security-Policy stricte : aucun script tiers, aucun CDN, aucune
+            origine externe — polices et code servis exclusivement par
+            <code>app.filarr.com</code>, API épinglée sur <code>api.filarr.com</code>.</li>
+        <li>Aucune clé en clair au repos : la clé de chiffrement vit en mémoire de
+            session ; l'option « Rester déverrouillé » la scelle sous une clé
+            <em>non-extractible</em> gérée par le navigateur — le vol du stockage local
+            ne suffit pas à l'obtenir.</li>
+        <li>Votre mot de passe n'est jamais envoyé pour le déchiffrement : la clé est
+            dérivée localement (PBKDF2-SHA-512, 600 000 itérations).</li>
+        <li>Deux relais serveur, deux accords SÉPARÉS, chacun refusé par défaut et
+            chacun avec son interrupteur dans Paramètres → Confidentialité → Sécurité.
+            Accepter l'un n'active jamais l'autre.
+            <ul>
+              <li><strong>Aperçus de liens</strong> (remplissage ⚡ depuis un lien, titres
+                  de liens collés, aperçus de favoris) : seule l'URL de la page transite.</li>
+              <li><strong>Recherches de sources</strong> (bouton ⚡ des bases inline quand
+                  une source livres/animes/séries/films est choisie) : seuls les quelques
+                  mots cherchés transitent, plus votre clé TMDB si vous en avez configuré
+                  une.</li>
+            </ul>
+            Dans les deux cas le contenu de vos notes ne transite jamais, et rien de ce
+            qui passe par ces relais n'est journalisé ni conservé.</li>
+        <li>Session révoquée au moindre doute : déconnexion = clé et session purgées.</li>
+      </ul>
+    </div>
+
+    <h2>Ce que nous ne promettons pas</h2>
+    <div class="card">
+      <p>
+        Nous ne promettons pas qu'une application web égale un client installé — c'est
+        faux chez tout le monde. Nous ne promettons pas de récupérer vos données sans vos
+        secrets — c'est la contrepartie du chiffrement réel. Et nous ne promettons jamais
+        « zero-knowledge » pour le web sans cette page à côté.
+      </p>
+    </div>
+
+    <p class="muted">
+      Application de bureau : <a href="https://filarr.com">filarr.com</a>.
+      In English: <a href="./security.html">English version of this page</a>.
+    </p>
+  </main>
+</body>
+</html>

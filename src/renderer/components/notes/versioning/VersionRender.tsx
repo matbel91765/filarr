@@ -10,14 +10,15 @@
  *     caller swaps versions, sidestepping the class of bugs where
  *     `setContent` on a reused editor doesn't repaint (observed with
  *     TipTap v3 when content contains custom node types).
- *   - The extension list mirrors NoteEditor via `buildReadOnlyExtensions()`.
+ *   - The extension list mirrors NoteEditor via `buildSharedNoteExtensions()`.
  *     If that set doesn't cover a node used in the stored JSON, the
  *     fallback banner kicks in with the plain-text rendering.
  */
 
 import React, { useEffect, useMemo } from 'react';
+import { migrateLegacyImageNodes } from '../../../../services/notes/legacyImageMigration';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { buildReadOnlyExtensions } from './readOnlyExtensions';
+import { buildSharedNoteExtensions } from '../sharedNoteExtensions';
 
 interface VersionRenderProps {
   content: string;
@@ -56,7 +57,7 @@ const VersionRenderEditor: React.FC<{ doc: unknown; className?: string }> = ({
   className,
 }) => {
   const editor = useEditor({
-    extensions: buildReadOnlyExtensions(),
+    extensions: buildSharedNoteExtensions(),
     content: doc as any,
     editable: false,
   });
@@ -82,7 +83,9 @@ export const VersionRender: React.FC<VersionRenderProps> = React.memo(function V
   const parsed = useMemo<unknown>(() => {
     if (!content) return null;
     try {
-      return JSON.parse(content);
+      // Une version archivee porte le document TEL QU'IL ETAIT : les nœuds
+      // `image` hors schema y dorment aussi, et disparaitraient a l'affichage.
+      return migrateLegacyImageNodes(JSON.parse(content)).doc;
     } catch {
       return null;
     }

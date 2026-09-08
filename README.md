@@ -8,8 +8,36 @@ More info in the website: filarr.com
 
 ## Status
 
-This repository is the public, source-available release of the Filarr desktop client. It contains only the renderer (React) and the Electron main process — the cloud sync, billing and account components that powered the hosted product have been removed for this release. See [CONTRIBUTING.md](./CONTRIBUTING.md) for details on the scope of contributions accepted.
-I'll try to update the repo as soon as possible. Actually Filarr has 2 repo, one public and one private. The public repo is practically the same than the private, but the cloud section has been removed because it's not core of the project. The purpose of this repository is to serve as proof of security and quality. The code is exactly the same, and you can build it from home. It's the same version, but local only, with no cloud option. I also hope that if users have comments or suggestions for improvements, they can review the code and propose their own solutions or new features, which I will be happy to test and add if they are relevant and needed. I will try to update the repository as frequently as possible, but I think I will only do so with major versions (3.0, 4.0, etc.) or every 7 or 8 feature updates (2.8, 2.16, etc.).
+This repository is the public, source-available release of the **complete Filarr
+desktop client** — renderer, Electron main process, and the cloud-facing code
+(accounts, sync, sharing, billing) included. Nothing is stripped.
+
+**What is not here:** the server infrastructure — the Cloudflare Worker, the D1
+migrations and the admin console. That is the only part kept private.
+
+### Why publish the cloud code too
+
+Earlier releases removed everything cloud-related. That protected nothing: an
+Electron app is JavaScript in an archive, and the web build at app.filarr.com is
+served to anyone who asks. The client has never held a secret — no key, no
+token; it only knows the public API URL.
+
+More importantly, Filarr is sold on a zero-knowledge promise: our servers cannot
+read your data. A closed client asks you to take that on faith. An open one lets
+you check it — the key derivation, the containers, the authenticated encryption,
+all of it is in this repository. If you find a flaw, please open an issue.
+
+This is the same model as Signal, Proton and Bitwarden: open client, private
+infrastructure.
+
+### Running it
+
+Cloud features need a Filarr account and reach api.filarr.com. Without one, the
+app runs entirely offline — that path is not a stub, it is how Filarr worked
+before the hosted product existed, and it is still fully supported.
+
+Builds from this repository are published under BUSL-1.1 (see [LICENSE](./LICENSE)).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the scope of contributions accepted.
 
 ## Features
 

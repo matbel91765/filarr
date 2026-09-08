@@ -27,6 +27,7 @@ import {
   selectOperationMessage,
 } from '../uiSelectors';
 import { createMockRootState } from '../../../test-utils/mockState';
+import { describe, it, expect, vi } from 'vitest';
 
 describe('uiSelectors', () => {
   describe('selectTheme', () => {
@@ -199,7 +200,7 @@ describe('uiSelectors', () => {
         type: 'confirm',
         props: {
           message: 'Are you sure?',
-          onConfirm: jest.fn(),
+          onConfirm: vi.fn(),
         },
       };
 
@@ -394,8 +395,8 @@ describe('uiSelectors', () => {
     it('should return modal props', () => {
       const props = {
         message: 'Are you sure?',
-        onConfirm: jest.fn(),
-        onCancel: jest.fn(),
+        onConfirm: vi.fn(),
+        onCancel: vi.fn(),
       };
 
       const state = createMockRootState({
@@ -737,7 +738,7 @@ describe('uiSelectors', () => {
             props: {
               title: 'Delete file?',
               message: 'This action cannot be undone',
-              onConfirm: jest.fn(),
+              onConfirm: vi.fn(),
             },
           },
         },

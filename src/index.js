@@ -4,13 +4,26 @@
  * Configure Redux, i18n, PWA et initialise le rendu de l'application
  */
 
+// PREMIER import : installe le dispatcher web si window.electron est absent
+// (navigateur). Sous Electron, no-op strict — le preload a déjà posé la façade.
+import './platform/web/installWebPlatform';
+// Juste après : la captation du lien d'invitation doit précéder redux-persist
+// (importé par ./store) et le premier rendu, car l'URL /invite?token=… est
+// invisible du HashRouter et disparaît au premier location.reload().
+import './services/invites/pendingInvite';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import store from './store';
 import { setupIpcListeners } from './store/middleware/electronMiddleware';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
+import { installChunkRecovery } from './renderer/components/ui/ErrorBoundary/chunkRecovery';
 import './i18n/config'; // Initialiser i18n
+
+// Un chunk qui ne se charge plus = un deploiement passe sous un onglet ouvert.
+// Pose AVANT le premier rendu : les import() des effets partent tot, et un rejet
+// non gere disparaitrait en console sans que l'action de l'utilisateur aboutisse.
+installChunkRecovery();
 
 // Initialiser les écouteurs IPC pour Electron
 setupIpcListeners(store);

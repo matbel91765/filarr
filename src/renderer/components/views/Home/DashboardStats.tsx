@@ -3,6 +3,17 @@
  *
  * Affiche des StatCards, un donut SVG par type de fichier,
  * et les top 5 plus gros dossiers. Zéro dépendance externe.
+ *
+ * ── CE FICHIER EST AUSSI UNE BIBLIOTHÈQUE ───────────────────────────────────
+ *
+ * L'accueil modulaire découpe ce bandeau en TROIS blocs indépendants (cartes,
+ * donut, top dossiers) que l'utilisateur pose où il veut. Ces trois blocs
+ * réutilisent les composants et les calculs d'ici plutôt que d'en recopier une
+ * variante : deux donuts finiraient par ne plus se ressembler, et deux calculs
+ * de « top dossiers » par ne plus donner le même classement.
+ *
+ * Le bandeau d'un seul tenant, lui, reste : c'est ce que l'amorçage écrit pour
+ * les profils qui l'avaient déjà (`type: 'dashboard-stats'`).
  */
 
 import React, { useState, useMemo, FC } from 'react';
@@ -11,10 +22,15 @@ import { useSelector } from 'react-redux';
 import { createSelector } from '@reduxjs/toolkit';
 import type { RootState } from '../../../../store';
 import { selectFilesStats } from '../../../../store/selectors/fileSelectors';
+import * as profileStorage from '../../../../services/core/profileStorage';
+
+// Préférence d'affichage durable → portée par profil (repli sur l'ancienne clé
+// nue tant que le profil n'a rien enregistré).
+const DASHBOARD_COLLAPSED_KEY = 'filarr-dashboard-collapsed';
 
 // ==================== Helpers ====================
 
-const formatSize = (bytes: number, t: (key: string) => string): string => {
+export const formatSize = (bytes: number, t: (key: string) => string): string => {
   if (bytes === 0) return `0 ${t('units.b')}`;
   const unitKeys = ['units.b', 'units.kb', 'units.mb', 'units.gb', 'units.tb'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -36,7 +52,7 @@ const selectAllFolders = createSelector(
 
 // ==================== Sub-components ====================
 
-const StatCard: FC<{ label: string; value: string | number; icon: React.ReactNode }> = ({
+export const StatCard: FC<{ label: string; value: string | number; icon: React.ReactNode }> = ({
   label,
   value,
   icon,
@@ -53,7 +69,7 @@ const StatCard: FC<{ label: string; value: string | number; icon: React.ReactNod
 );
 
 // Donut SVG
-const DonutChart: FC<{
+export const DonutChart: FC<{
   data: Array<{ label: string; value: number; color: string }>;
   noFilesLabel: string;
 }> = ({ data, noFilesLabel }) => {
@@ -117,7 +133,7 @@ const DonutChart: FC<{
 };
 
 // Top folders bar chart
-const TopFoldersChart: FC<{
+export const TopFoldersChart: FC<{
   folders: Array<{ name: string; size: number }>;
   noFoldersLabel: string;
   formatSizeFn: (bytes: number) => string;
@@ -156,7 +172,7 @@ const TopFoldersChart: FC<{
 
 // ==================== Icons ====================
 
-const FileIcon: FC = () => (
+export const FileIcon: FC = () => (
   <svg
     width="20"
     height="20"
@@ -172,7 +188,7 @@ const FileIcon: FC = () => (
   </svg>
 );
 
-const FolderIcon: FC = () => (
+export const FolderIcon: FC = () => (
   <svg
     width="20"
     height="20"
@@ -187,7 +203,7 @@ const FolderIcon: FC = () => (
   </svg>
 );
 
-const StorageIcon: FC = () => (
+export const StorageIcon: FC = () => (
   <svg
     width="20"
     height="20"
@@ -220,25 +236,25 @@ const ChevronIcon: FC<{ open: boolean }> = ({ open }) => (
   </svg>
 );
 
-// ==================== Main ====================
+// ==================== Calculs partagés ====================
+//
+// Extraits en crochets pour que les blocs de l'accueil modulaire (« Cartes de
+// stats », « Donut des types », « Top dossiers ») s'en servent tels quels. Un
+// bloc qui recopierait le calcul finirait tôt ou tard par afficher un autre
+// classement que le bandeau d'à côté, pour les mêmes fichiers.
 
-export const DashboardStats: FC = () => {
+/** Formateur de taille lié à la langue courante. */
+export const useFormatSize = (): ((bytes: number) => string) => {
   const { t } = useTranslation();
+  return useMemo(() => (bytes: number) => formatSize(bytes, t), [t]);
+};
 
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('filarr-dashboard-collapsed') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
+/** Répartition par catégorie de type MIME, la plus fournie d'abord. */
+export const useFileTypeDonut = (): Array<{ label: string; value: number; color: string }> => {
+  const { t } = useTranslation();
   const fileStats = useSelector(selectFilesStats);
-  const folderCount = useSelector((state: RootState) => state.folders.allIds.length);
-  const allFiles = useSelector(selectAllFiles);
-  const allFolders = useSelector(selectAllFolders);
 
-  // File categories with colors for the donut — must be inside component for t()
+  // File categories with colors for the donut — must be inside the hook for t()
   const fileCategories = useMemo(
     () =>
       ({
@@ -253,10 +269,8 @@ export const DashboardStats: FC = () => {
 
   const otherCategory = useMemo(() => ({ label: t('dashboard.other'), color: '#94a3b8' }), [t]);
 
-  const localFormatSize = useMemo(() => (bytes: number) => formatSize(bytes, t), [t]);
-
   // Donut data — group by category (MIME prefix: "image/jpeg" → "image")
-  const donutData = useMemo(() => {
+  return useMemo(() => {
     const groups: Record<string, number> = {};
     Object.entries(fileStats.typeDistribution).forEach(([type, count]) => {
       const mimePrefix = type.split('/')[0];
@@ -272,9 +286,14 @@ export const DashboardStats: FC = () => {
       })
       .sort((a, b) => b.value - a.value);
   }, [fileStats.typeDistribution, fileCategories, otherCategory]);
+};
 
-  // Top 5 folders by total file size
-  const topFolders = useMemo(() => {
+/** Les cinq dossiers les plus lourds, vides exclus. */
+export const useTopFoldersBySize = (): Array<{ name: string; size: number }> => {
+  const allFiles = useSelector(selectAllFiles);
+  const allFolders = useSelector(selectAllFolders);
+
+  return useMemo(() => {
     const folderSizes = new Map<string, { name: string; size: number }>();
     allFolders.forEach((f) => {
       if (f) folderSizes.set(f.id, { name: f.name, size: 0 });
@@ -290,12 +309,38 @@ export const DashboardStats: FC = () => {
       .slice(0, 5)
       .filter((f) => f.size > 0);
   }, [allFiles, allFolders]);
+};
+
+/** Les trois chiffres du haut : fichiers, dossiers, taille totale. */
+export const useStatCardFigures = (): {
+  fileCount: number;
+  folderCount: number;
+  totalSize: number;
+} => {
+  const fileStats = useSelector(selectFilesStats);
+  const folderCount = useSelector((state: RootState) => state.folders.allIds.length);
+  return { fileCount: fileStats.totalCount, folderCount, totalSize: fileStats.totalSize };
+};
+
+// ==================== Main ====================
+
+export const DashboardStats: FC = () => {
+  const { t } = useTranslation();
+
+  const [collapsed, setCollapsed] = useState(
+    () => profileStorage.getItemWithLegacyFallback(DASHBOARD_COLLAPSED_KEY) === 'true'
+  );
+
+  const { fileCount, folderCount, totalSize } = useStatCardFigures();
+  const localFormatSize = useFormatSize();
+  const donutData = useFileTypeDonut();
+  const topFolders = useTopFoldersBySize();
 
   const toggleCollapsed = () => {
     const next = !collapsed;
     setCollapsed(next);
     try {
-      localStorage.setItem('filarr-dashboard-collapsed', String(next));
+      profileStorage.setItem(DASHBOARD_COLLAPSED_KEY, String(next));
     } catch {
       /* noop */
     }
@@ -315,15 +360,11 @@ export const DashboardStats: FC = () => {
         <div className="flex flex-col gap-4">
           {/* Stat cards row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <StatCard
-              label={t('dashboard.files')}
-              value={fileStats.totalCount}
-              icon={<FileIcon />}
-            />
+            <StatCard label={t('dashboard.files')} value={fileCount} icon={<FileIcon />} />
             <StatCard label={t('dashboard.folders')} value={folderCount} icon={<FolderIcon />} />
             <StatCard
               label={t('dashboard.totalSize')}
-              value={localFormatSize(fileStats.totalSize)}
+              value={localFormatSize(totalSize)}
               icon={<StorageIcon />}
             />
           </div>

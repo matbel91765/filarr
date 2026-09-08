@@ -18,6 +18,13 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
+  /**
+   * Issues SUPPLÉMENTAIRES entre « Annuler » et l'action principale — pour les
+   * décisions qui n'ont pas que deux sorties (un conflit d'écriture : écraser,
+   * garder les deux, voir la leur). Chaque action ferme la modale ; celle qui
+   * doit la laisser ouverte le gère elle-même.
+   */
+  extraActions?: Array<{ label: string; onClick: () => void }>;
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -29,6 +36,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmText = 'Confirmer',
   cancelText = 'Annuler',
   variant = 'danger',
+  extraActions,
 }) => {
   const handleConfirm = () => {
     onConfirm();
@@ -104,10 +112,19 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <Button variant="secondary" onClick={onClose}>
           {cancelText}
         </Button>
-        <Button
-          variant={variant === 'danger' ? 'danger' : 'primary'}
-          onClick={handleConfirm}
-        >
+        {extraActions?.map((a) => (
+          <Button
+            key={a.label}
+            variant="secondary"
+            onClick={() => {
+              a.onClick();
+              onClose();
+            }}
+          >
+            {a.label}
+          </Button>
+        ))}
+        <Button variant={variant === 'danger' ? 'danger' : 'primary'} onClick={handleConfirm}>
           {confirmText}
         </Button>
       </ModalFooter>

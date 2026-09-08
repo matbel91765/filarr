@@ -8,6 +8,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 import { MermaidNodeView } from './MermaidNodeView';
+import { mermaidIndexText } from './indexText';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -28,6 +29,15 @@ export const MermaidExtension = Node.create({
     return {
       code: { default: 'graph TD\n  A[Start] --> B[End]' },
     };
+  },
+
+  /**
+   * Sans ceci, `getText()` saute le nœud et la SOURCE du diagramme (ses
+   * libellés, ses étiquettes de flèches) n'entre jamais dans `plainText` :
+   * un diagramme est alors introuvable par la recherche locale.
+   */
+  renderText({ node }) {
+    return mermaidIndexText(node.attrs);
   },
 
   parseHTML() {

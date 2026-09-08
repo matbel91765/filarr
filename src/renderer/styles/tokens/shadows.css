@@ -12,16 +12,13 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 
   /* Default shadow (cards, dropdowns) */
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-              0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 
   /* Medium shadow (elevated cards, modals) */
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-              0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 
   /* Large shadow (popovers, tooltips) */
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-              0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
   /* Extra large shadow (modals, dialogs) */
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -31,10 +28,10 @@
 
   /* ===== Colored Shadows (Primary) ===== */
   --shadow-primary-sm: 0 1px 2px 0 rgba(135, 206, 235, 0.3);
-  --shadow-primary-md: 0 4px 6px -1px rgba(135, 206, 235, 0.3),
-                       0 2px 4px -1px rgba(135, 206, 235, 0.2);
-  --shadow-primary-lg: 0 10px 15px -3px rgba(135, 206, 235, 0.3),
-                       0 4px 6px -2px rgba(135, 206, 235, 0.2);
+  --shadow-primary-md:
+    0 4px 6px -1px rgba(135, 206, 235, 0.3), 0 2px 4px -1px rgba(135, 206, 235, 0.2);
+  --shadow-primary-lg:
+    0 10px 15px -3px rgba(135, 206, 235, 0.3), 0 4px 6px -2px rgba(135, 206, 235, 0.2);
 
   /* ===== Focus Ring ===== */
   --shadow-focus: 0 0 0 3px rgba(135, 206, 235, 0.4);
@@ -66,14 +63,11 @@
 /**
  * Dark Mode Shadow Adjustments
  */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4),
-              0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5),
-              0 4px 6px -2px rgba(0, 0, 0, 0.3);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6),
-              0 10px 10px -5px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
   --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
 
   --shadow-sidebar: 4px 0 6px -1px rgba(0, 0, 0, 0.5);
@@ -81,32 +75,95 @@
 }
 
 /**
+ * Papier Theme — chrome plat : ombres quasi imperceptibles, la séparation
+ * vient des bordures 1px (tokens couleur), pas de la profondeur.
+ */
+[data-theme='papier'] {
+  --shadow-sm: 0 1px 2px 0 rgba(51, 49, 44, 0.04);
+  --shadow-md: 0 1px 2px 0 rgba(51, 49, 44, 0.05);
+  --shadow-lg: 0 1px 3px 0 rgba(51, 49, 44, 0.06);
+  --shadow-xl: 0 2px 4px 0 rgba(51, 49, 44, 0.06);
+  --shadow-2xl: 0 4px 12px 0 rgba(51, 49, 44, 0.08);
+  --shadow-inner: inset 0 1px 2px 0 rgba(51, 49, 44, 0.04);
+
+  --shadow-button: none;
+  --shadow-button-hover: none;
+  --shadow-button-active: none;
+
+  --shadow-card: none;
+  --shadow-card-hover: var(--shadow-sm);
+
+  --shadow-dropdown: 0 1px 3px 0 rgba(51, 49, 44, 0.08);
+  --shadow-modal: var(--shadow-2xl);
+  --shadow-tooltip: 0 1px 3px 0 rgba(51, 49, 44, 0.08);
+
+  --shadow-sidebar: none;
+  --shadow-header: none;
+}
+
+/**
  * Shadow Utility Classes
  */
-.shadow-none { box-shadow: var(--shadow-none); }
-.shadow-sm { box-shadow: var(--shadow-sm); }
-.shadow-md { box-shadow: var(--shadow-md); }
-.shadow-lg { box-shadow: var(--shadow-lg); }
-.shadow-xl { box-shadow: var(--shadow-xl); }
-.shadow-2xl { box-shadow: var(--shadow-2xl); }
-.shadow-inner { box-shadow: var(--shadow-inner); }
+.shadow-none {
+  box-shadow: var(--shadow-none);
+}
+.shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+.shadow-md {
+  box-shadow: var(--shadow-md);
+}
+.shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+.shadow-xl {
+  box-shadow: var(--shadow-xl);
+}
+.shadow-2xl {
+  box-shadow: var(--shadow-2xl);
+}
+.shadow-inner {
+  box-shadow: var(--shadow-inner);
+}
 
-.shadow-primary-sm { box-shadow: var(--shadow-primary-sm); }
-.shadow-primary-md { box-shadow: var(--shadow-primary-md); }
-.shadow-primary-lg { box-shadow: var(--shadow-primary-lg); }
+.shadow-primary-sm {
+  box-shadow: var(--shadow-primary-sm);
+}
+.shadow-primary-md {
+  box-shadow: var(--shadow-primary-md);
+}
+.shadow-primary-lg {
+  box-shadow: var(--shadow-primary-lg);
+}
 
-.shadow-focus { box-shadow: var(--shadow-focus); }
-.shadow-focus-error { box-shadow: var(--shadow-focus-error); }
-.shadow-focus-success { box-shadow: var(--shadow-focus-success); }
+.shadow-focus {
+  box-shadow: var(--shadow-focus);
+}
+.shadow-focus-error {
+  box-shadow: var(--shadow-focus-error);
+}
+.shadow-focus-success {
+  box-shadow: var(--shadow-focus-success);
+}
 
-.glow-primary { box-shadow: var(--glow-primary); }
-.glow-success { box-shadow: var(--glow-success); }
-.glow-warning { box-shadow: var(--glow-warning); }
-.glow-error { box-shadow: var(--glow-error); }
+.glow-primary {
+  box-shadow: var(--glow-primary);
+}
+.glow-success {
+  box-shadow: var(--glow-success);
+}
+.glow-warning {
+  box-shadow: var(--glow-warning);
+}
+.glow-error {
+  box-shadow: var(--glow-error);
+}
 
 /* Hover Shadow Transitions */
 .shadow-hover-lift {
-  transition: box-shadow 200ms ease, transform 200ms ease;
+  transition:
+    box-shadow 200ms ease,
+    transform 200ms ease;
 }
 
 .shadow-hover-lift:hover {

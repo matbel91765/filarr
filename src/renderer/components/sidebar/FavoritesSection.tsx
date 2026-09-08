@@ -29,6 +29,8 @@ import {
   FavoriteItem,
   RecentItem,
 } from '../../../store/slices/favoritesSlice';
+import { vaultRefOf } from '../../../store/selectors/fileShortcutSelectors';
+import { vaultFolderRoute } from '../layout/RouteContent/routeCompat';
 import type { RootState, AppDispatch } from '../../../store';
 
 // ==================== ICONS ====================
@@ -251,12 +253,19 @@ export const FavoritesSection: React.FC<FavoritesSectionProps> = ({
       } else {
         if (itemType === 'folder') {
           navigate(`/folder/${itemId}`);
-        } else {
-          navigate(`/file/${itemId}`);
+          return;
         }
+        // Un RACCOURCI s'ouvre dans le coffre, sur l'élément : ses octets
+        // ne sont plus ici.
+        const shortcutRef = vaultRefOf(filesById[itemId]);
+        if (shortcutRef) {
+          navigate(vaultFolderRoute(shortcutRef.vaultId, { itemId: shortcutRef.itemId }));
+          return;
+        }
+        navigate(`/file/${itemId}`);
       }
     },
-    [onItemClick, navigate]
+    [onItemClick, navigate, filesById]
   );
 
   const handleRemoveFavorite = useCallback(

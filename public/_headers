@@ -1,0 +1,27 @@
+# En-têtes Cloudflare Pages pour app.filarr.com (avant-projet web, ETW-1052/1056).
+# Copié dans build/ par CRA ; ignoré par Electron (le desktop pose sa CSP via
+# les en-têtes de session). AUCUNE origine tierce : polices auto-hébergées,
+# pas de CDN, pas de télémétrie. Toute extension de connect-src est une
+# décision de sécurité tracée au registre DECISIONS, pas une ligne de config.
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://api.filarr.com wss://api.filarr.com; img-src 'self' blob: data:; media-src 'self' blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Frame-Options: DENY
+
+# Le bac à sable des greffons : SA propre CSP (aucun réseau, webrtc bloqué),
+# encadrable même-origine — frame-ancestors 'self' remplace X-Frame-Options,
+# qu'on DÉTACHE (le DENY global bloquerait l'iframe). Miroir de
+# infra/web-app/worker.js (SANDBOX_HEADERS), qui reste l'autorité
+# (run_worker_first) — ce bloc est la ceinture si la config assets régresse.
+/plugin-sandbox
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; webrtc 'block'
+  Referrer-Policy: no-referrer
+
+/plugin-sandbox.html
+  ! X-Frame-Options
+  Content-Security-Policy: default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; form-action 'none'; base-uri 'none'; frame-ancestors 'self'; webrtc 'block'
+  Referrer-Policy: no-referrer

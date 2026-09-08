@@ -142,6 +142,12 @@ export interface FileContext {
    * the OS downloads watcher. Undefined for in-app file events.
    */
   osSourcePath?: string;
+  /**
+   * ID of the hot folder rule that surfaced the file (only set for events
+   * originating from a configured hot folder). Lets users build automation
+   * rules scoped to specific hot folders.
+   */
+  hotFolderRuleId?: string;
 }
 
 export interface RuleTemplate {

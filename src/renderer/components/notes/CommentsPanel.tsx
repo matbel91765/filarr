@@ -9,13 +9,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import './CommentsPanel.css';
 
-export interface NoteComment {
-  id: string;
-  text: string;
-  author: string;
-  createdAt: string;
-  resolved: boolean;
-}
+// Le modèle vit désormais dans src/types/notes.ts — ré-exporté ici pour ne pas
+// casser les imports existants (NoteEditor, NotesView).
+export type { NoteComment } from '../../../types/notes';
+import type { NoteComment } from '../../../types/notes';
 
 interface CommentsPanelProps {
   comments: Record<string, NoteComment>;
@@ -53,17 +50,27 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = React.memo(function C
 
   return (
     <div className="comments-panel">
-      <button
-        className="comments-panel__header"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <button className="comments-panel__header" onClick={() => setExpanded(!expanded)}>
         <svg
-          width="10" height="10" viewBox="0 0 24 24" fill="currentColor"
-          style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          style={{
+            transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.15s',
+          }}
         >
           <path d="M8 5l8 7-8 7z" />
         </svg>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
           <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
         </svg>
         <span>{t('notes.comments', 'Comments')}</span>
@@ -81,9 +88,7 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = React.memo(function C
               : t('notes.showResolved', 'Show resolved')}
           </button>
           {commentList.length === 0 ? (
-            <div className="comments-panel__empty">
-              {t('notes.noComments', 'No comments')}
-            </div>
+            <div className="comments-panel__empty">{t('notes.noComments', 'No comments')}</div>
           ) : (
             <div className="comments-panel__list">
               {commentList.map((comment) => (
@@ -95,7 +100,10 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = React.memo(function C
                   <div className="comments-panel__item-header">
                     <span className="comments-panel__item-author">{comment.author}</span>
                     <span className="comments-panel__item-date">
-                      {new Date(comment.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                      {new Date(comment.createdAt).toLocaleDateString(undefined, {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
                     </span>
                   </div>
                   <p className="comments-panel__item-text">{comment.text}</p>
@@ -103,21 +111,42 @@ export const CommentsPanel: React.FC<CommentsPanelProps> = React.memo(function C
                     {!comment.resolved && (
                       <button
                         className="comments-panel__item-action"
-                        onClick={(e) => { e.stopPropagation(); onResolveComment(comment.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onResolveComment(comment.id);
+                        }}
                         title={t('notes.resolveComment', 'Resolve')}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
                           <polyline points="20,6 9,17 4,12" />
                         </svg>
                       </button>
                     )}
                     <button
                       className="comments-panel__item-action comments-panel__item-action--delete"
-                      onClick={(e) => { e.stopPropagation(); onDeleteComment(comment.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteComment(comment.id);
+                      }}
                       title={t('notes.deleteComment', 'Delete')}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
                       </svg>
                     </button>
                   </div>

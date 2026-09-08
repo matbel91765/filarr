@@ -6,8 +6,14 @@
  * Persists settings in localStorage and applies them as CSS custom properties.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  getStyleDefaults,
+  loadStyleSettings,
+  resolveStyleColors,
+  saveStyleSettings,
+} from './NoteEditor';
 import './StyleSettingsPanel.css';
 
 // ==================== Types ====================
@@ -17,9 +23,14 @@ export interface StyleSettings {
   fontSize: number;
   lineHeight: number;
   headingScale: number;
-  accentColor: string;
-  editorBg: string;
-  textColor: string;
+  /**
+   * `null` = « suis le thème de l'application ». Une couleur n'est écrite que
+   * lorsque l'utilisateur en choisit une lui-même : c'est ce qui empêche ce
+   * panneau de repeindre la page de notes en blanc sous un thème sombre.
+   */
+  accentColor: string | null;
+  editorBg: string | null;
+  textColor: string | null;
   editorPadding: number;
   contentMaxWidth: number;
   showLineNumbers: boolean;
@@ -33,90 +44,127 @@ interface StyleSettingsPanelProps {
 
 // ==================== Constants ====================
 
-const STORAGE_KEY = 'filarr-style-settings';
-
-const DEFAULT_SETTINGS: StyleSettings = {
-  fontFamily: 'system',
-  fontSize: 16,
-  lineHeight: 1.6,
-  headingScale: 1.25,
-  accentColor: '#3b82f6',
-  editorBg: '#ffffff',
-  textColor: '#1e293b',
-  editorPadding: 48,
-  contentMaxWidth: 720,
-  showLineNumbers: false,
-  typewriterMode: false,
-  spacingScale: 1,
-};
+// Le chargement, l'enregistrement et les valeurs par défaut vivent dans
+// NoteEditor : une seule source de vérité, sinon les deux jeux de défauts
+// divergent et le panneau finit par épingler les couleurs du thème clair.
 
 const FONT_OPTIONS: { value: string; label: string; css: string }[] = [
-  { value: 'system', label: 'System Default', css: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+  {
+    value: 'system',
+    label: 'System Default',
+    css: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
   { value: 'serif', label: 'Serif', css: 'Georgia, "Times New Roman", Times, serif' },
-  { value: 'sans-serif', label: 'Sans-serif', css: '"Helvetica Neue", Helvetica, Arial, sans-serif' },
-  { value: 'monospace', label: 'Monospace', css: '"Fira Code", "JetBrains Mono", "Cascadia Code", Consolas, monospace' },
+  {
+    value: 'sans-serif',
+    label: 'Sans-serif',
+    css: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  },
+  {
+    value: 'monospace',
+    label: 'Monospace',
+    css: '"Fira Code", "JetBrains Mono", "Cascadia Code", Consolas, monospace',
+  },
 ];
 
 interface StylePreset {
   id: string;
   label: string;
   icon: string;
-  settings: Partial<StyleSettings>;
+  /** `null` = remise à zéro complète (donc retour aux couleurs du thème). */
+  settings: Partial<StyleSettings> | null;
 }
 
 const PRESETS: StylePreset[] = [
   {
-    id: 'default', label: 'Default', icon: '📝',
-    settings: { ...DEFAULT_SETTINGS },
+    id: 'default',
+    label: 'Default',
+    icon: '📝',
+    settings: null,
   },
   {
-    id: 'writer', label: 'Writer', icon: '✍️',
-    settings: { fontFamily: 'serif', fontSize: 18, lineHeight: 1.8, editorPadding: 60, contentMaxWidth: 640, editorBg: '#fefcf7', textColor: '#2c2c2c' },
+    id: 'writer',
+    label: 'Writer',
+    icon: '✍️',
+    settings: {
+      fontFamily: 'serif',
+      fontSize: 18,
+      lineHeight: 1.8,
+      editorPadding: 60,
+      contentMaxWidth: 640,
+      editorBg: '#fefcf7',
+      textColor: '#2c2c2c',
+    },
   },
   {
-    id: 'developer', label: 'Developer', icon: '💻',
-    settings: { fontFamily: 'monospace', fontSize: 14, lineHeight: 1.5, editorPadding: 24, contentMaxWidth: 900, showLineNumbers: true },
+    id: 'developer',
+    label: 'Developer',
+    icon: '💻',
+    settings: {
+      fontFamily: 'monospace',
+      fontSize: 14,
+      lineHeight: 1.5,
+      editorPadding: 24,
+      contentMaxWidth: 900,
+      showLineNumbers: true,
+    },
   },
   {
-    id: 'compact', label: 'Compact', icon: '📋',
+    id: 'compact',
+    label: 'Compact',
+    icon: '📋',
     settings: { fontSize: 13, lineHeight: 1.4, editorPadding: 16, contentMaxWidth: 1000 },
   },
   {
-    id: 'focus', label: 'Focus', icon: '🎯',
-    settings: { fontFamily: 'sans-serif', fontSize: 18, lineHeight: 1.8, editorPadding: 80, contentMaxWidth: 560, typewriterMode: true },
+    // Renommé : ce préréglage règle la TYPOGRAPHIE d'une colonne de lecture, il
+    // ne masque rien. Le vrai mode sans distraction (Ctrl+Maj+F) porte ce nom
+    // désormais, et deux « Focus » côte à côte dont un seul agit sur le chrome
+    // aurait été trompeur.
+    //
+    // `typewriterMode` retiré avec lui : personne ne le lit (seul le défaut
+    // `false` existe, NoteEditor.tsx), il n'était qu'une promesse compilable.
+    id: 'focus',
+    label: 'Reading',
+    icon: '📖',
+    settings: {
+      fontFamily: 'sans-serif',
+      fontSize: 18,
+      lineHeight: 1.8,
+      editorPadding: 80,
+      contentMaxWidth: 560,
+    },
   },
 ];
 
 // ==================== Helpers ====================
 
-function loadSettings(): StyleSettings {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return { ...DEFAULT_SETTINGS, ...parsed };
+/**
+ * `<input type="color">` n'accepte que du `#rrggbb`. Les fonds de thème sont
+ * parfois donnés en `rgba(...)` (space, aurora, sakura, crepuscule, foret) :
+ * on les convertit pour la pastille, l'alpha n'ayant pas de place ici.
+ */
+function toColorInputValue(color: string): string {
+  if (color.startsWith('#')) {
+    if (color.length === 4) {
+      return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
     }
-  } catch {
-    // Ignore parse errors
+    return color.slice(0, 7);
   }
-  return { ...DEFAULT_SETTINGS };
-}
-
-function saveSettings(settings: StyleSettings): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  } catch {
-    // Ignore storage errors
+  const match = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (match) {
+    const hex = (n: string) => Number(n).toString(16).padStart(2, '0');
+    return `#${hex(match[1])}${hex(match[2])}${hex(match[3])}`;
   }
+  return '#000000';
 }
 
 function getFontCss(family: string): string {
-  const option = FONT_OPTIONS.find(o => o.value === family);
+  const option = FONT_OPTIONS.find((o) => o.value === family);
   return option ? option.css : family;
 }
 
 function getFontLabel(family: string): string {
-  const option = FONT_OPTIONS.find(o => o.value === family);
+  const option = FONT_OPTIONS.find((o) => o.value === family);
   return option ? option.label : family;
 }
 
@@ -124,25 +172,44 @@ function getFontLabel(family: string): string {
 
 const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChange }) => {
   const { t } = useTranslation();
-  const [settings, setSettings] = useState<StyleSettings>(loadSettings);
+  const [settings, setSettings] = useState<StyleSettings>(loadStyleSettings);
   const [isCollapsed, setIsCollapsed] = useState<Record<string, boolean>>({});
+  // Rien n'est écrit tant que l'utilisateur n'a rien touché : la simple
+  // ouverture du panneau ne doit épingler AUCUNE couleur (c'est ce qui
+  // repeignait la page de notes en blanc sous les thèmes sombres).
+  const dirtyRef = useRef(false);
+
+  const defaults = getStyleDefaults();
+  const resolved = resolveStyleColors(settings);
 
   // Persist and notify on change
   useEffect(() => {
-    saveSettings(settings);
+    if (!dirtyRef.current) return;
+    saveStyleSettings(settings);
     onSettingsChange?.(settings);
   }, [settings, onSettingsChange]);
 
-  const update = useCallback(<K extends keyof StyleSettings>(key: K, value: StyleSettings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  }, []);
+  const applySettings = useCallback(
+    (next: StyleSettings | ((prev: StyleSettings) => StyleSettings)) => {
+      dirtyRef.current = true;
+      setSettings(next);
+    },
+    []
+  );
+
+  const update = useCallback(
+    <K extends keyof StyleSettings>(key: K, value: StyleSettings[K]) => {
+      applySettings((prev) => ({ ...prev, [key]: value }));
+    },
+    [applySettings]
+  );
 
   const resetToDefaults = useCallback(() => {
-    setSettings({ ...DEFAULT_SETTINGS });
-  }, []);
+    applySettings(getStyleDefaults());
+  }, [applySettings]);
 
   const toggleGroup = useCallback((group: string) => {
-    setIsCollapsed(prev => ({ ...prev, [group]: !prev[group] }));
+    setIsCollapsed((prev) => ({ ...prev, [group]: !prev[group] }));
   }, []);
 
   return (
@@ -164,11 +231,15 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
 
         {/* Quick Presets */}
         <div className="style-settings__presets">
-          {PRESETS.map(preset => (
+          {PRESETS.map((preset) => (
             <button
               key={preset.id}
-              className={`style-settings__preset ${settings.fontFamily === (preset.settings.fontFamily ?? DEFAULT_SETTINGS.fontFamily) && settings.fontSize === (preset.settings.fontSize ?? DEFAULT_SETTINGS.fontSize) ? 'is-active' : ''}`}
-              onClick={() => setSettings(prev => ({ ...prev, ...preset.settings }))}
+              className={`style-settings__preset ${settings.fontFamily === (preset.settings?.fontFamily ?? defaults.fontFamily) && settings.fontSize === (preset.settings?.fontSize ?? defaults.fontSize) ? 'is-active' : ''}`}
+              onClick={() =>
+                applySettings((prev) =>
+                  preset.settings ? { ...prev, ...preset.settings } : getStyleDefaults()
+                )
+              }
               title={preset.label}
             >
               <span className="style-settings__preset-icon">{preset.icon}</span>
@@ -186,7 +257,9 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
             <span className="style-settings__group-title">
               {t('notes.styleSettings.typography', 'Typography')}
             </span>
-            <span className={`style-settings__chevron ${isCollapsed.typography ? 'style-settings__chevron--collapsed' : ''}`}>
+            <span
+              className={`style-settings__chevron ${isCollapsed.typography ? 'style-settings__chevron--collapsed' : ''}`}
+            >
               &#9662;
             </span>
           </button>
@@ -199,10 +272,12 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                 <select
                   className="style-settings__select"
                   value={settings.fontFamily}
-                  onChange={e => update('fontFamily', e.target.value)}
+                  onChange={(e) => update('fontFamily', e.target.value)}
                 >
-                  {FONT_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  {FONT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -215,9 +290,11 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                 <input
                   type="range"
                   className="style-settings__slider"
-                  min={12} max={24} step={1}
+                  min={12}
+                  max={24}
+                  step={1}
                   value={settings.fontSize}
-                  onChange={e => update('fontSize', Number(e.target.value))}
+                  onChange={(e) => update('fontSize', Number(e.target.value))}
                 />
               </div>
 
@@ -229,9 +306,11 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                 <input
                   type="range"
                   className="style-settings__slider"
-                  min={1.2} max={2.0} step={0.1}
+                  min={1.2}
+                  max={2.0}
+                  step={0.1}
                   value={settings.lineHeight}
-                  onChange={e => update('lineHeight', Number(e.target.value))}
+                  onChange={(e) => update('lineHeight', Number(e.target.value))}
                 />
               </div>
 
@@ -243,9 +322,11 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                 <input
                   type="range"
                   className="style-settings__slider"
-                  min={1.0} max={1.5} step={0.05}
+                  min={1.0}
+                  max={1.5}
+                  step={0.05}
                   value={settings.headingScale}
-                  onChange={e => update('headingScale', Number(e.target.value))}
+                  onChange={(e) => update('headingScale', Number(e.target.value))}
                 />
               </div>
             </div>
@@ -254,14 +335,13 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
 
         {/* Colors Group */}
         <div className="style-settings__group">
-          <button
-            className="style-settings__group-header"
-            onClick={() => toggleGroup('colors')}
-          >
+          <button className="style-settings__group-header" onClick={() => toggleGroup('colors')}>
             <span className="style-settings__group-title">
               {t('notes.styleSettings.colors', 'Colors')}
             </span>
-            <span className={`style-settings__chevron ${isCollapsed.colors ? 'style-settings__chevron--collapsed' : ''}`}>
+            <span
+              className={`style-settings__chevron ${isCollapsed.colors ? 'style-settings__chevron--collapsed' : ''}`}
+            >
               &#9662;
             </span>
           </button>
@@ -272,8 +352,14 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                   {t('notes.styleSettings.accentColor', 'Accent Color')}
                 </label>
                 <div className="style-settings__color-input">
-                  <input type="color" value={settings.accentColor} onChange={e => update('accentColor', e.target.value)} />
-                  <span className="style-settings__color-hex">{settings.accentColor}</span>
+                  <input
+                    type="color"
+                    value={toColorInputValue(resolved.accentColor)}
+                    onChange={(e) => update('accentColor', e.target.value)}
+                  />
+                  <span className="style-settings__color-hex">
+                    {settings.accentColor ?? t('notes.styleSettings.followTheme', 'Theme')}
+                  </span>
                 </div>
               </div>
 
@@ -282,8 +368,14 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                   {t('notes.styleSettings.editorBg', 'Background')}
                 </label>
                 <div className="style-settings__color-input">
-                  <input type="color" value={settings.editorBg} onChange={e => update('editorBg', e.target.value)} />
-                  <span className="style-settings__color-hex">{settings.editorBg}</span>
+                  <input
+                    type="color"
+                    value={toColorInputValue(resolved.editorBg)}
+                    onChange={(e) => update('editorBg', e.target.value)}
+                  />
+                  <span className="style-settings__color-hex">
+                    {settings.editorBg ?? t('notes.styleSettings.followTheme', 'Theme')}
+                  </span>
                 </div>
               </div>
 
@@ -292,8 +384,14 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                   {t('notes.styleSettings.textColor', 'Text Color')}
                 </label>
                 <div className="style-settings__color-input">
-                  <input type="color" value={settings.textColor} onChange={e => update('textColor', e.target.value)} />
-                  <span className="style-settings__color-hex">{settings.textColor}</span>
+                  <input
+                    type="color"
+                    value={toColorInputValue(resolved.textColor)}
+                    onChange={(e) => update('textColor', e.target.value)}
+                  />
+                  <span className="style-settings__color-hex">
+                    {settings.textColor ?? t('notes.styleSettings.followTheme', 'Theme')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -302,14 +400,13 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
 
         {/* Spacing Group */}
         <div className="style-settings__group">
-          <button
-            className="style-settings__group-header"
-            onClick={() => toggleGroup('spacing')}
-          >
+          <button className="style-settings__group-header" onClick={() => toggleGroup('spacing')}>
             <span className="style-settings__group-title">
               {t('notes.styleSettings.spacing', 'Spacing')}
             </span>
-            <span className={`style-settings__chevron ${isCollapsed.spacing ? 'style-settings__chevron--collapsed' : ''}`}>
+            <span
+              className={`style-settings__chevron ${isCollapsed.spacing ? 'style-settings__chevron--collapsed' : ''}`}
+            >
               &#9662;
             </span>
           </button>
@@ -323,9 +420,11 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                 <input
                   type="range"
                   className="style-settings__slider"
-                  min={16} max={80} step={4}
+                  min={16}
+                  max={80}
+                  step={4}
                   value={settings.editorPadding}
-                  onChange={e => update('editorPadding', Number(e.target.value))}
+                  onChange={(e) => update('editorPadding', Number(e.target.value))}
                 />
               </div>
 
@@ -337,9 +436,11 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
                 <input
                   type="range"
                   className="style-settings__slider"
-                  min={600} max={1200} step={20}
+                  min={600}
+                  max={1200}
+                  step={20}
                   value={settings.contentMaxWidth}
-                  onChange={e => update('contentMaxWidth', Number(e.target.value))}
+                  onChange={(e) => update('contentMaxWidth', Number(e.target.value))}
                 />
               </div>
             </div>
@@ -348,14 +449,13 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
 
         {/* Editor Group */}
         <div className="style-settings__group">
-          <button
-            className="style-settings__group-header"
-            onClick={() => toggleGroup('editor')}
-          >
+          <button className="style-settings__group-header" onClick={() => toggleGroup('editor')}>
             <span className="style-settings__group-title">
               {t('notes.styleSettings.editor', 'Editor')}
             </span>
-            <span className={`style-settings__chevron ${isCollapsed.editor ? 'style-settings__chevron--collapsed' : ''}`}>
+            <span
+              className={`style-settings__chevron ${isCollapsed.editor ? 'style-settings__chevron--collapsed' : ''}`}
+            >
               &#9662;
             </span>
           </button>
@@ -404,37 +504,63 @@ const StyleSettingsPanel: React.FC<StyleSettingsPanelProps> = ({ onSettingsChang
             fontFamily: getFontCss(settings.fontFamily),
             fontSize: `${settings.fontSize}px`,
             lineHeight: settings.lineHeight,
-            color: settings.textColor,
-            backgroundColor: settings.editorBg,
+            color: resolved.textColor,
+            backgroundColor: resolved.editorBg,
             padding: `${Math.min(settings.editorPadding, 24)}px`,
             maxWidth: `${Math.min(settings.contentMaxWidth, 320)}px`,
           }}
         >
-          <div style={{ fontSize: `${settings.fontSize * settings.headingScale}px`, fontWeight: 700, marginBottom: 8, color: settings.textColor }}>
+          <div
+            style={{
+              fontSize: `${settings.fontSize * settings.headingScale}px`,
+              fontWeight: 700,
+              marginBottom: 8,
+              color: resolved.textColor,
+            }}
+          >
             My Document
           </div>
           <div style={{ marginBottom: 8 }}>
-            The quick brown fox jumps over the lazy dog. This is how your text will look with the current settings.
+            The quick brown fox jumps over the lazy dog. This is how your text will look with the
+            current settings.
           </div>
-          <div style={{ marginBottom: 8, borderLeft: `3px solid ${settings.accentColor}`, paddingLeft: 12, opacity: 0.8, fontStyle: 'italic' }}>
+          <div
+            style={{
+              marginBottom: 8,
+              borderLeft: `3px solid ${resolved.accentColor}`,
+              paddingLeft: 12,
+              opacity: 0.8,
+              fontStyle: 'italic',
+            }}
+          >
             A blockquote styled with your accent color.
           </div>
           <div style={{ fontSize: `${settings.fontSize * 0.85}px`, opacity: 0.5 }}>
-            {getFontLabel(settings.fontFamily)} &middot; {settings.fontSize}px &middot; {settings.lineHeight.toFixed(1)} lh
+            {getFontLabel(settings.fontFamily)} &middot; {settings.fontSize}px &middot;{' '}
+            {settings.lineHeight.toFixed(1)} lh
           </div>
         </div>
         {/* Summary chips */}
         <div className="style-settings__preview-summary">
           <span className="style-settings__chip">
-            <span className="style-settings__chip-dot" style={{ background: settings.accentColor }} />
+            <span
+              className="style-settings__chip-dot"
+              style={{ background: resolved.accentColor }}
+            />
             Accent
           </span>
           <span className="style-settings__chip">
-            <span className="style-settings__chip-dot" style={{ background: settings.editorBg, border: '1px solid var(--color-border, #e2e8f0)' }} />
+            <span
+              className="style-settings__chip-dot"
+              style={{
+                background: resolved.editorBg,
+                border: '1px solid var(--color-border, #e2e8f0)',
+              }}
+            />
             Background
           </span>
           <span className="style-settings__chip">
-            <span className="style-settings__chip-dot" style={{ background: settings.textColor }} />
+            <span className="style-settings__chip-dot" style={{ background: resolved.textColor }} />
             Text
           </span>
           {settings.showLineNumbers && (

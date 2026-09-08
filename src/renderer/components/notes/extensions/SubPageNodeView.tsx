@@ -12,6 +12,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../store';
 import { addNote, setEditingNote } from '../../../../store/slices/notesSlice';
 import { createNote } from '../../../../services/notes/noteService';
+import { claimMintedSubPage } from './subPageMint';
 
 interface SubPageNodeViewProps {
   node: {
@@ -24,6 +25,8 @@ interface SubPageNodeViewProps {
   updateAttributes: (attrs: Record<string, unknown>) => void;
   selected: boolean;
   deleteNode: () => void;
+  /** Fourni par TipTap. Absent des doublures de test — d'où le `?`. */
+  editor?: { isEditable?: boolean };
 }
 
 export const SubPageNodeView: React.FC<SubPageNodeViewProps> = ({
@@ -31,6 +34,7 @@ export const SubPageNodeView: React.FC<SubPageNodeViewProps> = ({
   updateAttributes,
   selected,
   deleteNode,
+  editor,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { noteId, icon } = node.attrs;
@@ -44,18 +48,38 @@ export const SubPageNodeView: React.FC<SubPageNodeViewProps> = ({
   const displayTitle = linkedNote?.title || node.attrs.title || 'Untitled';
   const displayIcon = linkedNote?.icon || icon || '📄';
 
-  // Auto-create the note on first mount when noteId is empty
+  // Matérialisation de la note de la sous-page.
+  //
+  // DEUX GARDES, toutes deux nées de la collaboration temps réel : le nœud
+  // voyage par le CRDT, donc CETTE VUE est montée sur les DEUX appareils.
+  //  - un aperçu en LECTURE SEULE (historique de versions) ne crée jamais rien ;
+  //  - un id frappé ailleurs n'est pas matérialisé ici (voir `claimMintedSubPage`) :
+  //    sans cela, chaque appareil fabriquait sa propre note « Sans titre » pour
+  //    la même sous-page, et le nœud n'en désignait qu'une.
   useEffect(() => {
-    if (noteId || created.current) return;
-    created.current = true;
+    if (created.current) return;
+    if (editor?.isEditable === false) return;
 
+    if (noteId) {
+      // Id frappé par CET appareil et pas encore matérialisé : la note lui
+      // revient. Un id venu d'ailleurs (ou déjà matérialisé) ne bouge pas —
+      // il désigne soit une note qui arrivera par la synchronisation, soit une
+      // note supprimée, et l'état « lien cassé » plus bas le dit.
+      if (linkedNote || !claimMintedSubPage(noteId)) return;
+      created.current = true;
+      const minted = createNote({ id: noteId, title: '' });
+      dispatch(addNote(minted));
+      dispatch(setEditingNote(minted.id));
+      return;
+    }
+
+    // Nœud HÉRITÉ, inséré avant que l'id soit frappé à l'insertion.
+    created.current = true;
     const newNote = createNote({ title: '' });
     dispatch(addNote(newNote));
     updateAttributes({ noteId: newNote.id, title: newNote.title, icon: '' });
-
-    // Navigate to the new note so the user can start writing
     dispatch(setEditingNote(newNote.id));
-  }, [noteId, dispatch, updateAttributes]);
+  }, [noteId, linkedNote, editor, dispatch, updateAttributes]);
 
   // Keep node attrs in sync with Redux note title
   useEffect(() => {
@@ -103,18 +127,29 @@ export const SubPageNodeView: React.FC<SubPageNodeViewProps> = ({
           {isOrphan ? 'Deleted page' : displayTitle || 'Untitled'}
         </span>
         <span className="sub-page-block__arrow">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
           </svg>
         </span>
         {selected && (
-          <button
-            className="sub-page-block__remove"
-            onClick={handleDelete}
-            title="Remove link"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          <button className="sub-page-block__remove" onClick={handleDelete} title="Remove link">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         )}

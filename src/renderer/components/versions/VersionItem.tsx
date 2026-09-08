@@ -138,16 +138,27 @@ export const VersionItem: FC<VersionItemProps> = memo(({
     }
   };
 
+  /**
+   * Sans octets conserves, il n'y a rien a restaurer NI a exporter.
+   *
+   * Le bouton est desactive plutot que masque : une action qui disparait sans
+   * explication laisse croire a un bug, alors qu'un bouton grise avec son
+   * info-bulle DIT pourquoi. C'est le garde-fou qui empeche le retour du
+   * defaut d'origine — un « Restaurer » qui annoncait sa reussite sans avoir
+   * jamais reecrit un octet.
+   */
+  const contenuIndisponible = version.contentAvailable !== true;
+
   const handleRestoreClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!disabled && onRestore) {
+    if (!disabled && !contenuIndisponible && onRestore) {
       onRestore(version);
     }
   };
 
   const handleExportClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!disabled && onExport) {
+    if (!disabled && !contenuIndisponible && onExport) {
       onExport(version);
     }
   };
@@ -222,8 +233,12 @@ export const VersionItem: FC<VersionItemProps> = memo(({
         <button
           className="version-item__action"
           onClick={handleRestoreClick}
-          disabled={disabled}
-          title="Restaurer cette version"
+          disabled={disabled || contenuIndisponible}
+          title={
+            contenuIndisponible
+              ? "Le contenu de cette version n'a pas ete conserve : restauration impossible"
+              : 'Restaurer cette version'
+          }
           aria-label="Restaurer"
         >
           <RestoreIcon />
@@ -231,8 +246,12 @@ export const VersionItem: FC<VersionItemProps> = memo(({
         <button
           className="version-item__action"
           onClick={handleExportClick}
-          disabled={disabled}
-          title="Exporter cette version"
+          disabled={disabled || contenuIndisponible}
+          title={
+            contenuIndisponible
+              ? "Le contenu de cette version n'a pas ete conserve : export impossible"
+              : 'Exporter cette version'
+          }
           aria-label="Exporter"
         >
           <DownloadIcon />

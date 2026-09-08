@@ -1,0 +1,76 @@
+/**
+ * OpenWithDialog — la liste des façons d'ouvrir un fichier.
+ *
+ * Chaque ligne porte DEUX niveaux : le nom de la cible, et la conséquence du
+ * clic. Le second est en retrait typographique (taille et couleur) sans être
+ * effacé : c'est lui qui donne le consentement à une conversion, il doit se
+ * lire, pas se deviner.
+ */
+
+.open-with {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.open-with__file {
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.open-with__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.open-with__choice {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: flex-start;
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.open-with__choice:hover {
+  background: var(--color-hover-overlay);
+}
+
+/* Le focus se pose sur le bouton radio, qui est un vrai <input> : le rendre
+   visible sur la LIGNE entière évite un anneau de 12 px perdu au bord gauche. */
+.open-with__choice:focus-within {
+  background: var(--color-hover-overlay);
+  box-shadow: var(--shadow-focus);
+}
+
+.open-with__choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.open-with__choice-title {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.open-with__choice-hint {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: 1.4;
+}
+
+.open-with__actions {
+  display: flex;
+  gap: var(--spacing-2);
+  justify-content: flex-end;
+}

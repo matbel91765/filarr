@@ -21,6 +21,14 @@
   border-right: 1px solid var(--color-border, #e2e8f0);
 }
 
+/* Une colonne qui défile ne comprime pas ses enfants — sans quoi les groupes,
+   qui portent `overflow: hidden` pour leur arrondi, rognent leurs dernières
+   lignes en silence au lieu de faire défiler la colonne. Même défaut, même
+   remède que dans GraphSettingsPanel.css, où il a mordu pour de bon. */
+.style-settings__controls > * {
+  flex-shrink: 0;
+}
+
 /* ---- Right column: preview ---- */
 
 .style-settings__preview-panel {
@@ -117,7 +125,9 @@
   background: transparent;
   color: var(--color-text-secondary, #64748b);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .style-settings__reset-btn:hover {
@@ -322,7 +332,7 @@
   gap: 6px;
 }
 
-.style-settings__color-input input[type="color"] {
+.style-settings__color-input input[type='color'] {
   width: 28px;
   height: 28px;
   border: 1px solid var(--color-border, #e2e8f0);
@@ -397,11 +407,11 @@
   }
 }
 
-[data-theme="dark"] .style-settings__preview-panel {
+[data-theme='dark'] .style-settings__preview-panel {
   background: var(--color-background-secondary, #1e293b);
 }
 
-[data-theme="dark"] .style-settings__chip {
+[data-theme='dark'] .style-settings__chip {
   background: var(--color-background-secondary, #1e293b);
   border-color: var(--color-border, #334155);
 }

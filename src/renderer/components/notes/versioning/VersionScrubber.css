@@ -14,7 +14,7 @@
      unreachable (clicks would pass to the drag region or native controls
      on the right). Pushing everything down past that strip avoids the
      dead-click zone at the top-right. */
-  padding-top: 40px;
+  padding-top: var(--chrome-inset-top);
 }
 
 @keyframes scrubber-fade {

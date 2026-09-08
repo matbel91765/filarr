@@ -1,0 +1,3000 @@
+/**
+ * La place de marché — feuille de style.
+ *
+ * ── ZÉRO COULEUR EN DUR ─────────────────────────────────────────────────────
+ *
+ * Neuf thèmes. Toute valeur hexadécimale posée ici serait juste sur l'un d'eux
+ * et fausse sur les huit autres — y compris déguisée en repli de variable
+ * (`var(--color-x, #dbeafe)`), qui est la même faute avec un alibi : le repli ne
+ * se voit qu'au moment où il tombe, c'est-à-dire jamais en développement et
+ * toujours chez quelqu'un d'autre. L'ancien écran en contenait quatre.
+ *
+ * Les fonds teintés se construisent en `color-mix` sur les tokens d'état :
+ * un même mélange donne un aplat lisible en clair comme en sombre, là où un
+ * `--color-success-100` figé n'existe pas dans les thèmes sombres.
+ *
+ * ── UNE COULEUR = UN ÉTAT ───────────────────────────────────────────────────
+ *
+ * danger = cassé (l'extension n'est plus ce que son auteur a signé) ;
+ * warn    = conflit (installée, inerte) ;
+ * info    = mise à jour disponible ;
+ * ok      = installée et active ;
+ * muted   = désactivée volontairement.
+ * Aucun autre usage décoratif de ces cinq tons dans cet écran.
+ */
+
+/* ==================== La coquille ==================== */
+
+.mkt {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-background);
+}
+
+.mkt__head {
+  flex: 0 0 auto;
+  padding: var(--spacing-5) var(--spacing-6) 0;
+  border-bottom: var(--border-width-1) solid var(--color-border-light);
+}
+
+.mkt__title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+/**
+ * LA PHRASE DES CINQ SECONDES. Ce n'est pas de la décoration : c'est la seule
+ * chose de l'écran qui réponde à « qu'est-ce que je peux faire ici ». Elle reste
+ * donc en taille de lecture (sm), pas en petit gris de bas de page.
+ */
+.mkt__tagline {
+  margin: var(--spacing-1_5) 0 0;
+  max-width: 88ch;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+/* ---- L'étage des TYPES D'OBJET (extensions / modèles) ---- */
+
+.mkt__kinds {
+  display: flex;
+  gap: var(--spacing-1);
+  margin-top: var(--spacing-4);
+}
+
+.mkt__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1_5) var(--spacing-3);
+  border: var(--border-width-1) solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.mkt__kind:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.mkt__kind--active {
+  background: var(--color-selected);
+  border-color: var(--color-selected-border);
+  color: var(--color-text-primary);
+}
+
+.mkt__kind-soon {
+  padding: 0 var(--spacing-1_5);
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-transform: lowercase;
+}
+
+/* ---- L'étage des SECTIONS (découvrir / mes extensions / publier) ---- */
+
+.mkt__nav {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-4);
+}
+
+.mkt__nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-0_5) var(--spacing-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-color);
+}
+
+.mkt__nav-item:hover {
+  color: var(--color-text-primary);
+}
+
+.mkt__nav-item--active {
+  color: var(--color-text-primary);
+}
+
+.mkt__nav-item--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: var(--border-width-2);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-600);
+}
+
+.mkt__nav-count {
+  min-width: 20px;
+  padding: 0 var(--spacing-1_5);
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.mkt__nav-count--attention {
+  background: color-mix(in srgb, var(--color-info-500) 18%, transparent);
+  color: var(--color-info-600);
+}
+
+/* ==================== Le corps ==================== */
+
+.mkt__body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/**
+ * ⚠ `.mkt__body--with-detail` ET `.mkt__detail-pane` ONT ÉTÉ RETIRÉS.
+ *
+ * La fiche vivait dans une seconde colonne, la liste restant visible à gauche.
+ * L'intention était bonne — garder sa place dans le catalogue — mais donnait
+ * une fiche de 340 px, où une capture d'écran ne montre rien, à côté d'une
+ * liste de 340 px, où plus rien ne se lit. Sous 1100 px, cette feuille FAISAIT
+ * DÉJÀ recouvrir la liste : la moitié des écrans avait le comportement qu'on
+ * adopte maintenant partout. Voir `MarketplaceView`.
+ */
+
+.mkt__pane {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--spacing-5) var(--spacing-6) var(--spacing-8);
+}
+
+/* ==================== La barre d'outils ==================== */
+
+.mkt__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+}
+
+.mkt__search {
+  flex: 1 1 18rem;
+  max-width: 26rem;
+}
+
+.mkt__sort {
+  flex: 0 0 auto;
+  min-width: 11rem;
+}
+
+.mkt__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1_5);
+  margin-bottom: var(--spacing-4);
+}
+
+.mkt__chip {
+  padding: var(--spacing-1) var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.mkt__chip:hover {
+  background: var(--color-hover-overlay);
+  color: var(--color-text-primary);
+}
+
+.mkt__chip--active {
+  background: var(--color-selected);
+  border-color: var(--color-selected-border);
+  color: var(--color-text-primary);
+}
+
+.mkt__result-count {
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/* ==================== La carte d'une extension ==================== */
+
+.mkt-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--spacing-3);
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  transition: var(--transition-button);
+}
+
+.mkt-card:hover {
+  border-color: var(--color-border);
+  background: var(--color-surface-hover);
+}
+
+/**
+ * LA ZONE D'OUVERTURE est un vrai bouton, et les actions vivent À CÔTÉ, pas
+ * dedans. Une carte entière rendue cliquable avec des boutons imbriqués est un
+ * HTML invalide qui, en pratique, vole les clics de ses propres boutons et
+ * n'annonce plus rien de juste au clavier.
+ */
+.mkt-card__open {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--spacing-3);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+/**
+ * La même carte, mais qui ne S'OUVRE PAS.
+ *
+ * Les modèles de mise en page n'ont pas de fiche de détail : leur corps est un
+ * `<div>`, pas un `<button>`. Le curseur en main sur une zone qui ne fait rien
+ * est un mensonge d'affordance — on promet un clic, il ne se passe rien, et
+ * l'utilisateur conclut que l'écran est cassé.
+ */
+.mkt-card__open--static {
+  cursor: default;
+}
+
+.mkt-card--selected {
+  border-color: var(--color-selected-border);
+  background: var(--color-selected);
+}
+
+/**
+ * LE LISERÉ D'ÉTAT — la seule chose qui se lit sans lire. Quatre pixels au bord
+ * gauche portent le verdict de la ligne ; l'ancienne liste ne les avait pas et
+ * une extension cassée y ressemblait trait pour trait à une extension saine.
+ */
+.mkt-card--danger {
+  border-left: var(--border-width-4) solid var(--color-error-500);
+}
+
+.mkt-card--warn {
+  border-left: var(--border-width-4) solid var(--color-warning-500);
+}
+
+.mkt-card--info {
+  border-left: var(--border-width-4) solid var(--color-info-500);
+}
+
+.mkt-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-background-tertiary);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+}
+
+.mkt-card__main {
+  min-width: 0;
+}
+
+.mkt-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.mkt-card__name {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-card__desc {
+  margin: var(--spacing-1) 0 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-2) var(--spacing-3);
+  margin-top: var(--spacing-2);
+}
+
+.mkt-card__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--spacing-2);
+}
+
+/* ==================== Pastilles et jetons ==================== */
+
+.mkt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-0_5) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.mkt-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+/* Le texte d’une pastille prend le jeton `-on-background`, pas le `-600` :
+   le second est calibré pour un fond clair, et sur les huit thèmes sombres
+   il tombait sous 3:1 contre sa propre teinte à 16 %. Même défaut aux six
+   endroits où ces pastilles se posent — carte, ligne, fiche, avis, liste,
+   panneau — parce que tous ces fonds sont à un cheveu du fond de page. */
+.mkt-badge--ok {
+  background: color-mix(in srgb, var(--color-success-500) 16%, transparent);
+  color: var(--color-success-on-background);
+}
+
+.mkt-badge--info {
+  background: color-mix(in srgb, var(--color-info-500) 16%, transparent);
+  color: var(--color-info-on-background);
+}
+
+.mkt-badge--warn {
+  background: color-mix(in srgb, var(--color-warning-500) 18%, transparent);
+  color: var(--color-warning-on-background);
+}
+
+.mkt-badge--danger {
+  background: color-mix(in srgb, var(--color-error-500) 16%, transparent);
+  color: var(--color-error-on-background);
+}
+
+.mkt-badge--muted {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+/** La catégorie : un jeton NEUTRE — c'est un rayon, pas un état. */
+.mkt-tag {
+  padding: var(--spacing-0_5) var(--spacing-2);
+  border-radius: var(--radius-full);
+  background: var(--color-background-secondary);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+}
+
+.mkt-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+/** Le type de fichier servi : `.md`. Monospace ASSUMÉ — c'est un nom technique
+ *  que l'utilisateur reconnaît, contrairement à une empreinte de 30 chiffres. */
+.mkt-cap {
+  padding: var(--spacing-0_5) var(--spacing-1_5);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+}
+
+.mkt-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1_5);
+}
+
+/* ==================== La ligne de confiance ==================== */
+
+/**
+ * La traduction humaine du fait cryptographique. Elle prend la place que
+ * l'empreinte brute occupait, et l'empreinte descend dans un dépliant.
+ */
+.mkt-trust {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1_5);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.mkt-trust__glyph {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.mkt-trust--known .mkt-trust__glyph {
+  color: var(--color-success-600);
+}
+
+.mkt-trust--yours .mkt-trust__glyph {
+  color: var(--color-primary-600);
+}
+
+.mkt-trust--first .mkt-trust__glyph,
+.mkt-trust--unknown .mkt-trust__glyph {
+  color: var(--color-text-tertiary);
+}
+
+.mkt-trust--key_changed {
+  color: var(--color-error-600);
+  font-weight: var(--font-weight-medium);
+}
+
+.mkt-trust--key_changed .mkt-trust__glyph {
+  color: var(--color-error-600);
+}
+
+/* ==================== Le dépliant technique ==================== */
+
+/**
+ * TOUT LE JARGON VIT ICI, ET NULLE PART AILLEURS. Empreinte, condensat,
+ * identifiant, octets signés : ce sont des informations vraies et parfois
+ * indispensables, mais elles ne sont l'ouverture d'aucune conversation. Repliées
+ * par défaut, elles cessent d'être le premier obstacle de l'écran.
+ */
+.mkt-adv {
+  margin-top: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-background-secondary);
+}
+
+.mkt-adv > summary {
+  padding: var(--spacing-2) var(--spacing-3);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  list-style: none;
+}
+
+.mkt-adv > summary::-webkit-details-marker {
+  display: none;
+}
+
+.mkt-adv > summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: var(--spacing-2);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.mkt-adv[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.mkt-adv__body {
+  padding: 0 var(--spacing-3) var(--spacing-3);
+}
+
+.mkt-adv__hint {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-tertiary);
+}
+
+.mkt-fp {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-1);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+
+.mkt-fp__group {
+  padding: var(--spacing-0_5) var(--spacing-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+/** Le groupe QUI DIFFÈRE — la comparaison de deux nombres de 30 chiffres ne se
+ *  délègue pas à l'œil de l'utilisateur. */
+.mkt-fp__group--differs {
+  background: color-mix(in srgb, var(--color-error-500) 18%, transparent);
+  color: var(--color-error-600);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ==================== La fiche détaillée ==================== */
+
+.mkt-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  padding: var(--spacing-5);
+}
+
+.mkt-detail__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+}
+
+.mkt-detail__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-background-tertiary);
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+}
+
+.mkt-detail__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  color: var(--color-text-primary);
+}
+
+.mkt-detail__desc {
+  margin: var(--spacing-2) 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-detail__close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+}
+
+.mkt-detail__close:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.mkt-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.mkt-section__title {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.mkt-section__lead {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-primary);
+}
+
+/** Les faits en deux colonnes — un fait par ligne, jamais trois séparés par des
+ *  points médians dans une même ligne monospace. */
+.mkt-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--spacing-1_5) var(--spacing-4);
+  margin: 0;
+  font-size: var(--font-size-xs);
+}
+
+.mkt-facts dt {
+  color: var(--color-text-tertiary);
+}
+
+.mkt-facts dd {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/** Ce que le bac à sable interdit — la vraie réponse à « est-ce dangereux ? ». */
+.mkt-limits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1_5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-limits__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-limits__glyph {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--color-success-600);
+}
+
+.mkt-limits__glyph--warn {
+  color: var(--color-warning-600);
+}
+
+/* La liste des versions publiées */
+
+.mkt-versions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  padding: var(--spacing-1_5) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.mkt-version--current {
+  background: var(--color-selected);
+  color: var(--color-text-primary);
+}
+
+.mkt-version__num {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ==================== Bandeaux d'état ==================== */
+
+.mkt-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-alert);
+  background: var(--color-background-secondary);
+}
+
+.mkt-notice + .mkt-notice,
+.mkt-notice + .mkt-list,
+.mkt-notice + .mkt-group,
+.mkt-notice + .mkt-empty,
+.mkt-notice + .mkt__toolbar {
+  margin-top: var(--spacing-4);
+}
+
+.mkt-notice--danger {
+  border-color: color-mix(in srgb, var(--color-error-500) 45%, transparent);
+  background: color-mix(in srgb, var(--color-error-500) 10%, transparent);
+}
+
+.mkt-notice--warn {
+  border-color: color-mix(in srgb, var(--color-warning-500) 45%, transparent);
+  background: color-mix(in srgb, var(--color-warning-500) 12%, transparent);
+}
+
+.mkt-notice--info {
+  border-color: color-mix(in srgb, var(--color-info-500) 40%, transparent);
+  background: color-mix(in srgb, var(--color-info-500) 10%, transparent);
+}
+
+.mkt-notice__glyph {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--color-text-tertiary);
+}
+
+.mkt-notice--danger .mkt-notice__glyph {
+  color: var(--color-error-600);
+}
+
+.mkt-notice--warn .mkt-notice__glyph {
+  color: var(--color-warning-700);
+}
+
+.mkt-notice--info .mkt-notice__glyph {
+  color: var(--color-info-600);
+}
+
+.mkt-notice__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mkt-notice__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-notice__text {
+  margin: var(--spacing-1) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+}
+
+/* ==================== L'état vide ==================== */
+
+.mkt-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-16) var(--spacing-6);
+  text-align: center;
+}
+
+.mkt-empty__glyph {
+  width: 40px;
+  height: 40px;
+  color: var(--color-text-disabled);
+}
+
+.mkt-empty__title {
+  margin: var(--spacing-2) 0 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-empty__text {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-empty__actions {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-2);
+}
+
+/* ==================== Squelettes de chargement ==================== */
+
+/**
+ * Le chargement n'était pas traité du tout : après une recherche, la liste
+ * précédente restait affichée, identique, et rien ne distinguait « en cours » de
+ * « zéro résultat ». Trois silhouettes suffisent à le dire.
+ */
+.mkt-skel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-card);
+}
+
+.mkt-skel__block {
+  border-radius: var(--radius-sm);
+  background: var(--color-background-tertiary);
+  animation: mkt-pulse 1.4s var(--ease-in-out) infinite;
+}
+
+@keyframes mkt-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-skel__block {
+    animation: none;
+  }
+}
+
+/* ==================== Mes extensions ==================== */
+
+.mkt-group {
+  margin-bottom: var(--spacing-6);
+}
+
+.mkt-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
+}
+
+.mkt-group__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.mkt-row--danger {
+  border-left: var(--border-width-4) solid var(--color-error-500);
+}
+
+.mkt-row--warn {
+  border-left: var(--border-width-4) solid var(--color-warning-500);
+}
+
+.mkt-row--info {
+  border-left: var(--border-width-4) solid var(--color-info-500);
+}
+
+.mkt-row--dashed {
+  border-style: dashed;
+  background: transparent;
+}
+
+.mkt-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.mkt-row__name {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-row__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1) var(--spacing-3);
+  margin-top: var(--spacing-1);
+}
+
+.mkt-row__fix {
+  margin: var(--spacing-2) 0 0;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+/* ==================== Le parcours de publication ==================== */
+
+/**
+ * Le bac d'essai est une CARTE À PART, en pointillés : rien de ce qui s'y passe
+ * n'est publié, et la frontière doit se voir sans lire. Sans elle, l'auteur
+ * confondait le bundle qu'il essayait avec celui qu'il s'apprêtait à signer.
+ */
+.mkt-testbox {
+  max-width: 46rem;
+  padding: var(--spacing-4);
+  border: var(--border-width-1) dashed var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-background-secondary);
+}
+
+.mkt-wiz {
+  max-width: 46rem;
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-6);
+  border-top: var(--border-width-1) solid var(--color-border-light);
+}
+
+.mkt-wiz__title {
+  margin: 0 0 var(--spacing-4);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-wiz__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-5);
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-wiz__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-1_5) var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.mkt-wiz__step:hover:not(:disabled) {
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.mkt-wiz__step--current {
+  border-color: var(--color-selected-border);
+  background: var(--color-selected);
+  color: var(--color-text-primary);
+}
+
+.mkt-wiz__step--todo {
+  border-color: color-mix(in srgb, var(--color-warning-500) 50%, transparent);
+  color: var(--color-warning-700);
+}
+
+.mkt-wiz__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--color-background-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mkt-wiz__step--current .mkt-wiz__num {
+  background: var(--color-primary-600);
+  color: var(--color-text-inverted);
+}
+
+.mkt-wiz__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.mkt-wiz__legend {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-wiz__help {
+  margin: var(--spacing-1) 0 0;
+  max-width: 82ch;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-wiz__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-5);
+  padding-top: var(--spacing-4);
+  border-top: var(--border-width-1) solid var(--color-border-light);
+}
+
+.mkt-wiz__field-error {
+  margin: var(--spacing-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-error-600);
+}
+
+/** La zone de dépôt du bundle — un `<input type=file>` nu ne dit ni ce qu'il
+ *  attend, ni ce qu'il a reçu. */
+.mkt-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-8) var(--spacing-4);
+  border: var(--border-width-2) dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background-secondary);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.mkt-drop:hover,
+.mkt-drop--over {
+  border-color: var(--color-primary-600);
+  background: var(--color-drag-over);
+}
+
+.mkt-drop--filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-success-500) 55%, transparent);
+  background: color-mix(in srgb, var(--color-success-500) 8%, transparent);
+}
+
+.mkt-drop__glyph {
+  width: 28px;
+  height: 28px;
+  color: var(--color-text-tertiary);
+}
+
+.mkt-drop--filled .mkt-drop__glyph {
+  color: var(--color-success-600);
+}
+
+.mkt-drop__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.mkt-drop__hint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.mkt-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  max-width: 34rem;
+}
+
+/**
+ * L'AVERTISSEMENT DE CE QUI EST DÉFINITIF. Le code savait depuis toujours que le
+ * slug est permanent et la version immuable — c'était écrit dans un commentaire
+ * de fichier, c'est-à-dire à l'endroit exact où l'utilisateur ne regarde jamais.
+ */
+.mkt-permanent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-warning-500) 12%, transparent);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+/** L'aperçu public — l'auteur voit sa fiche AVANT de signer. */
+.mkt-preview {
+  padding: var(--spacing-4);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.mkt-public {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1_5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-public__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-public__glyph {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--color-text-tertiary);
+}
+
+/* ==================== Le signalement ==================== */
+
+.mkt-report-textarea {
+  display: block;
+  width: 100%;
+  min-height: 7rem;
+  padding: var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  resize: vertical;
+}
+
+.mkt-report-textarea:focus-visible {
+  outline: var(--border-width-2) solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+/* ==================== La modale de changement de clé ==================== */
+
+.mkt-keychange__lead {
+  margin: 0 0 var(--spacing-3);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-primary);
+}
+
+/** Les trois conseils : une vraie liste à puces — trois phrases empilées sans
+ *  marqueur se lisent comme un paragraphe, et l'on n'en retient aucune. */
+.mkt-advice {
+  margin: var(--spacing-3) 0 0;
+  padding-left: var(--spacing-5);
+  list-style: disc;
+}
+
+.mkt-advice li {
+  margin-bottom: var(--spacing-1_5);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-keychange__cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--spacing-3);
+}
+
+.mkt-keychange__col {
+  padding: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  background: var(--color-background-secondary);
+}
+
+.mkt-keychange__col-title {
+  margin: 0 0 var(--spacing-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.mkt-keychange__fp {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-1);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+}
+
+/* ==================== Le panneau « bientôt » ==================== */
+
+.mkt-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-16) var(--spacing-6);
+  text-align: center;
+}
+
+.mkt-soon__title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-soon__text {
+  margin: 0;
+  max-width: 52ch;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+/* ==================== Modèles de mise en page ==================== */
+
+/**
+ * L'étage « Modèles » de la place de marché. En v1 il ne liste QUE ce qui a été
+ * importé localement (le partage se fait par fichier) : la barre du haut porte
+ * donc l'action d'import, et non des filtres de catalogue qui n'auraient rien à
+ * filtrer.
+ */
+
+.mkt-layouts__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-5);
+}
+
+.mkt-layouts__lead {
+  margin: 0;
+  max-width: 60ch;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.mkt-layouts__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--spacing-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-layouts__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background-elevated);
+}
+
+.mkt-layouts__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+}
+
+.mkt-layouts__icon {
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
+.mkt-layouts__identity {
+  min-width: 0;
+}
+
+.mkt-layouts__name {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.mkt-layouts__meta {
+  margin: var(--spacing-1) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.mkt-layouts__description {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.mkt-layouts__actions {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: auto;
+}
+
+/* ---------- Publier un modele de mise en page ---------- */
+
+/**
+ * LE CHOIX DE LA DISPOSITION — des cartes qui montrent ce qu'elles sont.
+ *
+ * La premiere version alignait des rectangles gris portant un nom et un compte
+ * de blocs, avec un `<input type=radio>` natif. Deux defauts, et le second est
+ * une regle du depot : on ne voyait pas lequel etait choisi, et un input natif
+ * ne suit pas le theme.
+ *
+ * Meme grammaire que les modeles d'accueil (`home-preset`), et pour la meme
+ * raison : c'est la meme question posee au meme endroit du produit.
+ */
+.layout-publish__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.layout-publish__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.layout-publish__card:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-surface-hover);
+}
+
+.layout-publish__card:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/**
+ * Le choisi se signale par sa bordure ET par son etiquette.
+ *
+ * La couleur seule ne dit rien a qui ne la distingue pas — et c'etait
+ * exactement le defaut d'origine : rien du tout ne distinguait le choisi.
+ */
+.layout-publish__card--chosen {
+  border-color: var(--color-primary-500);
+  background: var(--color-selected);
+}
+
+.layout-publish__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+}
+
+.layout-publish__card-name {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.layout-publish__card-badge {
+  padding: 0 var(--spacing-2);
+  border-radius: var(--radius-badge, 4px);
+  background: color-mix(in srgb, var(--color-primary-500) 16%, transparent);
+  color: var(--color-primary-600);
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.layout-publish__card-meta {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* Ce qui devient public : une liste qu'on LIT, donc aeree. */
+.layout-publish__public {
+  margin: var(--spacing-2) 0 0;
+  padding-left: var(--spacing-5);
+  display: grid;
+  gap: var(--spacing-1);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.layout-publish__mine {
+  margin-bottom: var(--spacing-6);
+}
+
+.layout-publish__wizard {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--spacing-5);
+}
+
+/**
+ * L'action « signaler » d'une carte : lisible, atteignable au clavier, et
+ * nettement moins lourde que l'action principale.
+ *
+ * Un lien-bouton plutot qu'un `Button` : la palette de boutons n'a pas de
+ * variante assez effacee, et forcer `tertiary` a cette taille produirait un
+ * second bouton que l'oeil compare au premier.
+ */
+.mkt-card__report {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.mkt-card__report:hover {
+  color: var(--color-text-secondary);
+  text-decoration: underline;
+}
+
+.mkt-card__report:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- L'icone d'une fiche : emoji ou vignette ---------- */
+
+.layout-publish__icon {
+  display: grid;
+  gap: var(--spacing-2);
+}
+
+.layout-publish__icon-label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.layout-publish__icon-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
+}
+
+/**
+ * L'apercu a une taille FIXE, et c'est ce qui rend le champ lisible : sans
+ * elle, poser puis retirer une image ferait sauter toute la rangee.
+ */
+.layout-publish__icon-preview {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-hover);
+  font-size: 22px;
+  overflow: hidden;
+}
+
+.layout-publish__icon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.layout-publish__icon-empty {
+  color: var(--color-text-tertiary);
+}
+
+/**
+ * L'input de fichier natif est masque, et c'est le `<label>` qui fait bouton.
+ *
+ * Il reste ATTEIGNABLE AU CLAVIER : `opacity: 0` + taille nulle le sortiraient
+ * de l'ordre de tabulation sur certains navigateurs. On le laisse dans le flux,
+ * caché derriere le label, avec le focus reporte sur celui-ci.
+ */
+.layout-publish__icon-pick {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.layout-publish__icon-pick:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-surface-hover);
+}
+
+.layout-publish__icon-pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.layout-publish__icon-pick:focus-within {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.layout-publish__icon-help {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* La vignette d'une carte de catalogue remplit sa case. */
+.mkt-card__icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+
+/**
+ * Les blocs refuses : une liste qu'on LIT pour agir, donc aeree et nommee.
+ * Le ton est celui d'un avertissement, pas d'une erreur — rien n'est casse,
+ * il y a un geste a faire.
+ */
+.layout-publish__rejected {
+  margin: var(--spacing-2) 0 0;
+  padding-left: var(--spacing-5);
+  display: grid;
+  gap: var(--spacing-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.layout-publish__rejected strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+/* Le detail chiffre passe a la ligne : c'est une phrase, pas une etiquette. */
+.layout-publish__rejected-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* ---------- La grille des MODELES (et pas des greffons) ---------- */
+
+/**
+ * POURQUOI DES CARTES ICI, ET DES LIGNES POUR LES GREFFONS.
+ *
+ * Un modele de mise en page est un objet VISUEL : il a une vignette, une forme,
+ * une densite. On le choisit a l'oeil, et une grille en montre six d'un coup —
+ * la comparaison est le geste.
+ *
+ * Un greffon se choisit sur ce qu'il FAIT : un nom, une phrase, qui l'a signe,
+ * combien de gens l'ont installe. C'est du texte, et le texte se lit en lignes.
+ * Lui donner une carte carree gonflerait chaque entree d'un glyphe generique
+ * pour montrer moins d'information a l'ecran. VS Code et Obsidian font
+ * exactement ce partage, et pour cette raison.
+ */
+.mkt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--spacing-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mkt-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  min-width: 0;
+}
+
+.mkt-tile--info {
+  border-color: var(--color-primary-500);
+}
+
+/** La vignette en TETE, large : c'est elle qu'on regarde en premier. */
+/**
+ * ⚠ LE CADRE EST CARRE, ET `contain` PLUTOT QUE `cover`.
+ *
+ * La vignette produite a la publication est un CARRE de 96x96. La poser dans un
+ * cadre 16/9 en `cover` la rognait des deux tiers en hauteur PUIS l'agrandissait
+ * pour remplir la largeur : on voyait une bande floue prise au milieu de
+ * l'image, ce qui ne ressemblait a rien de ce que l'auteur avait choisi.
+ *
+ * `contain` ne rogne RIEN et n'agrandit pas au-dela de la taille reelle : ce
+ * qu'on voit est exactement ce qui a ete publie. Le fond neutre comble le reste
+ * quand l'image n'est pas parfaitement carree.
+ */
+.mkt-tile__thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 168px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-hover);
+  overflow: hidden;
+  font-size: 28px;
+  color: var(--color-text-tertiary);
+}
+
+.mkt-tile__thumb img {
+  max-width: 96px;
+  max-height: 96px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  /* Le rendu pixellise vaut mieux qu'un lissage : une vignette de 96 px etiree
+     par le navigateur devient une tache, nette elle reste lisible. */
+  image-rendering: auto;
+}
+
+.mkt-tile__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.mkt-tile__name {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * La description est bornee a deux lignes.
+ *
+ * Sans cette borne, une fiche bavarde etirait SA carte et, la grille alignant
+ * les rangees, toutes les autres avec elle — six cartes hautes de trois lignes
+ * pour une seule qui parle trop.
+ */
+.mkt-tile__desc {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.4em;
+}
+
+.mkt-tile__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.mkt-tile__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  margin-top: auto;
+  padding-top: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.mkt-tile__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/**
+ * Un slug est une chaine SANS ESPACE : sans coupure explicite, il etire la
+ * tuile et fait deborder toute la grille — c'est exactement ce qui s'est vu sur
+ * la base64 d'une icone rendue en texte.
+ */
+.mkt-tile__desc code {
+  word-break: break-all;
+  background: none;
+  padding: 0;
+}
+
+/* ---------- La fiche d'un MODELE (prefixe propre : voir LayoutDetailPanel) ---------- */
+
+/**
+ * ⚠ `justify-items: start` A ÉTÉ RETIRÉ, et c'est ce qui débloque tout le reste.
+ *
+ * Avec lui, chaque enfant de la fiche se réduisait à son contenu : une grille
+ * de deux colonnes posée à l'intérieur se tassait à gauche, quelle que soit la
+ * place disponible. C'était invisible tant que la fiche n'était qu'une pile de
+ * paragraphes ; ça rend impossible toute mise en page en colonnes.
+ *
+ * Les enfants s'étirent donc, et le seul qui ne le doit pas le dit lui-même
+ * (`justify-self: start` sur le lien de signalement, plus bas).
+ */
+.mkt-ldetail {
+  display: grid;
+  gap: var(--spacing-5);
+  width: 100%;
+}
+
+.mkt-ldetail__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+/**
+ * ⚠ 64 px, ET PLUS 96. L'icône vivait en tête d'une fiche pleine largeur, où
+ * elle avait la place d'être une affiche. Elle est maintenant dans un rail de
+ * 360 px, à côté du nom et des étiquettes : à 96 px elle prenait le tiers de la
+ * carte pour une information que la capture donne déjà, en grand, à sa gauche.
+ */
+.mkt-ldetail__icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 auto;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-hover);
+  overflow: hidden;
+  font-size: 34px;
+  color: var(--color-text-tertiary);
+}
+
+.mkt-ldetail__identity {
+  display: grid;
+  gap: var(--spacing-2);
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.mkt-ldetail__name {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary);
+}
+
+.mkt-ldetail__meta,
+.mkt-ldetail__hint {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.mkt-ldetail__desc {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  max-width: 68ch;
+}
+
+.mkt-ldetail__section {
+  display: grid;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding-top: var(--spacing-4);
+  border-top: var(--border-width-1) solid var(--color-border);
+}
+
+.mkt-ldetail__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium, 500);
+  color: var(--color-text-primary);
+}
+
+/**
+ * L'empreinte en SIX GROUPES.
+ *
+ * Elle se lit a voix haute pour etre comparee — c'est un safety number. Trente
+ * chiffres d'affilee ne se comparent pas, et personne ne le ferait.
+ */
+.mkt-ldetail__fingerprint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.mkt-ldetail__also {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mkt-ldetail__also button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 6px 10px;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.mkt-ldetail__also button:hover {
+  border-color: var(--color-primary-400);
+}
+
+.mkt-ldetail__also-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.mkt-ldetail__versions {
+  display: grid;
+  gap: var(--spacing-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--font-size-sm);
+}
+
+.mkt-ldetail__versions li {
+  display: flex;
+  gap: var(--spacing-3);
+  color: var(--color-text-tertiary);
+}
+
+.mkt-ldetail__versions strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium, 500);
+  min-width: 5ch;
+}
+
+/* La vignette et le nom d'une tuile sont cliquables : pas de chrome de bouton. */
+.mkt-tile__open,
+.mkt-tile__name-btn {
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  min-width: 0;
+}
+
+.mkt-tile__open:focus-visible,
+.mkt-tile__name-btn:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.mkt-tile__name-btn:hover .mkt-tile__name {
+  text-decoration: underline;
+}
+
+/**
+ * L'APERCU DE GEOMETRIE, BORNE.
+ *
+ * Etale sur toute la largeur d'une page de 1900 px, une disposition de quatre
+ * blocs devient quatre BANDES : les proportions qu'elle est censee montrer
+ * disparaissent, et c'est precisement ce qu'on venait regarder. Borne a la
+ * largeur d'un ecran plausible, elle redevient une mise en page.
+ */
+.mkt-ldetail__section .home-template__map {
+  max-width: 720px;
+}
+
+/* ---------- Qui publie ---------- */
+
+.mkt-publisher {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.mkt-publisher__name {
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.mkt-publisher__fp {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: var(--color-text-tertiary);
+}
+
+/**
+ * LE BADGE OFFICIEL — accent plein, et jamais la meme forme qu'une etiquette
+ * ordinaire (categorie, emplacement). Un badge qui ressemble a une etiquette
+ * n'est plus un badge : il devient une categorie de plus, et ne se remarque
+ * pas la ou il compte.
+ */
+.mkt-publisher__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 100px;
+  background: var(--color-primary-600);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: var(--font-weight-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mkt-publisher--official .mkt-publisher__name {
+  color: var(--color-text-primary);
+}
+
+/**
+ * La tuile d'un editeur officiel porte un LISERE, pas une couleur de fond : le
+ * fond changerait la lisibilite du texte selon le theme, le lisere se voit sans
+ * rien deranger.
+ */
+.mkt-tile--official {
+  border-color: var(--color-primary-500);
+  box-shadow: inset 3px 0 0 0 var(--color-primary-600);
+}
+
+/* ==================== Le catalogue, en LIGNES ==================== */
+
+/**
+ * POURQUOI DES LIGNES, APRES AVOIR ESSAYE DES TUILES.
+ *
+ * Les tuiles entassaient nom, description, deux etiquettes, un auteur, une
+ * version et deux boutons dans 240 px : tout y etait, rien ne s'y lisait. Une
+ * ligne large donne a chaque chose sa colonne — l'icone, ce que c'est, qui l'a
+ * fait, et l'action — et l'oeil descend au lieu de fouiller.
+ *
+ * C'est le choix de VS Code et d'Obsidian pour la meme raison : on parcourt un
+ * catalogue en LISANT des noms, pas en regardant des images.
+ */
+.mkt-rows {
+  display: grid;
+  gap: var(--spacing-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mkt-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.mkt-row:hover {
+  border-color: var(--color-primary-400);
+}
+
+.mkt-row--official {
+  box-shadow: inset 3px 0 0 0 var(--color-primary-600);
+}
+
+.mkt-row__open {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.mkt-row__open:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.mkt-row__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-hover);
+  overflow: hidden;
+  font-size: 22px;
+  color: var(--color-text-tertiary);
+}
+
+.mkt-row__body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mkt-row__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.mkt-row__name {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base, 1rem);
+  font-weight: var(--font-weight-medium, 500);
+}
+
+.mkt-row__open:hover .mkt-row__name {
+  text-decoration: underline;
+}
+
+/** Une seule ligne : la description complete vit sur la fiche. */
+.mkt-row__desc {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mkt-row__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.mkt-row__aside {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+/* ==================== La fiche ==================== */
+
+/**
+ * LA CAPTURE EN TETE, bornee.
+ *
+ * Une image de 640 px etalee sur 1900 px serait floue ; c'est la borne qui la
+ * garde nette, pas la taille du stockage.
+ */
+/* ==================== LA GALERIE D'UNE FICHE ====================
+ *
+ * ── « ON VOIT PAS L'IMAGE, C'EST TOUT PETIT » ───────────────────────────────
+ *
+ * La capture était bornée à 640 px de large dans un panneau qui en fait souvent
+ * le double. Sur une fiche dont l'image EST l'argument — c'est un thème, une
+ * disposition : on achète ce qu'on voit —, la brider à moins de la moitié de la
+ * place disponible était le plus sûr moyen de ne rien montrer.
+ *
+ * Elle prend maintenant toute la largeur du panneau. Le plafond qui reste est
+ * une HAUTEUR, pas une largeur : au-delà, l'image chasse hors de l'écran le nom
+ * et le bouton d'installation, qui sont la raison d'être de la fiche.
+ */
+.mkt-ldetail__gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/**
+ * LA GRANDE CAPTURE EST UN BOUTON.
+ *
+ * Elle l'est devenue le jour où elle s'est mise à ouvrir la visionneuse. Un
+ * `<div onClick>` aurait donné la même chose à la souris et rien du tout au
+ * clavier : pas de tabulation, pas d'Entrée, pas de nom lu à voix haute.
+ *
+ * D'où la remise à zéro qui suit — un bouton apporte son fond, sa bordure et
+ * son remplissage, et les trois se voient.
+ */
+.mkt-ldetail__shot {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 52vh;
+  padding: 0;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--color-surface-hover);
+  cursor: zoom-in;
+  transition: border-color 0.15s;
+}
+
+.mkt-ldetail__shot:hover {
+  border-color: var(--color-border-strong);
+}
+
+.mkt-ldetail__shot:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/**
+ * L'AFFORDANCE. Sans elle, rien ne dit que l'image s'ouvre — et une image qui
+ * ne s'annonce pas cliquable ne se fait pas cliquer.
+ *
+ * Elle est VISIBLE EN PERMANENCE, pas seulement au survol : le survol
+ * n'existe pas au doigt, et c'est justement sur un écran tactile qu'on essaie
+ * le moins volontiers un geste dont on n'est pas sûr.
+ */
+.mkt-ldetail__zoom {
+  position: absolute;
+  right: var(--spacing-3);
+  bottom: var(--spacing-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1_5);
+  height: 30px;
+  padding: 0 var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: var(--color-overlay-dark, rgba(0, 0, 0, 0.7));
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  pointer-events: none;
+}
+
+.mkt-ldetail__shot img {
+  width: 100%;
+  height: 100%;
+  /* `contain` et non `cover` : une capture d'application est une COMPOSITION.
+     La recadrer pour remplir un rapport 16/9 coupe justement les bords, qui
+     sont l'endroit où l'on voit la mise en page. */
+  object-fit: contain;
+  display: block;
+}
+
+.mkt-ldetail__thumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+/* Le compteur pousse à droite : il dit combien il y en a, il ne se lit pas. */
+.mkt-ldetail__count {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.mkt-ldetail__thumb {
+  width: 92px;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: var(--color-surface-hover);
+  cursor: pointer;
+  opacity: 0.6;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
+}
+
+.mkt-ldetail__thumb:hover {
+  opacity: 1;
+}
+
+/* La vignette courante est PLEINEMENT opaque et cerclée d'accent : sans ces
+   deux marques, une galerie de quatre images ne dit pas laquelle on regarde. */
+.mkt-ldetail__thumb.is-current {
+  opacity: 1;
+  border-color: var(--color-primary-400);
+}
+
+.mkt-ldetail__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ==================== Reprise de la mise en page ==================== */
+
+/**
+ * UNE LARGEUR DE LECTURE, ET C'EST LE CORRECTIF LE PLUS IMPORTANT.
+ *
+ * Tout s'etalait sur la largeur de la fenetre — 1900 px sur un grand ecran.
+ * Une phrase de deux cents caracteres sur une seule ligne ne se lit pas : l'oeil
+ * perd le debut en arrivant a la fin. Bornee, la meme page devient un document.
+ *
+ * La borne porte sur le CONTENU, pas sur le conteneur : la page garde sa
+ * respiration a gauche, et rien ne saute quand on redimensionne.
+ */
+.mkt-rows,
+.mkt__toolbar,
+.mkt__chips,
+.mkt__result-count {
+  max-width: var(--page-max-width, 900px);
+}
+
+/**
+ * ⚠ BORNER SANS CENTRER DEPLACE LE PROBLEME.
+ *
+ * La borne posee juste au-dessus rendait les phrases lisibles, mais collait
+ * toute la page a gauche : sur un ecran de 1900 px, la moitie droite devenait un
+ * vide que rien n'expliquait — on croit que quelque chose n'a pas charge.
+ *
+ * Centrer la colonne suffit. La page cesse d'etre « un contenu et un trou » pour
+ * devenir un document, et c'est le meme geste que fait n'importe quelle page de
+ * documentation pour la meme raison.
+ *
+ * La borne est GENEREUSE (1100 px) sur les listes : une ligne de catalogue porte
+ * un nom, une description, un auteur et une action, et l'etrangler ferait
+ * revenir l'entassement qu'on vient de defaire.
+ */
+/**
+ * ⚠ `.mkt-ldetail` A QUITTÉ CETTE LISTE, et c'est délibéré.
+ *
+ * La borne ci-dessous répond à « une phrase de deux cents caractères ne se lit
+ * pas ». C'est vrai d'une LISTE de catalogue, qui n'est que du texte. Ce n'est
+ * plus vrai d'une fiche, qui montre d'abord une capture d'écran : l'étrangler à
+ * 1100 px, c'est afficher une image de 1280 px de large dans un cadre plus
+ * petit qu'elle. La fiche borne donc ses propres colonnes de TEXTE (voir
+ * `.mkt-ldetail__desc` plus bas) et laisse l'image respirer.
+ */
+.mkt-rows,
+.mkt__toolbar,
+.mkt__chips,
+.mkt__result-count,
+.mkt-list,
+.layout-publish__mine,
+.layout-publish__wizard,
+.mkt-wiz {
+  max-width: var(--page-max-width, 1100px);
+  margin-inline: auto;
+  width: 100%;
+}
+
+.mkt-ldetail__desc,
+.mkt-ldetail__hint,
+.mkt-ldetail__section > p {
+  max-width: 68ch;
+}
+
+/**
+ * LA CARTE DE GEOMETRIE, REPRISE DE ZERO.
+ *
+ * Elle heritait d'un style pense pour les MODELES D'ACCUEIL : pastilles
+ * arrondies, fond d'accent, hauteur de rangee de 10 px. Sur une fiche, avec
+ * quatre blocs larges, ca donnait des barres brunes en pilule qui ne
+ * ressemblaient a aucune mise en page — le contraire de ce qu'on venait
+ * regarder.
+ *
+ * Ici : des rectangles a angles nets, un fond de surface, une bordure discrete,
+ * et des rangees deux fois plus hautes. Ca ressemble a une grille parce que
+ * c'en est une.
+ */
+.mkt-ldetail__section .home-template__map {
+  max-width: 560px;
+  grid-auto-rows: 22px;
+  grid-template-rows: repeat(var(--home-template-rows, 1), 22px);
+  gap: 4px;
+  padding: var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-bg-secondary, var(--color-surface));
+}
+
+.mkt-ldetail__section .home-template__cell {
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+  border: var(--border-width-1) solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0 6px;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+/**
+ * LE BADGE OFFICIEL, CALME.
+ *
+ * Un aplat d'accent avec du texte blanc criait plus fort que le nom du modele
+ * lui-meme. Un badge signale, il ne domine pas : fond translucide, texte
+ * d'accent, meme graisse que le reste.
+ */
+.mkt-publisher__badge {
+  background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+  color: var(--color-primary-600);
+  font-weight: var(--font-weight-medium, 500);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--font-size-xs);
+  padding: 1px 8px;
+}
+
+/* La ligne d'un editeur officiel : un lisere fin, pas un cadre colore. */
+.mkt-row--official {
+  box-shadow: inset 2px 0 0 0 var(--color-primary-500);
+}
+
+/**
+ * L'EN-TETE DE FICHE : l'icone reste petite quand une capture existe.
+ *
+ * Deux images de la meme chose, cote a cote, se font concurrence. La capture
+ * porte le regard ; l'icone n'est plus qu'un reperage.
+ */
+.mkt-ldetail__icon {
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+}
+
+.mkt-ldetail__section {
+  padding-top: var(--spacing-5);
+}
+
+/* ==================== LA BARRE D'UNE FICHE OUVERTE ====================
+ *
+ * Voir `DetailTopBar.tsx` pour le pourquoi. Une hauteur de bouton, une bordure
+ * basse, et le fond de la surface élevée : elle doit se lire comme un bandeau
+ * d'application, pas comme un premier bloc de contenu.
+ */
+
+.mkt-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  height: 48px;
+  flex: 0 0 auto;
+  padding: 0 var(--spacing-6);
+  border-bottom: var(--border-width-1) solid var(--color-border-light);
+  background: var(--color-background-secondary);
+}
+
+.mkt-topbar__left,
+.mkt-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.mkt-topbar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  height: 32px;
+  padding: 0 var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.mkt-topbar__back:hover {
+  background: var(--color-hover-overlay);
+}
+
+.mkt-topbar__sep {
+  color: var(--color-text-disabled);
+}
+
+.mkt-topbar__crumb {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== L'EN-TÊTE D'UNE FICHE : L'IMAGE ET LES FAITS ========
+ *
+ * Deux colonnes : la capture, qui est le sujet, et un rail qui porte
+ * l'identité, le bouton, et ce qu'on veut savoir AVANT d'installer.
+ *
+ * Le rail est en pixels et la capture en `1fr` : c'est l'image qui absorbe la
+ * largeur gagnée sur un grand écran, parce que c'est la seule chose dont la
+ * lisibilité s'améliore quand elle grandit. Un rail élastique se contenterait
+ * d'étirer des lignes de deux mots.
+ */
+
+.mkt-ldetail__hero,
+.mkt-ldetail__lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--spacing-6);
+  align-items: start;
+  width: 100%;
+}
+
+/* Sous cette largeur, deux colonnes donnent deux colonnes étroites — soit le
+   pire des deux mondes. On empile, et l'image reprend toute la place. */
+@media (max-width: 1000px) {
+  .mkt-ldetail__hero,
+  .mkt-ldetail__lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mkt-ldetail__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.mkt-ldetail__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  padding: var(--spacing-5);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.mkt-ldetail__card-title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.mkt-ldetail__rule {
+  height: 1px;
+  background: var(--color-border-light);
+}
+
+/* ---- Les faits : une étiquette à gauche, sa valeur à droite ---- */
+
+.mkt-ldetail__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0;
+}
+
+.mkt-ldetail__fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+}
+
+.mkt-ldetail__fact dt {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.mkt-ldetail__fact dd {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Un identifiant se COMPARE : monospace, et jamais en gras. */
+.mkt-ldetail__fact dd.is-mono {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Le verdict de compatibilité ---- */
+
+.mkt-ldetail__verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+}
+
+.mkt-ldetail__verdict--ok {
+  background: color-mix(in srgb, var(--color-success-500) 12%, transparent);
+}
+
+.mkt-ldetail__verdict--warn {
+  background: color-mix(in srgb, var(--color-warning-500) 14%, transparent);
+}
+
+.mkt-ldetail__verdict svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.mkt-ldetail__verdict--ok svg {
+  color: var(--color-success-700);
+}
+
+.mkt-ldetail__verdict--warn svg {
+  color: var(--color-warning-700);
+}
+
+.mkt-ldetail__verdict-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mkt-ldetail__verdict-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mkt-ldetail__verdict--ok .mkt-ldetail__verdict-title {
+  color: var(--color-success-700);
+}
+
+.mkt-ldetail__verdict--warn .mkt-ldetail__verdict-title {
+  color: var(--color-warning-700);
+}
+
+.mkt-ldetail__verdict-text {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Les blocs que le modèle apporte ---- */
+
+.mkt-ldetail__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1_5);
+}
+
+.mkt-ldetail__chip {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-selected);
+  border: var(--border-width-1) solid var(--color-selected-border);
+  color: var(--color-primary-700);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Un bloc que CE binaire ne connaît pas : il sera ignoré à l'installation, et
+   la puce doit le dire avant, pas après. */
+.mkt-ldetail__chip--unknown {
+  background: color-mix(in srgb, var(--color-warning-500) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning-500) 32%, transparent);
+  color: var(--color-warning-700);
+}
+
+.mkt-ldetail__report {
+  justify-self: start;
+}
+
+/* ==================== LA VISIONNEUSE ====================
+ *
+ * Voir `ShotLightbox.tsx`. Un voile, une surface, et une image CONTENUE :
+ * jamais étirée au-delà de ses pixels réels (voir `.mkt-lightbox__frame img`).
+ */
+
+.mkt-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-modal, 1000);
+  display: flex;
+  background: var(--color-overlay-dark, rgba(0, 0, 0, 0.85));
+  backdrop-filter: blur(2px);
+  /* chrome:aware — la reserve vit sur `.mkt-lightbox__head`, PAS ici. Le voile
+     doit couvrir l'ecran ENTIER, bande native comprise : le decaler laisserait
+     une lisiere claire en haut, sur laquelle l'OS peint ses boutons. Seul
+     l'en-tete porte des controles, et c'est donc lui qui s'ecarte. */
+}
+
+.mkt-lightbox__surface {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* L'en-tete de la visionneuse est la SEULE surface du lot collee au bord haut,
+   et elle y met un bouton a chaque extremite : le titre a gauche (sous les feux
+   macOS), « Fermer » a droite (sous les boutons Windows/Linux). Sans reserve,
+   le clic sur « Fermer » partait a l'OS et fermait l'application.
+   `.chrome-safe-inline` (pose dans ShotLightbox.tsx) ajoute les deux reserves.
+
+   ⚠ Le padding lateral passe par `--chrome-bar-pad`, et le vertical par des
+   longhands : le raccourci `padding` reinitialiserait padding-left/right et
+   effacerait la reserve SANS UN MOT. Voir chrome.css. */
+.mkt-lightbox__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  flex: 0 0 auto;
+  --chrome-bar-pad: var(--spacing-6);
+  padding-top: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+}
+
+.mkt-lightbox__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.mkt-lightbox__counter {
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.mkt-lightbox__close {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  height: 34px;
+  padding: 0 var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-button);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.mkt-lightbox__close:hover {
+  background: var(--color-hover-overlay);
+}
+
+.mkt-lightbox__kbd {
+  padding: 1px var(--spacing-1_5);
+  border-radius: var(--radius-sm);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-tertiary);
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+}
+
+.mkt-lightbox__stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-5);
+  padding: 0 var(--spacing-6);
+}
+
+.mkt-lightbox__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background-elevated);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: var(--transition-button);
+}
+
+.mkt-lightbox__arrow:hover {
+  background: var(--color-surface-hover);
+}
+
+.mkt-lightbox__frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/**
+ * ⚠ `width: auto` ET PAS `100%`. Une capture stockée en 1280×720 étirée sur un
+ * écran de 2560 px ne montre rien de plus : elle montre les mêmes pixels, deux
+ * fois plus gros. L'image reste donc à sa taille propre tant que la fenêtre est
+ * plus grande qu'elle, et ne rétrécit que si la fenêtre est plus petite.
+ */
+.mkt-lightbox__frame img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.mkt-lightbox__thumbs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  padding: var(--spacing-5) var(--spacing-6);
+}
+
+.mkt-lightbox__thumb {
+  width: 104px;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-hover);
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s;
+}
+
+.mkt-lightbox__thumb:hover {
+  opacity: 1;
+}
+
+.mkt-lightbox__thumb.is-current {
+  opacity: 1;
+  border-color: var(--color-primary-400);
+}
+
+.mkt-lightbox__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/**
+ * LE DÉFILEMENT D'UNE FICHE.
+ *
+ * La barre du haut ne défile pas : c'est elle qui porte le retour, et un retour
+ * qu'il faut aller rechercher en remontant n'est pas un retour. Le panneau qui
+ * l'accueille (`.mkt__pane--flush`) n'a donc plus ni marge ni défilement, et
+ * c'est cette boîte-ci qui reprend les deux.
+ */
+.mkt-ldetail__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--spacing-5) var(--spacing-6) var(--spacing-8);
+}
+
+/* Voir `.mkt-ldetail__gallery` : sans capture, une phrase, pas un cadre vide. */
+.mkt-ldetail__noshot {
+  margin: 0;
+  padding: var(--spacing-4);
+  border: var(--border-width-1) dashed var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+/**
+ * LE PANNEAU QUI PORTE UNE FICHE.
+ *
+ * `.mkt__pane` est un conteneur qui défile, avec sa marge. Une barre pleine
+ * largeur posée dedans hériterait de la marge (elle ne toucherait plus les
+ * bords) et défilerait avec le contenu. La fiche reprend donc les deux à son
+ * compte, et le panneau devient une simple colonne.
+ */
+.mkt__pane--flush {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ==================== LES CAPTURES DANS L'ASSISTANT D'EXTENSION ==========
+ *
+ * Une rangée de miniatures, chacune avec sa croix. Elles réutilisent le bouton
+ * de dépôt des modèles (`.layout-publish__icon-pick`) : c'est le même geste,
+ * et deux boutons différents pour « choisir une image » se remarqueraient.
+ */
+
+.mkt-wiz__shots {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.mkt-wiz__shot {
+  position: relative;
+  display: block;
+  width: 112px;
+  aspect-ratio: 16 / 9;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-hover);
+}
+
+.mkt-wiz__shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* La croix est posée SUR la vignette : la mettre en dessous ferait une rangée
+   de boutons dont on ne saurait plus lequel retire quoi. */
+.mkt-wiz__shot button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-overlay-dark, rgba(0, 0, 0, 0.7));
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mkt-wiz__shot button:hover {
+  background: var(--color-error-500, #ef4444);
+  color: #fff;
+}

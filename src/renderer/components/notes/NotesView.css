@@ -51,7 +51,7 @@
 
 .notes-view__mode-btn.is-active {
   background: var(--color-primary-600, #4682b4);
-  color: white;
+  color: var(--color-text-inverted, #fff);
   box-shadow: 0 1px 3px rgba(70, 130, 180, 0.3);
 }
 
@@ -93,11 +93,149 @@
 /* ---- Split Layout ---- */
 
 .notes-view__split {
+  position: relative;
   display: flex;
   flex: 1;
   overflow: hidden;
   min-height: 0;
   background: var(--color-background);
+}
+
+/* Séparé des modes de vue par un filet : il ne CHANGE pas de vue, il épure
+   celle qu'on regarde. Les confondre ferait croire à un dixième mode. */
+.notes-view__mode-btn--focus {
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid var(--color-border);
+  border-radius: 0 var(--radius-sm, 4px) var(--radius-sm, 4px) 0;
+}
+
+/* L'issue du mode sans distraction — même grammaire que les deux bascules
+   voisines : effacée au repos, révélée quand la souris entre dans la zone
+   d'édition ou quand le clavier l'atteint. */
+.notes-view__focus-exit {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 13;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border-light, var(--color-border));
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-surface, var(--color-background));
+  color: var(--color-text-tertiary, #94a3b8);
+  font-size: 0.75rem;
+  cursor: pointer;
+  /* Pas totalement effacé, contrairement aux deux bascules : c'est la SEULE
+     issue visible du mode, et le raccourci qui en est l'autre est
+     personnalisable. Assez pâle pour ne pas peser, assez présent pour qu'on
+     sache comment sortir sans avoir à chercher. */
+  opacity: 0.35;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+}
+
+.notes-view__editor-area:hover .notes-view__focus-exit,
+.notes-view__focus-exit:focus-visible {
+  opacity: 1;
+}
+
+.notes-view__focus-exit:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-primary-300, var(--color-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notes-view__focus-exit {
+    transition: none;
+  }
+}
+
+/* Mode sans distraction : la barre de modes s'efface avec le reste du chrome.
+   Elle reste dans le DOM (elle est déplaçable et mémorise sa position) mais
+   cesse d'être atteignable, sinon un clic invisible la ferait bouger. */
+.notes-view--focus .notes-view__mode-toggle {
+  display: none;
+}
+
+/* ---- Slots des panneaux latéraux (mode « au survol ») ---- */
+
+.notes-view__slot {
+  display: flex;
+  min-height: 0;
+}
+
+.notes-view__slot--hidden {
+  display: none;
+}
+
+/* En mode survol le panneau FLOTTE au-dessus du texte. Le faire rétracter
+   l'éditeur remettrait la note en page à chaque passage de souris.
+   z-index 12 : au-dessus des deux boutons d'épinglage (10), qui vivent dans un
+   frère non positionné et se dessineraient donc PAR-DESSUS le panneau qu'ils
+   épinglent. */
+.notes-view__slot--floating {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 12;
+  transition: opacity 0.18s ease;
+  /* Fond OPAQUE imposé : `--color-surface` porte de l'alpha sous le thème
+     `space` (rgba(…, 0.88)), et le texte de la note transparaîtrait sous un
+     panneau qui, lui, ne flottait pas jusqu'ici. */
+  background: var(--color-background);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.notes-view__slot--floating.notes-view__slot--left {
+  left: 0;
+}
+
+.notes-view__slot--floating.notes-view__slot--right {
+  right: 0;
+}
+
+/* MASQUÉ PAR L'OPACITÉ, JAMAIS PAR `visibility` NI `display`.
+   `visibility: hidden` retire tous les descendants de l'ordre de tabulation ET
+   de l'arbre d'accessibilité : `:focus-within` ne pourrait alors plus jamais
+   s'armer, et le panneau deviendrait inatteignable au clavier comme au lecteur
+   d'écran. Ici il reste tabulable — Tab y entre, le verrou de focus le révèle.
+   `transform` est exclu pour une autre raison : il ferait du panneau le bloc
+   conteneur des onze surfaces `position: fixed` que NotesList rend en enfants
+   directs, et `overflow: hidden` les rognerait. */
+.notes-view__slot--floating.notes-view__slot--hidden {
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+.notes-view__slot--floating.notes-view__slot--hidden:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notes-view__slot--floating {
+    transition: none;
+  }
+}
+
+/* Pas de survol au doigt : sur un écran tactile les panneaux restent là. */
+@media (hover: none) {
+  .notes-view__slot--floating {
+    position: static;
+    box-shadow: none;
+  }
+
+  .notes-view__slot--floating.notes-view__slot--hidden {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* ---- Editor Area ---- */
@@ -111,6 +249,51 @@
   min-height: 0;
   position: relative;
   background: var(--color-background);
+}
+
+/* ---- LES DEUX COINS HAUTS APPARTIENNENT AUX BASCULES ----
+ *
+ * `.notes-view__list-toggle` et `.notes-view__right-toggle` sont posées en
+ * absolu dans les coins hauts de la zone d'édition, à 8 px des bords, sur 28 px.
+ *
+ * ⚠ ELLES SONT TOUJOURS DANS LE DOCUMENT.
+ *
+ * Elles ne sont qu'à `opacity: 0` tant qu'on ne survole pas la zone — et un
+ * bouton transparent CAPTE QUAND MÊME LES CLICS. Ces deux carrés sont donc
+ * réservés en permanence, visibles ou non, pour tout ce qui s'affiche en
+ * dessous.
+ *
+ * C'est ce qui rendait le retour et la fermeture d'une note de coffre
+ * inatteignables : la barre de `.vault-note-pane` pose ses deux boutons
+ * exactement là, dans le flux et sans `z-index`, donc sous les bascules.
+ *
+ * La gouttière ci-dessous est la réservation. On l'écrit UNE fois, ici, à côté
+ * des nombres dont elle dérive : la poser dans la feuille du panneau de coffre
+ * aurait éloigné la valeur de sa cause, et le jour où les bascules bougent,
+ * personne n'aurait pensé à la suivre.
+ */
+.notes-view__editor-area {
+  /* 8 px de marge + 28 px de bouton + 8 px de respiration. */
+  --notes-view-toggle-gutter: 44px;
+}
+
+/* La barre d'une note de coffre s'écarte des deux coins réservés. Elle ne passe
+   PAS au-dessus par un `z-index` : ce serait rendre les bascules
+   inatteignables à leur tour, et échanger un bouton perdu contre deux. */
+.notes-view__editor-area .vault-note-pane__bar {
+  padding-left: var(--notes-view-toggle-gutter);
+  padding-right: var(--notes-view-toggle-gutter);
+}
+
+/* LE MÊME CONFLIT TOUCHE L'ÉDITEUR LOCAL, et il n'avait pas été signalé.
+ *
+ * `.note-editor__header-toggle` se pose à 12 px du bord droit sur 24 px, dans
+ * un en-tête en `position: relative` sans `z-index`. La bascule du panneau de
+ * droite, elle, occupe 8 → 36 px avec un `z-index: 10` : elle la recouvre
+ * presque entièrement. Le bouton de repli de l'en-tête d'une note ordinaire
+ * était donc lui aussi hors d'atteinte, en silence. */
+.notes-view__editor-area .note-editor__header-toggle {
+  right: calc(var(--notes-view-toggle-gutter) + 4px);
 }
 
 /* ---- Notes List Toggle Button ---- */
@@ -402,10 +585,12 @@
   background: transparent;
 }
 
-[data-theme='dark'] .notes-view__modal {
+[data-theme='dark'] .notes-view__modal,
+[data-theme='minuit'] .notes-view__modal {
   background: var(--color-surface, #1e293b);
 }
 
-[data-theme='dark'] .notes-view__modal-backdrop {
+[data-theme='dark'] .notes-view__modal-backdrop,
+[data-theme='minuit'] .notes-view__modal-backdrop {
   background: rgba(0, 0, 0, 0.6);
 }

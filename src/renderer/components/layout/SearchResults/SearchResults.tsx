@@ -96,6 +96,8 @@ function getTypeLabel(type: SearchResult['type']): string {
       return 'Note';
     case 'setting':
       return 'Parametre';
+    case 'vault-item':
+      return 'Coffre partagé';
     default:
       return 'Fichier';
   }

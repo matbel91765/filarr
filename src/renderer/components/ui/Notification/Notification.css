@@ -17,18 +17,23 @@
 }
 
 /* Positions */
+/* La pile démarre SOUS la bande native : la croix de fermeture du toast du
+   haut (24x24, coin haut droit) tombait dans le rectangle des boutons de
+   fenêtre, et le geste raté fermait l'application. Une fois la pile descendue,
+   aucune réserve horizontale n'est nécessaire — elle est déjà hors bande. La
+   variable vaut 0 dans un navigateur et sur la fenêtre mini. */
 .notification-container--top-right {
-  top: 0;
+  top: var(--chrome-inset-top);
   right: 0;
 }
 
 .notification-container--top-left {
-  top: 0;
+  top: var(--chrome-inset-top);
   left: 0;
 }
 
 .notification-container--top-center {
-  top: 0;
+  top: var(--chrome-inset-top);
   left: 50%;
   transform: translateX(-50%);
 }

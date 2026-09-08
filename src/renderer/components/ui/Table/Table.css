@@ -37,7 +37,7 @@
 
 /* Header */
 .table-header {
-  background: var(--color-gray-50, #f9fafb);
+  background: var(--color-surface-hover);
   border-bottom: 2px solid var(--color-border, #e5e7eb);
 }
 
@@ -76,7 +76,7 @@
 }
 
 .table-hoverable .table-body .table-row:hover {
-  background-color: var(--color-gray-50, #f9fafb);
+  background-color: var(--color-surface-hover);
 }
 
 .table-row-clickable {
@@ -84,7 +84,7 @@
 }
 
 .table-row-clickable:focus {
-  outline: 2px solid var(--color-primary-600, #4682B4);
+  outline: 2px solid var(--color-primary-600, #4682b4);
   outline-offset: -2px;
 }
 
@@ -93,16 +93,38 @@
 }
 
 .table-striped .table-body .table-row:nth-child(even) {
-  background-color: var(--color-gray-50, #f9fafb);
+  background-color: var(--color-surface-hover);
 }
 
 .table-striped .table-body .table-row:nth-child(even):hover {
-  background-color: var(--color-gray-100, #f3f4f6);
+  background-color: var(--color-surface-active);
 }
 
 /* Cell */
 .table-cell {
+  /*
+   * `flex: 1` = `flex-grow:1; flex-shrink:1; flex-basis:0%`, et c'est cette BASE
+   * DÉFINIE qui, pendant longtemps, a rendu la propriété `width` des colonnes
+   * purement décorative : toutes se partageaient la ligne à parts égales, et la
+   * colonne d'actions du trombinoscope se faisait couper ses boutons par
+   * l'`overflow: hidden` ci-dessous. Une colonne qui DÉCLARE une largeur reçoit
+   * désormais `flex: 0 0 <largeur>` en style en ligne (voir `cellStyle`) ; celles
+   * qui n'en déclarent pas gardent ce partage, qui est le bon comportement pour
+   * une colonne souple.
+   */
   flex: 1;
+  /*
+   * LE PLANCHER D'UNE COLONNE SOUPLE. Quand les colonnes figées consomment
+   * presque toute la ligne, celle qui reste tombait à quelques pixels : l'ellipse
+   * ne montrait plus une seule lettre du nom, ce qui est pire qu'un défilement.
+   * En dessous de ce plancher, c'est le conteneur qui défile (`.table-container`,
+   * `overflow-x: auto`) — dans la carte, jamais dans le corps de la page.
+   *
+   * Les colonnes FIGÉES ne le subissent pas : `cellStyle` leur pose un `min-width`
+   * égal à leur propre largeur, y compris quand elle est plus petite que ce
+   * plancher.
+   */
+  min-width: 120px;
   padding: var(--table-padding-y) var(--table-padding-x);
   font-size: var(--table-font-size);
   overflow: hidden;
@@ -124,16 +146,16 @@
 }
 
 .table-cell-sortable:hover {
-  background-color: var(--color-gray-100, #f3f4f6);
+  background-color: var(--color-surface-active);
 }
 
 .table-cell-sortable:focus {
-  outline: 2px solid var(--color-primary-600, #4682B4);
+  outline: 2px solid var(--color-primary-600, #4682b4);
   outline-offset: -2px;
 }
 
 .table-cell-sorted {
-  color: var(--color-primary-600, #4682B4);
+  color: var(--color-primary-600, #4682b4);
 }
 
 .table-cell-content {
@@ -153,6 +175,13 @@
 .table-cell-checkbox {
   flex: 0 0 auto;
   width: 48px;
+  /*
+   * ELLE REPREND SON PROPRE PLANCHER, sinon celui des colonnes souples
+   * (`.table-cell`, 120 px) l'élargirait à deux fois et demie sa taille et
+   * volerait cette place à la colonne du nom. La case n'a jamais que 18 px à
+   * loger : elle n'a pas de contenu qui puisse être « trop serré ».
+   */
+  min-width: 48px;
   padding: var(--table-padding-y) var(--spacing-3, 12px);
 }
 
@@ -164,7 +193,7 @@
   position: relative;
 }
 
-.table-checkbox input[type="checkbox"] {
+.table-checkbox input[type='checkbox'] {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -182,45 +211,45 @@
   position: relative;
 }
 
-.table-checkbox input[type="checkbox"]:checked + .table-checkbox-custom {
-  background-color: var(--color-primary-600, #4682B4);
-  border-color: var(--color-primary-600, #4682B4);
+.table-checkbox input[type='checkbox']:checked + .table-checkbox-custom {
+  background-color: var(--color-primary-600, #4682b4);
+  border-color: var(--color-primary-600, #4682b4);
 }
 
-.table-checkbox input[type="checkbox"]:checked + .table-checkbox-custom::after {
+.table-checkbox input[type='checkbox']:checked + .table-checkbox-custom::after {
   content: '';
   position: absolute;
   left: 5px;
   top: 2px;
   width: 4px;
   height: 8px;
-  border: solid white;
+  border: solid var(--color-text-inverted);
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 
-.table-checkbox input[type="checkbox"]:indeterminate + .table-checkbox-custom {
-  background-color: var(--color-primary-600, #4682B4);
-  border-color: var(--color-primary-600, #4682B4);
+.table-checkbox input[type='checkbox']:indeterminate + .table-checkbox-custom {
+  background-color: var(--color-primary-600, #4682b4);
+  border-color: var(--color-primary-600, #4682b4);
 }
 
-.table-checkbox input[type="checkbox"]:indeterminate + .table-checkbox-custom::after {
+.table-checkbox input[type='checkbox']:indeterminate + .table-checkbox-custom::after {
   content: '';
   position: absolute;
   left: 3px;
   top: 6px;
   width: 8px;
   height: 2px;
-  background: white;
+  background: var(--color-text-inverted);
 }
 
-.table-checkbox input[type="checkbox"]:focus + .table-checkbox-custom {
-  outline: 2px solid var(--color-primary-600, #4682B4);
+.table-checkbox input[type='checkbox']:focus + .table-checkbox-custom {
+  outline: 2px solid var(--color-primary-600, #4682b4);
   outline-offset: 2px;
 }
 
 .table-checkbox:hover .table-checkbox-custom {
-  border-color: var(--color-primary-600, #4682B4);
+  border-color: var(--color-primary-600, #4682b4);
 }
 
 /* Loading state */
@@ -231,9 +260,9 @@
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-gray-200, #e5e7eb) 25%,
-    var(--color-gray-100, #f3f4f6) 50%,
-    var(--color-gray-200, #e5e7eb) 75%
+    var(--color-border) 25%,
+    var(--color-surface-active) 50%,
+    var(--color-border) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -294,12 +323,12 @@
 }
 
 .table-actions-button:hover {
-  background-color: var(--color-gray-100, #f3f4f6);
+  background-color: var(--color-surface-active);
   color: var(--color-text-primary, #111827);
 }
 
 .table-actions-button:focus {
-  outline: 2px solid var(--color-primary-600, #4682B4);
+  outline: 2px solid var(--color-primary-600, #4682b4);
   outline-offset: 2px;
 }
 
@@ -339,15 +368,15 @@
 }
 
 .table-actions-menu-item:hover {
-  background-color: var(--color-gray-50, #f9fafb);
+  background-color: var(--color-surface-hover);
 }
 
 .table-actions-menu-item-danger {
-  color: var(--color-danger-600, #dc2626);
+  color: var(--color-error-600);
 }
 
 .table-actions-menu-item-danger:hover {
-  background-color: var(--color-danger-50, #fef2f2);
+  background-color: rgba(239, 68, 68, 0.12);
 }
 
 .table-actions-menu-icon {
@@ -386,7 +415,7 @@
 .data-grid-bulk-actions-count {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-primary-600, #4682B4);
+  color: var(--color-primary-600, #4682b4);
 }
 
 .data-grid-bulk-action {
@@ -405,18 +434,18 @@
 }
 
 .data-grid-bulk-action:hover {
-  background-color: var(--color-gray-50, #f9fafb);
-  border-color: var(--color-gray-300, #d1d5db);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
 }
 
 .data-grid-bulk-action-danger {
-  color: var(--color-danger-600, #dc2626);
-  border-color: var(--color-danger-300, #fca5a5);
+  color: var(--color-error-600);
+  border-color: var(--color-error-500);
 }
 
 .data-grid-bulk-action-danger:hover {
-  background-color: var(--color-danger-50, #fef2f2);
-  border-color: var(--color-danger-400, #f87171);
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: var(--color-error-500);
 }
 
 .data-grid-bulk-action-icon {
@@ -457,7 +486,7 @@
 
 .data-grid-search-input:focus {
   outline: none;
-  border-color: var(--color-primary-600, #4682B4);
+  border-color: var(--color-primary-600, #4682b4);
   box-shadow: 0 0 0 3px rgba(70, 130, 180, 0.1);
 }
 
@@ -479,7 +508,7 @@
 }
 
 .data-grid-search-clear:hover {
-  background-color: var(--color-gray-100, #f3f4f6);
+  background-color: var(--color-surface-active);
   color: var(--color-text-primary, #111827);
 }
 
@@ -519,7 +548,7 @@
 .data-grid-filter-select:focus,
 .data-grid-filter-input:focus {
   outline: none;
-  border-color: var(--color-primary-600, #4682B4);
+  border-color: var(--color-primary-600, #4682b4);
   box-shadow: 0 0 0 3px rgba(70, 130, 180, 0.1);
 }
 
@@ -527,7 +556,7 @@
 .data-grid-footer {
   padding: var(--spacing-4, 16px);
   border-top: 1px solid var(--color-border, #e5e7eb);
-  background: var(--color-gray-50, #f9fafb);
+  background: var(--color-surface-hover);
   border-radius: 0 0 var(--border-radius-md, 8px) var(--border-radius-md, 8px);
 }
 
@@ -574,7 +603,7 @@
 
 .table-pagination-size-select:focus {
   outline: none;
-  border-color: var(--color-primary-600, #4682B4);
+  border-color: var(--color-primary-600, #4682b4);
   box-shadow: 0 0 0 3px rgba(70, 130, 180, 0.1);
 }
 
@@ -600,8 +629,8 @@
 }
 
 .table-pagination-button:hover:not(:disabled) {
-  background-color: var(--color-gray-50, #f9fafb);
-  border-color: var(--color-gray-300, #d1d5db);
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
 }
 
 .table-pagination-button:disabled {
@@ -633,12 +662,12 @@
 }
 
 .table-pagination-page:hover {
-  background-color: var(--color-gray-50, #f9fafb);
+  background-color: var(--color-surface-hover);
 }
 
 .table-pagination-page-active {
-  background-color: var(--color-primary-600, #4682B4);
-  color: white;
+  background-color: var(--color-primary-600, #4682b4);
+  color: var(--color-text-inverted);
 }
 
 .table-pagination-page-active:hover {
@@ -654,125 +683,6 @@
   padding: var(--spacing-2, 8px);
   font-size: 0.875rem;
   color: var(--color-text-secondary, #6b7280);
-}
-
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  .table-container {
-    background: var(--color-dark-800, #1f2937);
-    border-color: var(--color-dark-700, #374151);
-  }
-
-  .table-header {
-    background: var(--color-dark-900, #111827);
-    border-color: var(--color-dark-700, #374151);
-  }
-
-  .table-header .table-row {
-    color: var(--color-dark-100, #f3f4f6);
-  }
-
-  .table-body {
-    background: var(--color-dark-800, #1f2937);
-  }
-
-  .table-row {
-    border-color: var(--color-dark-700, #374151);
-  }
-
-  .table-hoverable .table-body .table-row:hover {
-    background-color: var(--color-dark-700, #374151);
-  }
-
-  .table-row-selected {
-    background-color: rgba(70, 130, 180, 0.2) !important;
-  }
-
-  .table-striped .table-body .table-row:nth-child(even) {
-    background-color: var(--color-dark-900, #111827);
-  }
-
-  .table-striped .table-body .table-row:nth-child(even):hover {
-    background-color: var(--color-dark-700, #374151);
-  }
-
-  .table-header .table-cell {
-    color: var(--color-dark-300, #d1d5db);
-  }
-
-  .table-cell-sortable:hover {
-    background-color: var(--color-dark-700, #374151);
-  }
-
-  .table-checkbox-custom {
-    background: var(--color-dark-700, #374151);
-    border-color: var(--color-dark-600, #4b5563);
-  }
-
-  .skeleton {
-    background: linear-gradient(
-      90deg,
-      var(--color-dark-700, #374151) 25%,
-      var(--color-dark-600, #4b5563) 50%,
-      var(--color-dark-700, #374151) 75%
-    );
-  }
-
-  .table-empty-state {
-    color: var(--color-dark-400, #9ca3af);
-  }
-
-  .table-actions-button:hover {
-    background-color: var(--color-dark-700, #374151);
-    color: var(--color-dark-100, #f3f4f6);
-  }
-
-  .table-actions-menu {
-    background: var(--color-dark-800, #1f2937);
-    border-color: var(--color-dark-700, #374151);
-  }
-
-  .table-actions-menu-item {
-    color: var(--color-dark-100, #f3f4f6);
-  }
-
-  .table-actions-menu-item:hover {
-    background-color: var(--color-dark-700, #374151);
-  }
-
-  .data-grid-bulk-actions {
-    background: rgba(70, 130, 180, 0.1);
-    border-color: rgba(70, 130, 180, 0.3);
-  }
-
-  .data-grid-bulk-action {
-    background: var(--color-dark-800, #1f2937);
-    border-color: var(--color-dark-600, #4b5563);
-    color: var(--color-dark-100, #f3f4f6);
-  }
-
-  .data-grid-bulk-action:hover {
-    background-color: var(--color-dark-700, #374151);
-  }
-
-  .data-grid-search-input,
-  .data-grid-filter-select,
-  .data-grid-filter-input,
-  .table-pagination-size-select,
-  .table-pagination-button {
-    background: var(--color-dark-700, #374151);
-    border-color: var(--color-dark-600, #4b5563);
-    color: var(--color-dark-100, #f3f4f6);
-  }
-
-  .data-grid-footer {
-    background: var(--color-dark-900, #111827);
-    border-color: var(--color-dark-700, #374151);
-  }
-
-  .table-pagination-page:hover {
-    background-color: var(--color-dark-700, #374151);
-  }
 }
 
 /* Responsive */

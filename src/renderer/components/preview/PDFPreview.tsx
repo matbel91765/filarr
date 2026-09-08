@@ -10,60 +10,148 @@ import clsx from 'clsx';
 import { Button } from '../ui/Button/Button';
 import { Input } from '../ui/Input/Input';
 import * as pdfjsLib from 'pdfjs-dist';
+import { pdfWorkerReady } from '../../../utils/pdfWorker';
+import { createIpcRangeSource } from '../../../services/preview/ipcRangeSource';
+import {
+  createPdfDataRangeTransport,
+  PDF_RANGE_CHUNK_SIZE,
+} from '../../../services/preview/pdfRangeTransport';
 import './FilePreviewPanel.css';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
 export interface PDFPreviewProps {
-  /** PDF data as ArrayBuffer */
-  data: ArrayBuffer;
+  /** PDF data as ArrayBuffer (buffered mode; ignored when `windowed` is set) */
+  data?: ArrayBuffer;
   /** File name */
   fileName: string;
   /** Additional CSS class */
   className?: string;
+  /**
+   * Windowed mode: load the PDF by ranged reads (only the viewed pages are
+   * fetched) instead of buffering the whole file. Requires `folderId`; used
+   * for large vault PDFs in local / hybrid (V3) modes. Falls back to `data`
+   * when unset.
+   */
+  windowed?: boolean;
+  /** Folder id of the vault file — required in windowed mode. */
+  folderId?: string | null;
 }
 
 // SVG Icons
 const ChevronLeftIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
   </svg>
 );
 
 const ChevronRightIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
   </svg>
 );
 
 const ZoomInIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
+    />
   </svg>
 );
 
 const ZoomOutIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6"
+    />
   </svg>
 );
 
 const FitWidthIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v16.5h16.5M3.75 3.75h16.5M3.75 3.75L20.25 20.25" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 3.75v16.5h16.5M3.75 3.75h16.5M3.75 3.75L20.25 20.25"
+    />
   </svg>
 );
 
 const FitPageIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m10.5-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-10.5 10.5v-4.5m0 4.5h4.5m-4.5 0L9 15m10.5 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m10.5-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-10.5 10.5v-4.5m0 4.5h4.5m-4.5 0L9 15m10.5 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15"
+    />
   </svg>
 );
 
 const ThumbnailsIcon: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" width="18" height="18">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"
+    />
   </svg>
 );
 
@@ -78,6 +166,8 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
   data,
   fileName,
   className,
+  windowed = false,
+  folderId,
 }) => {
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -98,13 +188,47 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
   // Load PDF document
   useEffect(() => {
     let cancelled = false;
+    let transport: { abort: () => void } | null = null;
 
     const loadPDF = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const loadingTask = pdfjsLib.getDocument({ data });
+        // Ensure the worker (blob URL) is configured before the first parse.
+        await pdfWorkerReady;
+
+        let loadingTask: ReturnType<typeof pdfjsLib.getDocument>;
+        if (windowed && folderId != null) {
+          // Windowed mode: pdf.js pulls only the byte ranges it needs through
+          // the range transport, which reads decrypted windows over IPC — the
+          // whole file never enters renderer memory.
+          const source = createIpcRangeSource(folderId, fileName);
+          transport = await createPdfDataRangeTransport(source, {
+            // A ranged read failing mid-document (e.g. vault locked) surfaces to
+            // the UI — pdf.js would otherwise stall waiting for the chunk.
+            onError: (err) => {
+              if (!cancelled) {
+                setError(err instanceof Error ? err.message : 'Échec de lecture du PDF.');
+              }
+            },
+          });
+          if (cancelled) {
+            transport.abort();
+            return;
+          }
+          loadingTask = pdfjsLib.getDocument({
+            range: transport as unknown as pdfjsLib.PDFDataRangeTransport,
+            rangeChunkSize: PDF_RANGE_CHUNK_SIZE,
+            disableAutoFetch: true,
+            disableStream: true,
+          });
+        } else if (data) {
+          loadingTask = pdfjsLib.getDocument({ data });
+        } else {
+          throw new Error('Aucune source PDF disponible.');
+        }
+
         const pdf = await loadingTask.promise;
 
         if (cancelled) return;
@@ -114,7 +238,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
         setCurrentPage(1);
         setPageInputValue('1');
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : "Unknown error";
+        const errMsg = err instanceof Error ? err.message : 'Unknown error';
         if (cancelled) return;
         console.error('[PDFPreview] Error loading PDF:', err);
         setError(errMsg || 'Failed to load PDF');
@@ -129,8 +253,15 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
 
     return () => {
       cancelled = true;
+      if (transport) {
+        try {
+          transport.abort();
+        } catch {
+          /* best-effort */
+        }
+      }
     };
-  }, [data]);
+  }, [data, windowed, folderId, fileName]);
 
   // Render current page
   useEffect(() => {
@@ -172,8 +303,8 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
 
         await task.promise;
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : "Unknown error";
-        if ((err instanceof Error ? err.name : "") === 'RenderingCancelledException') return;
+        const errMsg = err instanceof Error ? err.message : 'Unknown error';
+        if ((err instanceof Error ? err.name : '') === 'RenderingCancelledException') return;
         console.error('[PDFPreview] Error rendering page:', err);
       }
     };
@@ -202,12 +333,15 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
   }, [pdfDoc]);
 
   // Navigation handlers
-  const goToPage = useCallback((page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-      setPageInputValue(page.toString());
-    }
-  }, [totalPages]);
+  const goToPage = useCallback(
+    (page: number) => {
+      if (page >= 1 && page <= totalPages) {
+        setCurrentPage(page);
+        setPageInputValue(page.toString());
+      }
+    },
+    [totalPages]
+  );
 
   const handlePrevPage = useCallback(() => {
     goToPage(currentPage - 1);
@@ -230,19 +364,22 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
     }
   }, [pageInputValue, currentPage, goToPage]);
 
-  const handlePageInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handlePageInputBlur();
-    }
-  }, [handlePageInputBlur]);
+  const handlePageInputKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        handlePageInputBlur();
+      }
+    },
+    [handlePageInputBlur]
+  );
 
   // Zoom handlers
   const handleZoomIn = useCallback(() => {
-    setScale(prev => Math.min(prev + SCALE_STEP, MAX_SCALE));
+    setScale((prev) => Math.min(prev + SCALE_STEP, MAX_SCALE));
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setScale(prev => Math.max(prev - SCALE_STEP, MIN_SCALE));
+    setScale((prev) => Math.max(prev - SCALE_STEP, MIN_SCALE));
   }, []);
 
   const handleFitWidth = useCallback(async () => {
@@ -273,7 +410,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
 
   // Toggle thumbnail sidebar
   const handleToggleThumbnails = useCallback(() => {
-    setShowThumbnails(prev => !prev);
+    setShowThumbnails((prev) => !prev);
   }, []);
 
   // Generate thumbnails
@@ -333,9 +470,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
   useEffect(() => {
     if (!showThumbnails || !thumbnailsRef.current) return;
 
-    const thumbnailElement = thumbnailsRef.current.querySelector(
-      `[data-page="${currentPage}"]`
-    );
+    const thumbnailElement = thumbnailsRef.current.querySelector(`[data-page="${currentPage}"]`);
     if (thumbnailElement) {
       thumbnailElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -370,19 +505,30 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handlePrevPage, handleNextPage, goToPage, totalPages, handleZoomIn, handleZoomOut, handleToggleThumbnails]);
+  }, [
+    handlePrevPage,
+    handleNextPage,
+    goToPage,
+    totalPages,
+    handleZoomIn,
+    handleZoomOut,
+    handleToggleThumbnails,
+  ]);
 
   // Mouse wheel zoom
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        handleZoomIn();
-      } else {
-        handleZoomOut();
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          handleZoomIn();
+        } else {
+          handleZoomOut();
+        }
       }
-    }
-  }, [handleZoomIn, handleZoomOut]);
+    },
+    [handleZoomIn, handleZoomOut]
+  );
 
   const containerClasses = clsx('pdf-preview', className);
 
@@ -551,11 +697,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({
         )}
 
         {/* Canvas Container */}
-        <div
-          ref={containerRef}
-          className="pdf-preview__container"
-          onWheel={handleWheel}
-        >
+        <div ref={containerRef} className="pdf-preview__container" onWheel={handleWheel}>
           <canvas ref={canvasRef} className="pdf-preview__canvas" />
         </div>
       </div>

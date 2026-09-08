@@ -1,0 +1,629 @@
+/**
+ * Mode édition de l'accueil — la feuille de style.
+ *
+ * ── CE FICHIER NE DÉCRIT QUE LE MODE ÉDITION ────────────────────────────────
+ *
+ * Toutes les règles sont sous `.home-page--editing` ou sous une classe qui
+ * n'existe qu'en édition (`.home-editbar`, `.home-panel`). L'accueil AU REPOS ne
+ * doit gagner aucun pixel de ce fichier : pas de trame, pas d'emplacement vide
+ * dessiné, pas de poignée, pas de cadre autour d'un titre, pas de bouton
+ * « ajouter » en ligne. C'est vérifiable en revue — cherchez un sélecteur qui ne
+ * commence pas par l'une de ces trois classes.
+ *
+ * Zéro couleur en dur : le produit a neuf thèmes, une valeur hexadécimale posée
+ * ici serait juste sur l'un d'eux et fausse sur les huit autres.
+ */
+
+:root {
+  /**
+   * La durée de LA BASCULE. Elle n'est pas dans les jetons du produit parce
+   * qu'elle décrit un changement de MODE, pas une transition d'état : 150 ms
+   * (`--duration-fast`) passerait inaperçu et l'accueil semblerait avoir
+   * clignoté, 300 ms (`--duration-slow`) ferait attendre avant de pouvoir
+   * attraper un bloc. 240 ms est le temps qu'il faut pour que l'œil enregistre
+   * que TOUT a changé de nature.
+   */
+  --home-edit-duration: 240ms;
+}
+
+/* ==================== L'en-tête de l'accueil ==================== */
+
+/**
+ * La ligne qui, au repos, ne porte QUE le menu « ⋯ », invisible tant que la
+ * souris est ailleurs — et qui, en édition, devient la barre. C'est le même
+ * ancrage dans les deux modes : la barre ne surgit pas d'ailleurs, elle prend la
+ * place de ce qui était déjà là.
+ */
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 28px;
+}
+
+.home-header__menu {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+/**
+ * Le focus clavier n'est pas bloqué par `pointer-events` : `:focus-within`
+ * rallume donc le menu pour qui navigue au clavier, sans quoi ce serait un piège
+ * à focus invisible.
+ */
+.home-page:hover .home-header__menu,
+.home-header__menu:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.home-header__menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-text-tertiary);
+  background: transparent;
+}
+
+.home-header__menu:hover .home-header__menu-button {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+.home-header__glyph {
+  width: 18px;
+  height: 18px;
+}
+
+/* ==================== La bascule ==================== */
+
+/**
+ * LA TRAME. C'est celle du moteur de grille (`grid.css`), pas une seconde : elle
+ * est calculée sur les colonnes réelles, donc elle dit vrai sur l'endroit où un
+ * bloc va tomber. On l'amène simplement à 6 % — à 45 %, elle se lit comme un
+ * quadrillage de tableur et l'accueil cesse d'être un accueil.
+ */
+.home-page--editing .grid-surface--editing::before {
+  opacity: 0.06;
+}
+
+/**
+ * LE RETRAIT COLLECTIF. Chaque bloc recule d'un cheveu et gagne sa bordure : le
+ * lot dit « ce sont des objets » sans que rien ne tremble. Le facteur est à
+ * 0,985 et pas à 0,95 — au-delà, les blocs se décollent visiblement de leur case
+ * et on croit que la grille s'est déréglée.
+ */
+.home-slot {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  transition: transform var(--home-edit-duration) var(--ease-out);
+}
+
+.home-page--editing .home-slot {
+  transform: scale(0.985);
+  cursor: pointer;
+}
+
+/**
+ * LE BLOC SÉLECTIONNÉ. Un anneau, pas un fond : un fond changerait la couleur du
+ * contenu qu'on est en train de régler, et on ne saurait plus à quoi ressemble
+ * le bloc pour de vrai.
+ */
+.home-page--editing .home-slot--selected {
+  outline: var(--border-width-2, 2px) solid var(--color-primary-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+
+/**
+ * LE FLASH DE POSE. Quatre cents millisecondes, une fois : le bloc vient d'être
+ * inséré au premier emplacement libre, qui n'est pas forcément là où l'œil
+ * regardait. Sans ce signal, on cherche ce qu'on vient d'ajouter.
+ */
+.home-slot--flash {
+  animation: home-slot-flash 400ms var(--ease-out) 1;
+  border-radius: var(--radius-card);
+}
+
+@keyframes home-slot-flash {
+  0% {
+    box-shadow: 0 0 0 3px var(--color-primary-500);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+/* ==================== La barre d'édition ==================== */
+
+.home-editbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-background-elevated);
+  animation: home-editbar-in var(--home-edit-duration) var(--ease-out) 1;
+}
+
+@keyframes home-editbar-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.home-editbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding-left: var(--spacing-2);
+  border-left: var(--border-width-1) solid var(--color-border);
+}
+
+.home-editbar__spacer {
+  flex: 1 1 auto;
+}
+
+.home-editbar__glyph {
+  width: 16px;
+  height: 16px;
+}
+
+.home-editbar__more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.home-editbar__more:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-secondary);
+}
+
+/* ==================== L'espace de travail ==================== */
+
+/**
+ * LE PANNEAU POUSSE LA GRILLE, il ne la recouvre pas. D'où une rangée en flex
+ * plutôt qu'un `position: absolute` : la grille se recompose dans la place qui
+ * reste, et on voit où le bloc va tomber pendant qu'on le glisse. Un panneau
+ * flottant masquerait exactement la zone qu'on vise.
+ */
+.home-workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.home-workspace__grid {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/**
+ * Toujours monté pendant l'édition, mais à largeur nulle quand il est fermé :
+ * c'est ce qui permet à l'ouverture d'être une TRANSITION (la grille se
+ * recompose en 200 ms) plutôt qu'un saut. Ses enfants, eux, ne sont montés que
+ * quand il est ouvert — douze aperçus vivants qui vivraient en permanence
+ * derrière un `overflow: hidden` seraient douze widgets rendus pour rien.
+ */
+.home-workspace__panel {
+  flex: 0 0 auto;
+  width: 0;
+  overflow: hidden;
+  transition: width var(--duration-normal) var(--ease-out);
+}
+
+.home-workspace__panel--open {
+  width: 320px;
+}
+
+/* ==================== Le panneau (palette ET inspecteur) ==================== */
+
+.home-panel {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-height: calc(100vh - 200px);
+  padding: var(--spacing-3);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-background-elevated);
+}
+
+.home-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
+.home-panel__title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.home-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 9999px);
+  color: var(--color-text-tertiary);
+  background: transparent;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.home-panel__close:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.home-panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.home-panel__hint {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
+.home-panel__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-panel__more {
+  width: 100%;
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-2);
+  border-radius: var(--radius-button, 8px);
+  color: var(--color-primary-500);
+  background: transparent;
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.home-panel__more:hover {
+  background: var(--color-surface-hover);
+}
+
+/* ==================== Une entrée de la palette ==================== */
+
+.home-palette__item {
+  margin: 0;
+  padding: 0;
+}
+
+.home-palette__entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  width: 100%;
+  padding: var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: grab;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.home-palette__entry:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-surface-hover);
+}
+
+.home-palette__entry:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--ring-offset-width) var(--color-background),
+    0 0 0 calc(var(--ring-offset-width) + var(--ring-width)) var(--ring-color);
+}
+
+.home-palette__entry:active {
+  cursor: grabbing;
+}
+
+/**
+ * Une source vide : GRISÉE, avec sa raison écrite juste en dessous — et toujours
+ * insérable. Poser un bloc avant d'avoir la donnée est un usage légitime (c'est
+ * comme ça qu'on se réserve une place) ; l'interdire ferait d'un blocage
+ * temporaire une impossibilité définitive.
+ */
+.home-palette__entry--empty {
+  opacity: 0.55;
+}
+
+.home-palette__name {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.home-palette__reason {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/**
+ * La fenêtre de l'aperçu. `overflow: hidden` la ferme, et `pointer-events: none`
+ * rend le widget qu'elle contient INERTE au clic : c'est une vignette, pas un
+ * bloc — sans ça, cliquer sur une note de l'aperçu l'ouvrirait depuis la
+ * palette au lieu d'insérer le widget.
+ */
+.home-palette__preview {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-background-secondary);
+  pointer-events: none;
+}
+
+.home-palette__preview-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  transform-origin: top left;
+}
+
+/* ==================== Un modèle ==================== */
+
+.home-template {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: 100%;
+  padding: var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-template:hover {
+  border-color: var(--color-primary-400);
+  background: var(--color-surface-hover);
+}
+
+.home-template--active {
+  border-color: var(--color-primary-500);
+}
+
+/**
+ * La carte d'un modèle : sa GÉOMÉTRIE, en douze colonnes, à l'échelle. Pas de
+ * données — un modèle décrit des rôles, et deux comptes n'y mettront pas la même
+ * chose. Montrer des données ferait une promesse que l'installation ne tiendrait
+ * pas.
+ */
+.home-template__map {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 10px;
+  grid-template-rows: repeat(var(--home-template-rows, 1), 10px);
+  gap: 2px;
+  width: 100%;
+}
+
+.home-template__cell {
+  grid-column: var(--home-template-x, 1) / span var(--home-template-w, 1);
+  grid-row: var(--home-template-y, 1) / span var(--home-template-h, 1);
+  overflow: hidden;
+  padding: 0 2px;
+  border-radius: var(--radius-badge, 4px);
+  background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+  color: var(--color-text-tertiary);
+  font-size: 7px;
+  line-height: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ==================== L'inspecteur ==================== */
+
+.home-inspector__field {
+  margin: 0 0 var(--spacing-3) 0;
+  padding: 0;
+  border: none;
+}
+
+.home-inspector__label {
+  display: block;
+  margin-bottom: var(--spacing-1);
+  padding: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.home-inspector__choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+/**
+ * La TAILLE COURANTE, en clair. Elle est lue plus souvent qu'elle n'est
+ * changée : c'est la seule façon de savoir ce qu'on a sans compter les cases à
+ * l'œil, donc elle passe avant les raccourcis et avant les champs.
+ */
+.home-inspector__size {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-2);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.home-inspector__size-cells {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Le nom du format, quand la géométrie tombe pile dessus. Discret : c'est une
+   précision sur les chiffres à gauche, pas l'information principale. */
+.home-inspector__size-name {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* Les raccourcis. Ils s'enroulent : leur nombre dépend des bornes du bloc, et
+   une rangée qui déborderait pousserait le panneau hors de sa largeur. */
+.home-inspector__shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+  margin-bottom: var(--spacing-2);
+}
+
+.home-inspector__shortcut {
+  padding: var(--spacing-1) var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-button, 8px);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.home-inspector__shortcut:hover {
+  border-color: var(--color-primary-500);
+  color: var(--color-text-primary);
+  background: var(--color-surface-hover);
+}
+
+.home-inspector__shortcut:focus-visible {
+  outline: var(--border-width-2) solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* Le raccourci qui décrit la taille actuelle. `color-mix` plutôt qu'une teinte
+   écrite en dur : le panneau existe sous sept thèmes. */
+.home-inspector__shortcut--active {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-500);
+  background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+}
+
+/* Les deux champs exacts, côte à côte : largeur et hauteur se lisent ensemble,
+   et les empiler aurait fait descendre la hauteur sous le pli du panneau. */
+.home-inspector__dims {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.home-inspector__dim {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.home-inspector__danger {
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-3);
+  border-top: var(--border-width-1) solid var(--color-border);
+}
+
+/* ==================== Le témoin de dépôt ==================== */
+
+/**
+ * Là où le bloc glissé va tomber. Rendu SEULEMENT pendant un glissement depuis
+ * la palette — au repos comme en édition sans geste, aucun emplacement vide
+ * n'est dessiné.
+ */
+.home-drop-ghost {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  border: var(--border-width-2, 2px) dashed var(--color-primary-500);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-primary-500) 10%, transparent);
+}
+
+/* ==================== Trop étroit ==================== */
+
+/**
+ * Le message qui remplace l'entrée du mode quand la fenêtre est trop étroite.
+ * Il est HONNÊTE : il dit qu'il faut une fenêtre plus large, pas « bientôt
+ * disponible ». Une édition mobile bâclée abîmerait la mise en page de bureau
+ * qu'on ne peut pas reconstruire depuis un téléphone.
+ */
+.home-too-narrow {
+  margin: 0;
+  padding: var(--spacing-3);
+  border: var(--border-width-1) dashed var(--color-border-strong);
+  border-radius: var(--radius-card);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* ==================== Mouvement réduit ==================== */
+
+/**
+ * La bascule perd son animation, pas son résultat : les bordures, la trame et le
+ * retrait restent — ce sont des INFORMATIONS (« ces choses sont des objets »),
+ * pas de la décoration. Ce qui saute, ce sont les interpolations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .home-slot,
+  .home-header__menu,
+  .home-workspace__panel,
+  .home-palette__entry {
+    transition: none;
+  }
+
+  .home-editbar {
+    animation: none;
+  }
+
+  /**
+   * Le flash perd son fondu mais PAS son message : l'anneau apparaît, et il
+   * disparaît quand le composant retire la classe (400 ms). Supprimer le signal
+   * entier priverait de « où est le bloc que je viens de poser ? » quelqu'un qui
+   * a seulement demandé moins de mouvement.
+   */
+  .home-slot--flash {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--color-primary-500);
+  }
+}

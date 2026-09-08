@@ -6,59 +6,34 @@
  * so it appears in that folder's view alongside files.
  */
 
-import React, { useMemo } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../../store';
-import type { Folder } from '../../../types';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '../../../store';
 import { updateNote } from '../../../store/slices/notesSlice';
+import { InlineFolderPicker } from '../automation/InlineFolderPicker';
 
 interface NoteFolderPickerProps {
   noteId: string;
   currentParentId: string | null;
 }
 
-interface FolderOption {
-  id: string;
-  label: string;
-}
-
 export function NoteFolderPicker({ noteId, currentParentId }: NoteFolderPickerProps) {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
-  const foldersById = useSelector((state: RootState) => state.folders.byId) as Record<
-    string,
-    Folder
-  >;
 
-  const folderOptions = useMemo((): FolderOption[] => {
-    const folders = Object.values(foldersById);
-
-    function getPath(folderId: string): string {
-      const parts: string[] = [];
-      let current: Folder | undefined = foldersById[folderId];
-      while (current) {
-        parts.unshift(current.name);
-        current = current.parentId ? foldersById[current.parentId] : undefined;
-      }
-      return parts.join(' / ');
-    }
-
-    return folders
-      .filter((f: Folder) => !f.deletedAt)
-      .map((f: Folder) => ({ id: f.id, label: getPath(f.id) }))
-      .sort((a: FolderOption, b: FolderOption) => a.label.localeCompare(b.label));
-  }, [foldersById]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    dispatch(
-      updateNote({
-        id: noteId,
-        changes: { parentId: value || null },
-      })
-    );
-  };
+  // Contrat inchangé : chaîne vide (bouton « effacer » du picker) ⇒ racine.
+  const handleChange = useCallback(
+    (folderId: string) => {
+      dispatch(
+        updateNote({
+          id: noteId,
+          changes: { parentId: folderId || null },
+        })
+      );
+    },
+    [dispatch, noteId]
+  );
 
   return (
     <div className="px-3 py-3 border-b border-[var(--color-border-light)]">
@@ -80,22 +55,11 @@ export function NoteFolderPicker({ noteId, currentParentId }: NoteFolderPickerPr
           {t('notes.parentFolder', 'Folder')}
         </span>
       </div>
-      <select
-        value={currentParentId || ''}
+      <InlineFolderPicker
+        value={currentParentId}
         onChange={handleChange}
-        className="w-full px-2.5 py-1.5 text-sm rounded-lg
-          bg-[var(--color-background-secondary)] text-[var(--color-text-primary)]
-          border border-[var(--color-border)] cursor-pointer
-          hover:border-[var(--color-border-strong)]
-          focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-400)]"
-      >
-        <option value="">{t('notes.noFolder', 'None (root)')}</option>
-        {folderOptions.map((f: FolderOption) => (
-          <option key={f.id} value={f.id}>
-            {f.label}
-          </option>
-        ))}
-      </select>
+        placeholder={t('notes.noFolder', 'None (root)')}
+      />
     </div>
   );
 }

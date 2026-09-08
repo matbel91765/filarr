@@ -13,6 +13,8 @@
  * short-circuit makes that round-trip O(1).
  */
 
+import { migrateLegacyImageNodes } from './legacyImageMigration';
+
 // Uses `any` on the content parameter so the real TipTap Editor (which
 // accepts `Content | Node | Fragment`) satisfies EditorLike without a
 // cast, while test mocks only have to implement `commands.setContent`.
@@ -50,7 +52,9 @@ export function syncEditorContent(
   if (noteContent === lastSyncedRef.current) return 'skipped';
 
   try {
-    const parsed = JSON.parse(noteContent);
+    // Meme rattrapage qu'a l'ouverture (cf. legacyImageMigration) : une mise a
+    // jour venue d'ailleurs ne doit pas reintroduire les nœuds hors schema.
+    const parsed = migrateLegacyImageNodes(JSON.parse(noteContent)).doc;
     editor.commands.setContent(parsed, { emitUpdate: false });
   } catch {
     editor.commands.setContent(noteContent, { emitUpdate: false });

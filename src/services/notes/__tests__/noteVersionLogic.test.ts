@@ -1,3 +1,5 @@
+import { describe, it, expect } from 'vitest';
+
 /**
  * Tests for note version history pure logic.
  *
@@ -11,6 +13,7 @@ import {
   applyRetention,
   buildVersionId,
   decideSnapshot,
+  effectiveRetentionDays,
   isValidVersionId,
   MAX_VERSIONS_PER_NOTE,
   MAX_VERSION_AGE_MS,
@@ -31,6 +34,24 @@ function meta(partial: Partial<NoteVersionMeta>): NoteVersionMeta {
     contentHash: partial.contentHash ?? 'deadbeef',
   };
 }
+
+// ── effectiveRetentionDays (E9-2) ────────────────────────────────────────
+
+describe('effectiveRetentionDays', () => {
+  it('uses the org value when it is a positive number (override, shorter or longer)', () => {
+    expect(effectiveRetentionDays(7, 30)).toBe(7); // shorter than default
+    expect(effectiveRetentionDays(90, 30)).toBe(90); // longer than default
+  });
+
+  it('falls back to the default when the org value is unset / invalid / non-positive', () => {
+    expect(effectiveRetentionDays(null, 30)).toBe(30);
+    expect(effectiveRetentionDays(undefined, 30)).toBe(30);
+    expect(effectiveRetentionDays(0, 30)).toBe(30);
+    expect(effectiveRetentionDays(-5, 30)).toBe(30);
+    expect(effectiveRetentionDays(Number.NaN, 30)).toBe(30);
+    expect(effectiveRetentionDays(Infinity, 30)).toBe(30);
+  });
+});
 
 // ── serializeForHash ─────────────────────────────────────────────────────
 

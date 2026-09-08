@@ -3,11 +3,13 @@
  *
  * When pasting a URL, inserts it as a link and asynchronously fetches
  * the page title to replace the link text.
- * Uses Electron IPC to bypass CORS restrictions, with fetch() fallback.
+ * Uses Electron IPC to bypass CORS restrictions, with fetch() fallback
+ * (desktop only — on the web, null means null).
  */
 
 import { Extension } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
+import { isWebPlatform } from '../../../../services/platform/isWebPlatform';
 
 const URL_REGEX = /^https?:\/\/[^\s]+$/;
 
@@ -21,6 +23,10 @@ async function fetchPageTitle(url: string): Promise<string | null> {
   } catch {
     // IPC not available or failed, fall through
   }
+
+  // Web : le canal a rendu null (opt-in refusé ou échec) — un fetch direct
+  // contournerait l'opt-in, et le CORS le ferait de toute façon échouer.
+  if (isWebPlatform()) return null;
 
   try {
     // Fallback: direct fetch (may fail due to CORS)

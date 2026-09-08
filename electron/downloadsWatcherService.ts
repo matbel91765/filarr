@@ -76,7 +76,15 @@ const FORBIDDEN_PATH_PREFIXES = [
   '/sbin',
 ];
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB — matches MAX_FILE_SIZE in renderer
+// 5 GiB — matches the V3 streaming import cap (MAX_FILE_SIZE in
+// src/constants/limits.ts). Large files are announced without inline content
+// and imported by the renderer from sourcePath via the streaming IPC.
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024;
+
+// Files up to this size are shipped inline as contentBytes (legacy renderer
+// pipeline). Bigger files omit contentBytes so they never exist as a whole
+// buffer (a number[] costs ~8x the file size in V8 heap).
+const INLINE_CONTENT_MAX_BYTES = 500 * 1024 * 1024;
 
 class DownloadsWatcherService {
   private watcher: FSWatcher | null = null;
@@ -327,24 +335,38 @@ class DownloadsWatcherService {
         return;
       }
 
-      const bytes = await fs.readFile(resolved);
-
       if (!this.mainWindow || this.mainWindow.isDestroyed()) {
         console.warn('[downloadsWatcher] no main window — dropping event for', resolved);
         return;
       }
 
-      // Send Uint8Array (transferred efficiently across IPC). The renderer
-      // converts to Buffer in fileService before encryption.
-      this.mainWindow.webContents.send('downloads-watcher:file-detected', {
+      const payload: {
+        sourcePath: string;
+        name: string;
+        size: number;
+        type: string;
+        inboxFolderId: string;
+        deleteOriginal: boolean;
+        contentBytes?: number[];
+      } = {
         sourcePath: resolved,
         name,
         size: stat.size,
         type: this.guessMimeType(ext),
-        contentBytes: Array.from(new Uint8Array(bytes)),
         inboxFolderId: this.config.inboxFolderId,
         deleteOriginal: this.config.deleteOriginal,
-      });
+      };
+
+      // Small files keep the legacy inline pipeline (renderer converts to
+      // Buffer in fileService before encryption). Files above the inline
+      // threshold omit contentBytes: the renderer imports them from
+      // sourcePath via the V3 streaming IPC ("saveEncryptedFileFromPath").
+      if (stat.size <= INLINE_CONTENT_MAX_BYTES) {
+        const bytes = await fs.readFile(resolved);
+        payload.contentBytes = Array.from(new Uint8Array(bytes));
+      }
+
+      this.mainWindow.webContents.send('downloads-watcher:file-detected', payload);
     } catch (error) {
       console.error(`[downloadsWatcher] failed to handle ${resolved}:`, error);
       // Allow retry on next event by removing from seen

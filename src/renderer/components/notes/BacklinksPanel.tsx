@@ -11,9 +11,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../store';
 import { setEditingNote } from '../../../store/slices/notesSlice';
 import { findBacklinks, findFileBacklinks } from '../../../services/notes/noteService';
-import { findPotentialLinks } from '../../../services/notes/autoLinkService';
+import { findPotentialLinks, requestPotentialLink } from '../../../services/notes/autoLinkService';
 import type { Note, Backlink } from '../../../types/notes';
 import type { PotentialLink } from '../../../services/notes/autoLinkService';
+import { Button } from '../ui/Button';
+import { useNotification } from '../ui/Notification';
 import './BacklinksPanel.css';
 
 // ==================== Icons ====================
@@ -97,6 +99,36 @@ const ChevronIcon: React.FC<{ open: boolean }> = ({ open }) => (
   </svg>
 );
 
+// ==================== Layout ====================
+
+/**
+ * A "Link" action can't live INSIDE `.backlinks-panel__item` — that item is
+ * itself a button, and nesting two is invalid. The row splits it in two
+ * instead; these three constants are the whole of the extra layout, kept as
+ * frozen objects so they never re-render the memoised rows.
+ */
+const LINK_ALL_ROW_STYLE: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+  padding: '0 4px 4px',
+};
+
+const POTENTIAL_ROW_STYLE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 4,
+};
+
+const POTENTIAL_ITEM_STYLE: React.CSSProperties = { flex: 1, minWidth: 0 };
+
+/**
+ * How long a linked row stays hidden on the panel's own say-so. The store
+ * normally catches up in ~600 ms (editor debounce + link resolution); this is
+ * generous enough to cover it and short enough that, if the rewrite somehow
+ * did NOT stick, the row comes back instead of quietly vanishing.
+ */
+const OPTIMISTIC_HIDE_MS = 4000;
+
 // ==================== Component ====================
 
 interface BacklinksPanelProps {
@@ -108,6 +140,7 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
 }) {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
+  const { error: notifyError } = useNotification();
 
   const notesById = useSelector((s: RootState) => s.notes.byId);
   const filesById = useSelector((s: RootState) => s.files.byId);
@@ -116,7 +149,10 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
 
   const [showBacklinks, setShowBacklinks] = React.useState(true);
   const [showOutgoing, setShowOutgoing] = React.useState(true);
-  const [showPotential, setShowPotential] = React.useState(false);
+  // Open by default: the section only exists when there IS something to link,
+  // and a collapsed count is a chore nobody opens. Unlinked mentions stay
+  // folded — they carry no action, only information about other notes.
+  const [showPotential, setShowPotential] = React.useState(true);
   const [showUnlinked, setShowUnlinked] = React.useState(false);
 
   // Defer the heavy scans (findBacklinks, findPotentialLinks, unlinked
@@ -155,6 +191,36 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
   const potentialLinks = useMemo(
     () => findPotentialLinks(deferredNoteId, deferredNotesById),
     [deferredNoteId, deferredNotesById]
+  );
+
+  /**
+   * Titles the editor just confirmed it linked. The store is the authority, but
+   * it only catches up after the editor's write-back debounce and the link
+   * resolution thunk — nearly a second during which the row the user just acted
+   * on would sit there unchanged, as if the click had done nothing. So we hide
+   * it on the editor's word, and let the timer below hand authority back.
+   */
+  const [justLinked, setJustLinked] = React.useState<string[]>([]);
+  const hideTimerRef = React.useRef<number | null>(null);
+
+  // Another note, another set of mentions — never carry the optimism across.
+  React.useEffect(() => {
+    setJustLinked([]);
+  }, [noteId]);
+
+  React.useEffect(
+    () => () => {
+      if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    },
+    []
+  );
+
+  const visiblePotentialLinks = useMemo(
+    () =>
+      justLinked.length === 0
+        ? potentialLinks
+        : potentialLinks.filter((pl) => !justLinked.includes(pl.matchedTitle)),
+    [potentialLinks, justLinked]
   );
 
   // Unlinked mentions: other notes that mention THIS note's title without wiki-linking
@@ -199,6 +265,40 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
 
   const handleBacklinkClick = (sourceNoteId: string) => {
     dispatch(setEditingNote(sourceNoteId));
+  };
+
+  /**
+   * Linking happens in the EDITOR, not here: it holds the ProseMirror document
+   * for this note, and a store-level rewrite would be overwritten at the next
+   * keystroke. We only ask; `requestPotentialLink` carries `noteId` so the
+   * right pane answers. Nothing to undo here either — the replacement lands in
+   * the editor's own history.
+   */
+  /**
+   * The call is a round trip: `dispatchEvent` is synchronous, so by the time it
+   * returns we know whether anyone answered and what they managed to link. The
+   * per-title failure toast is the editor's to raise (it is the one that
+   * looked); what only WE can tell is that nobody was holding the note at all.
+   */
+  const handleLinkPotential = (titles: string[]) => {
+    if (titles.length === 0) return;
+    const result = requestPotentialLink(noteId, titles);
+    if (!result.answered) {
+      notifyError(
+        t(
+          'notes.potentialLinkNoEditor',
+          'This note is not open in an editor — open it to link its mentions'
+        )
+      );
+      return;
+    }
+    if (result.linked.length === 0) return;
+    setJustLinked((prev) => [...prev, ...result.linked]);
+    if (hideTimerRef.current !== null) window.clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = window.setTimeout(() => {
+      hideTimerRef.current = null;
+      setJustLinked([]);
+    }, OPTIMISTIC_HIDE_MS);
   };
 
   if (!note) return null;
@@ -291,7 +391,7 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
       )}
 
       {/* Potential links (auto-detected mentions in this note) */}
-      {potentialLinks.length > 0 && (
+      {visiblePotentialLinks.length > 0 && (
         <>
           <button
             className="backlinks-panel__section-header"
@@ -302,29 +402,62 @@ export const BacklinksPanel: React.FC<BacklinksPanelProps> = React.memo(function
             <span className="backlinks-panel__section-title">
               {t('notes.potentialLinks', 'Potential Links')}
             </span>
-            <span className="backlinks-panel__section-count">{potentialLinks.length}</span>
+            <span className="backlinks-panel__section-count">{visiblePotentialLinks.length}</span>
           </button>
           {showPotential && (
             <div className="backlinks-panel__section-body">
-              {potentialLinks.map((pl) => (
-                <button
-                  key={pl.noteId}
-                  className="backlinks-panel__item"
-                  onClick={() => handleBacklinkClick(pl.noteId)}
-                >
-                  <NoteRefIcon />
-                  <div className="backlinks-panel__item-info">
-                    <span className="backlinks-panel__item-title">{pl.matchedTitle}</span>
-                    <span className="backlinks-panel__item-context">{pl.context}</span>
-                  </div>
-                </button>
+              {visiblePotentialLinks.length > 1 && (
+                <div style={LINK_ALL_ROW_STYLE}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      handleLinkPotential(visiblePotentialLinks.map((pl) => pl.matchedTitle))
+                    }
+                  >
+                    {t('notes.linkAllMentions', 'Link all')}
+                  </Button>
+                </div>
+              )}
+              {visiblePotentialLinks.map((pl) => (
+                <div key={pl.noteId} style={POTENTIAL_ROW_STYLE}>
+                  <button
+                    className="backlinks-panel__item"
+                    style={POTENTIAL_ITEM_STYLE}
+                    onClick={() => handleBacklinkClick(pl.noteId)}
+                  >
+                    <NoteRefIcon />
+                    <div className="backlinks-panel__item-info">
+                      <span className="backlinks-panel__item-title">{pl.matchedTitle}</span>
+                      <span className="backlinks-panel__item-context">{pl.context}</span>
+                    </div>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleLinkPotential([pl.matchedTitle])}
+                    aria-label={t('notes.linkMentionNamed', 'Link the mention of {{title}}', {
+                      title: pl.matchedTitle,
+                    })}
+                    title={t('notes.linkMention', 'Link this mention')}
+                  >
+                    {t('notes.linkMentionShort', 'Link')}
+                  </Button>
+                </div>
               ))}
             </div>
           )}
         </>
       )}
 
-      {/* Unlinked mentions (other notes mentioning this note's title) */}
+      {/*
+        Unlinked mentions (OTHER notes mentioning this note's title).
+        No "Link" action here, deliberately: the mention lives in a document
+        this pane doesn't hold. Rewriting it would mean editing another note's
+        content from the store, which the editor holding it would overwrite at
+        the next keystroke (see `noteEditorRegistry`). Clicking still navigates
+        — from there the mention shows up as a potential link, with its button.
+      */}
       {unlinkedMentions.length > 0 && (
         <>
           <button

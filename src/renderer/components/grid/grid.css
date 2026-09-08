@@ -1,0 +1,311 @@
+/**
+ * Moteur de grille — la feuille de style.
+ *
+ * Le placement est fait par CSS Grid avec des positions EXPLICITES : chaque case
+ * dit sa colonne et sa rangée. Le navigateur ne choisit rien.
+ *
+ * En particulier, `grid-auto-flow` reste à `row` et ne passera jamais à `dense`.
+ * Le remplissage dense comble les trous tout seul en tirant des widgets vers le
+ * haut à l'insu de l'utilisateur : on range son accueil, on revient le lendemain,
+ * et deux blocs ont changé de place parce qu'un troisième a rétréci. Un trou
+ * volontaire reste un trou — c'est la promesse d'un accueil modulaire.
+ *
+ * Zéro couleur en dur : le produit a neuf thèmes, et une valeur hexadécimale
+ * posée ici serait juste sur l'un d'eux et fausse sur les huit autres.
+ */
+
+/* ==================== La surface ==================== */
+
+.grid-surface {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns, 12), minmax(0, 1fr));
+  grid-auto-rows: var(--grid-row-height, 88px);
+  grid-auto-flow: row; /* JAMAIS `dense` — voir l'en-tête. */
+  gap: var(--grid-gutter, 16px);
+  width: 100%;
+  /**
+   * La surface RÉSERVE ses rangées, elle ne les rogne pas. `--grid-rows` suit
+   * l'aperçu du geste : agrandir un bloc au-delà de la dernière rangée allonge
+   * la surface sous le curseur au lieu de couper le bloc en cours de
+   * redimensionnement. Une grille vide garde une rangée, pour accueillir un
+   * premier dépôt.
+   */
+  min-height: calc(
+    var(--grid-rows, 1) * (var(--grid-row-height, 88px) + var(--grid-gutter, 16px)) -
+      var(--grid-gutter, 16px)
+  );
+}
+
+/**
+ * TRAME DE POINTS — en édition seulement.
+ *
+ * Au repos, la grille est invisible : ce qu'on voit est le contenu, pas
+ * l'échafaudage. Le pas des points est calculé, pas codé en dur, donc il suit
+ * les colonnes réelles à toutes les largeurs — y compris à six et à une, où une
+ * trame figée en douze mentirait sur l'endroit où le widget va tomber.
+ */
+.grid-surface--editing::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--grid-gutter, 16px) / -2);
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--color-border-strong) 1px,
+    transparent 0
+  );
+  background-size: calc((100% - var(--grid-gutter, 16px)) / var(--grid-columns, 12))
+    calc(var(--grid-row-height, 88px) + var(--grid-gutter, 16px));
+  opacity: 0.45;
+}
+
+/* ==================== L'état vide ==================== */
+
+/**
+ * L'enveloppe de `emptyState`. La surface est une grille à placements
+ * EXPLICITES : un enfant qui n'en déclare aucun tombe dans la première case
+ * libre — une colonne sur douze. L'état vide n'est pas une case, c'est un
+ * message : il prend la rangée entière.
+ */
+.grid-surface__empty {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-self: center;
+  min-width: 0;
+}
+
+/* ==================== Une case ==================== */
+
+/**
+ * AUCUN STYLE PROPRE AU REPOS : ni fond, ni bordure, ni ombre, ni arrondi. La
+ * case est un rectangle de placement, l'apparence appartient au widget qu'elle
+ * porte. `min-width/min-height: 0` sont indispensables : sans eux, un contenu
+ * large force sa piste de grille à s'élargir et fait déborder toute la rangée.
+ */
+.grid-item {
+  position: relative;
+  z-index: 1;
+  grid-column: var(--grid-col-start, 1) / span var(--grid-w, 1);
+  grid-row: var(--grid-row-start, 1) / span var(--grid-h, 1);
+  min-width: 0;
+  min-height: 0;
+}
+
+.grid-item__content {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* --- Édition --- */
+
+.grid-item--editing {
+  border-radius: var(--radius-card);
+  outline: var(--border-width-1) dashed var(--color-border);
+  outline-offset: 2px;
+  transition:
+    outline-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.grid-item--editing:hover {
+  outline-color: var(--color-border-strong);
+}
+
+/**
+ * La case saisie passe AU-DESSUS de tout et se laisse traverser : le moteur de
+ * gestes lui pose un décalage sous-case en `transform`, elle glisse donc sous le
+ * curseur, et si elle interceptait les événements elle se volerait à elle-même
+ * le survol des voisines.
+ */
+.grid-item--active {
+  z-index: 10;
+  pointer-events: none;
+  outline-color: var(--color-primary-400);
+  box-shadow: var(--shadow-lg);
+  /* Pas de transition sur `transform` : le décalage suit le curseur, une
+     interpolation le ferait traîner d'un temps derrière la main. */
+  transition: none;
+  will-change: transform;
+}
+
+.grid-item--active .grid-item__content {
+  opacity: 0.92;
+}
+
+/* ==================== Les prises ==================== */
+
+.grid-item__tools {
+  position: absolute;
+  top: var(--spacing-1);
+  right: var(--spacing-1);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.grid-item--editing:hover .grid-item__tools,
+.grid-item--editing:focus-within .grid-item__tools,
+.grid-item--active .grid-item__tools {
+  opacity: 1;
+}
+
+.grid-item__handle,
+.grid-item__size {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 var(--spacing-2);
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-badge);
+  background: var(--color-background-elevated);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.grid-item__handle {
+  width: 24px;
+  padding: 0;
+  cursor: grab;
+}
+
+.grid-item--active .grid-item__handle {
+  cursor: grabbing;
+}
+
+.grid-item__handle:hover,
+.grid-item__size:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.grid-item__handle:focus-visible,
+.grid-item__size:focus-visible,
+.grid-item__resize:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--ring-offset-width) var(--color-background),
+    0 0 0 calc(var(--ring-offset-width) + var(--ring-width)) var(--ring-color);
+}
+
+/** Six points, dessinés — le produit n'embarque pas de bibliothèque d'icônes. */
+.grid-item__grip {
+  width: 10px;
+  height: 12px;
+  background-image: radial-gradient(circle at 1.5px 1.5px, currentColor 1.5px, transparent 0);
+  background-size: 5px 5px;
+  background-position: 0 1px;
+  background-repeat: repeat;
+}
+
+/**
+ * Prise d'angle. Même dessin que celle du plan libre (`board-card__resize`) :
+ * deux traits en diagonale, dans la couleur du texte tertiaire — les deux
+ * moteurs de geste du produit doivent se reconnaître au premier coup d'œil.
+ *
+ * ── ELLE SE VOIT ET ELLE SE SAISIT ─────────────────────────────────────────
+ *
+ * C'est la prise PRINCIPALE du mode édition depuis que le redimensionnement est
+ * libre : la largeur ET la hauteur se règlent ici, case par case. Elle était un
+ * carré de 16 px, invisible tant qu'on ne survolait pas la case exacte — donc
+ * introuvable, donc « on ne peut pas redimensionner ». Trois corrections :
+ *
+ *   — 22 px au lieu de 16, au-dessus du seuil des cibles pointées ;
+ *   — dessinée EN PERMANENCE tant qu'on édite (le survol ne fait que l'appuyer),
+ *     parce qu'une prise qu'il faut deviner n'existe pas ;
+ *   — posée sur une pastille opaque : sur un widget chargé (liste, aperçu,
+ *     image), deux traits translucides se noyaient dans le contenu.
+ *
+ * Elle est peinte en CSS, sans `<svg>` : la règle globale `svg { max-width:
+ * 100% }` de `reset.css` a déjà rogné des icônes ailleurs dans le produit, et
+ * un dessin de fond ne peut pas se faire attraper par cette règle-là.
+ */
+.grid-item__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  cursor: nwse-resize;
+  opacity: 0.7;
+  border: var(--border-width-1) solid var(--color-border);
+  border-radius: var(--radius-badge);
+  background-color: var(--color-background-elevated);
+  transition:
+    opacity var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+  background-image: linear-gradient(
+    135deg,
+    transparent 0%,
+    transparent 52%,
+    var(--color-text-tertiary) 52%,
+    var(--color-text-tertiary) 62%,
+    transparent 62%,
+    transparent 72%,
+    var(--color-text-tertiary) 72%,
+    var(--color-text-tertiary) 82%,
+    transparent 82%
+  );
+}
+
+.grid-item--editing:hover .grid-item__resize,
+.grid-item--editing:focus-within .grid-item__resize,
+.grid-item--active .grid-item__resize {
+  opacity: 1;
+  border-color: var(--color-border-strong);
+}
+
+/* ==================== Une colonne ==================== */
+
+/**
+ * En une colonne, les prises grandissent : la cible d'un doigt n'est pas celle
+ * d'un curseur. (L'édition y est refusée côté composant — ces règles servent
+ * quand un appelant force `columnsOverride`.)
+ */
+.grid-surface[data-columns='1'] .grid-item__handle,
+.grid-surface[data-columns='1'] .grid-item__size {
+  height: 32px;
+}
+
+.grid-surface[data-columns='1'] .grid-item__handle {
+  width: 32px;
+}
+
+.grid-surface[data-columns='1'] .grid-item__resize {
+  width: 30px;
+  height: 30px;
+}
+
+/* ==================== Mouvement réduit ==================== */
+
+/**
+ * Le décalage sous-case reste : c'est le retour direct du geste, pas une
+ * décoration, et le supprimer rendrait le glissement illisible. Ce qui saute,
+ * ce sont les fondus et les transitions d'état, qui n'apportent rien de plus
+ * qu'un état final déjà lisible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .grid-item--editing,
+  .grid-item__tools,
+  .grid-item__handle,
+  .grid-item__size,
+  .grid-item__resize {
+    transition: none;
+  }
+}

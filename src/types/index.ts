@@ -11,6 +11,7 @@ export interface Folder {
   id: string;
   name: string;
   color: string;
+  emoji?: string; // Optional emoji shown in place of the folder glyph
   items: string[]; // Array of item IDs (files or folders)
   parentId?: string | null;
   protected?: boolean;
@@ -19,6 +20,21 @@ export interface Folder {
   updatedAt?: string;
   date?: string;
   description?: string;
+  /**
+   * ÉTIQUETTES DES FICHIERS DE CE DOSSIER — `identifiant de fichier → étiquettes`.
+   *
+   * Une table PLATE, à côté de `description`, et c'est le format que le
+   * téléphone a créé (`filarr-mobile/src/services/tags/fileTags.ts`). Elle est
+   * rangée sur le DOSSIER et non sur l'`Item` parce que le dossier voyage
+   * entier dans `metadata.json` : la clé traverse la synchronisation sans
+   * qu'aucune ligne de `services/sync` ait à la connaître, et une version qui
+   * l'ignore la RECOPIE au lieu de l'effacer.
+   *
+   * Les étiquettes sont des CHAÎNES normalisées (`normalizeFileTag`), jamais
+   * des identifiants : c'est ce qui fait que `pitch` posé ici et `pitch` posé
+   * sur un téléphone sont la même étiquette.
+   */
+  fileTags?: Record<string, string[]>;
   reminders?: Reminder[];
   deletedAt?: string; // Date when item was moved to trash
 }
@@ -38,6 +54,27 @@ export interface FileItem {
   description?: string;
   content?: ArrayBuffer | string;
   deletedAt?: string; // Date when item was moved to trash
+  /**
+   * RACCOURCI VERS UN COFFRE — posé par « déplacer vers le coffre en laissant
+   * un raccourci ». Une seule version du fichier existe alors : celle du
+   * coffre (`vaultId`/`itemId`). Ses octets n'existent PLUS dans l'espace
+   * personnel (ni en local, ni dans le nuage perso) : `encryptedData`/`iv`
+   * sont absents. La FICHE (nom, type, taille, dates, description, tags)
+   * reste, pour que le fichier garde sa place ici et s'ouvre là-bas.
+   *
+   * Rien de plus n'entre en clair dans la persistance : deux identifiants et
+   * une date — jamais un nom de coffre, jamais un contenu. Optionnel : zéro
+   * migration. Retirer un raccourci = `deleteFile` (corbeille douce), aucune
+   * API dédiée.
+   */
+  vaultRef?: VaultShortcutRef;
+}
+
+/** Ce que porte une fiche-raccourci : où sont les octets, et depuis quand. */
+export interface VaultShortcutRef {
+  vaultId: string;
+  itemId: string;
+  movedAt: string;
 }
 
 // Type union pour les items (fichiers ou dossiers)
@@ -57,12 +94,17 @@ export interface Reminder {
   id: string;
   itemId: string;
   itemName: string;
-  itemType: 'file' | 'folder';
+  itemType: 'file' | 'folder' | 'note';
   date: string;
   message?: string;
+  /** @deprecated electron-side legacy field — read `message` instead. */
+  description?: string;
   priority?: 'low' | 'normal' | 'high';
   recurring?: 'none' | 'daily' | 'weekly' | 'monthly';
   completed?: boolean;
+  /** @deprecated electron-side legacy field — use `completed`. Both are
+   * written on completion to keep older readers happy. */
+  isCompleted?: boolean;
   read?: boolean;
   snoozedUntil?: string;
   createdAt?: string;
@@ -415,6 +457,17 @@ export interface IStorageImplementation {
     onProgress?: (percent: number) => void
   ): Promise<Buffer>;
   saveEncryptedFile(folderId: string, fileName: string, content: Buffer): Promise<void>;
+  /**
+   * Import V3 en streaming : chiffre directement depuis un chemin OS,
+   * sans jamais charger le fichier en mémoire renderer.
+   * Implémenté en mode local (clé machine) et en mode hybride (FEK de
+   * session — conteneur V3 portable entre appareils).
+   */
+  saveEncryptedFileFromPath?(
+    folderId: string,
+    fileName: string,
+    sourcePath: string
+  ): Promise<{ size: number }>;
   addReminder(itemId: string, reminder: Reminder): Promise<Reminder>;
   updateReminder(
     itemId: string,
@@ -430,6 +483,16 @@ export interface IStorageImplementation {
     itemId: string,
     itemData: Partial<Item>
   ): Promise<Item>;
+  /**
+   * Transforme une fiche de fichier en RACCOURCI vers un coffre : les octets
+   * de l'espace personnel sont effacés (local + nuage perso), la fiche reste
+   * avec `vaultRef` posé et sans `encryptedData`/`iv`. Rend le dossier à jour.
+   */
+  convertFileToVaultShortcut(
+    folderId: string,
+    fileId: string,
+    ref: VaultShortcutRef
+  ): Promise<Folder>;
   moveItem(itemId: string, sourceFolderId: string, targetFolderId: string): Promise<MoveResult>;
   copyItem(
     itemId: string,
@@ -446,11 +509,14 @@ export interface FolderCreateData {
   id?: string;
   name: string;
   color?: string;
+  emoji?: string;
   items?: Item[];
   reminders?: Reminder[];
   parentId?: string | null;
   date?: string;
   description?: string;
+  /** Voir `Folder.fileTags` — porté par `updateFolder`, jamais par la création. */
+  fileTags?: Record<string, string[]>;
   protected?: boolean;
   password?: string;
 }
@@ -464,6 +530,12 @@ export interface FileCreateData {
   type?: string;
   size?: number;
   content?: Buffer;
+  /**
+   * Chemin OS source pour l'import V3 en streaming (mode local uniquement).
+   * Quand présent sans `content`, le main process chiffre directement depuis
+   * ce chemin — le contenu ne transite jamais par le renderer.
+   */
+  sourcePath?: string;
   date?: string;
   description?: string;
   protected?: boolean;

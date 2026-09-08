@@ -11,6 +11,13 @@
 
 import Fuse from 'fuse.js';
 import errorService from '../platform/errorService';
+import {
+  compilePattern,
+  testBounded,
+  ScanBudget,
+  DEFAULT_REGEX_BUDGET_MS,
+  type PatternRejection,
+} from './regexGuard';
 import type {
   FileItem,
   Folder,
@@ -24,33 +31,27 @@ import type {
 } from '../../types';
 
 /**
- * SÉCURITÉ: Vérifie si un pattern regex est potentiellement dangereux (ReDoS)
- * Cette fonction remplace le module 'safe-regex' pour être compatible navigateur
+ * GARDE ANTI-REDOS — voir `regexGuard.ts`.
+ *
+ * L'ancienne paire `isSafeRegex` / `testRegexWithTimeout` vivait ICI et ne
+ * protégeait de rien : la seconde rendait une `Promise` castée en booléen (donc
+ * TOUJOURS vraie : tout document « correspondait »), son `setTimeout` ne pouvait
+ * pas interrompre un `regex.test` synchrone, et la première laissait passer
+ * `(a+)+`. Les deux sont remplacées par une garde pure, testée, et partagée en
+ * forme avec le mobile.
  */
-function isSafeRegex(pattern: string): boolean {
-  // Patterns dangereux connus qui peuvent causer des ReDoS
-  const dangerousPatterns = [
-    /(\*\+|\+\*|\+\+|\{\d+,\}\+)/,  // Quantificateurs imbriqués
-    /(\([^)]*\)\*\+|\([^)]*\)\+\*)/,  // Groupes avec quantificateurs imbriqués
-    /(\([^)]*\+[^)]*\)\*|\([^)]*\*[^)]*\)\+)/,  // Groupes avec quantificateurs multiples
-    /(\.\*\.\*\.\*)/,  // Plusieurs .* consécutifs
-    /(\(.*\|.*\)\+)/,  // Alternance dans un groupe répété
-  ];
 
-  // Vérifie si le pattern contient des éléments dangereux
-  for (const dangerous of dangerousPatterns) {
-    if (dangerous.test(pattern)) {
-      return false;
-    }
-  }
-
-  // Limite la longueur du pattern
-  if (pattern.length > 500) {
-    return false;
-  }
-
-  return true;
-}
+/**
+ * Ce qu'on DIT à l'utilisateur quand son motif est refusé. Un refus est une
+ * réponse, pas une panne : il nomme la règle enfreinte au lieu de renvoyer
+ * « pattern invalide ou dangereux » pour les trois cas à la fois.
+ */
+const REGEX_REJECTION_MESSAGES: Record<PatternRejection, string> = {
+  'too-long': 'Expression régulière trop longue (500 caractères au maximum).',
+  unsafe:
+    'Expression régulière refusée : sa forme peut bloquer la recherche (quantificateur sur un groupe déjà quantifié, alternance répétée, ou « .* » en série). Veuillez la simplifier.',
+  invalid: 'Expression régulière invalide.',
+};
 
 /**
  * Search Service Class
@@ -60,6 +61,21 @@ class SearchService {
   private fuse: Fuse<SearchIndex> | null = null;
   private searchHistory: string[] = [];
   private maxHistorySize: number = 50;
+
+  /**
+   * Budget d'un balayage par expression régulière, en millisecondes.
+   * Modifiable pour les tests — voir `regexGuard.ScanBudget`.
+   */
+  regexBudgetMs: number = DEFAULT_REGEX_BUDGET_MS;
+
+  /**
+   * Le dernier balayage par expression régulière s'est-il arrêté faute de
+   * temps ? Vrai ⇒ les résultats rendus sont PARTIELS.
+   */
+  lastRegexTimedOut: boolean = false;
+
+  /** Motif du dernier refus, ou `null`. Utile aux écrans qui veulent l'expliquer. */
+  lastRegexRejection: PatternRejection | null = null;
 
   /**
    * Initialize or update the search index
@@ -236,9 +252,7 @@ class SearchService {
       }
 
       // Search in folder path
-      const folderPath = options.caseSensitive
-        ? index.folderPath
-        : index.folderPath.toLowerCase();
+      const folderPath = options.caseSensitive ? index.folderPath : index.folderPath.toLowerCase();
       if (folderPath.includes(searchQuery)) {
         relevance += 5;
         matches.push({ field: 'folderPath', value: index.folderPath, start: 0, end: 0 });
@@ -277,7 +291,14 @@ class SearchService {
   }
 
   /**
-   * Regex search avec protection ReDoS
+   * RECHERCHE PAR EXPRESSION RÉGULIÈRE, sous garde réelle.
+   *
+   * Trois barrières, décrites en détail dans `regexGuard.ts` : refus statique
+   * des formes explosives, bornage du texte fouillé, budget de temps consulté
+   * ENTRE deux documents. Le motif refusé lève (l'écran l'affiche) ; le budget
+   * épuisé, lui, ne lève pas — il rend les résultats PARTIELS et le dit par
+   * `lastRegexTimedOut`, parce qu'une réponse incomplète annoncée vaut mieux
+   * qu'une fenêtre figée ou qu'un silence.
    */
   private regexSearch(
     pattern: string,
@@ -285,104 +306,60 @@ class SearchService {
     options: SearchOptions
   ): SearchResult[] {
     const results: SearchResult[] = [];
+    this.lastRegexTimedOut = false;
+    this.lastRegexRejection = null;
 
-    try {
-      // SÉCURITÉ: Validation du regex pour éviter les attaques ReDoS
-      if (!isSafeRegex(pattern)) {
-        throw new Error('Pattern regex potentiellement dangereux détecté (ReDoS). Veuillez simplifier votre expression régulière.');
+    const compiled = compilePattern(pattern, options.caseSensitive === true);
+    if (!compiled.ok) {
+      this.lastRegexRejection = compiled.reason;
+      throw errorService.createFromError(
+        new Error(REGEX_REJECTION_MESSAGES[compiled.reason]),
+        REGEX_REJECTION_MESSAGES[compiled.reason],
+        errorService.ErrorTypes.VALIDATION
+      );
+    }
+    const regex = compiled.regex;
+    const budget = new ScanBudget(this.regexBudgetMs);
+
+    for (const index of this.searchIndex.values()) {
+      // L'horloge est consultée ENTRE deux documents : c'est le seul point où
+      // le moteur d'expression régulière rend la main.
+      if (!budget.canContinue()) break;
+
+      if (!this.matchesFilters(index, filters)) continue;
+
+      let relevance = 0;
+      const matches: SearchResult['matches'] = [];
+
+      if (testBounded(regex, index.fileName)) {
+        relevance += 10;
+        matches.push({ field: 'fileName', value: index.fileName, start: 0, end: 0 });
       }
 
-      const regex = new RegExp(pattern, options.caseSensitive ? 'g' : 'gi');
+      if (options.includeContent && index.content && testBounded(regex, index.content)) {
+        relevance += 6;
+        matches.push({ field: 'content', value: index.content, start: 0, end: 0 });
+      }
 
-      // SÉCURITÉ: Timeout de sécurité pour éviter les regex qui prennent trop de temps
-      const REGEX_TIMEOUT_MS = 1000;
+      if (relevance > 0) {
+        results.push({
+          id: index.fileId,
+          type: index.metadata.type === 'folder' ? 'folder' : 'file',
+          item: this.createItemFromIndex(index),
+          relevance,
+          matches,
+        });
+      }
+    }
 
-      this.searchIndex.forEach((index) => {
-        // Apply filters
-        if (!this.matchesFilters(index, filters)) {
-          return;
-        }
-
-        let relevance = 0;
-        const matches: any[] = [];
-
-        // Test filename avec timeout
-        try {
-          const filenameMatch = this.testRegexWithTimeout(regex, index.fileName, REGEX_TIMEOUT_MS);
-          if (filenameMatch) {
-            relevance += 10;
-            matches.push({ field: 'fileName', value: index.fileName, start: 0, end: 0 });
-          }
-        } catch (timeoutError) {
-          console.warn('Regex timeout sur filename:', index.fileName);
-        }
-
-        // Test content avec timeout
-        if (options.includeContent && index.content) {
-          try {
-            const contentMatch = this.testRegexWithTimeout(regex, index.content, REGEX_TIMEOUT_MS);
-            if (contentMatch) {
-              relevance += 6;
-              matches.push({ field: 'content', value: index.content, start: 0, end: 0 });
-            }
-          } catch (timeoutError) {
-            console.warn('Regex timeout sur content');
-          }
-        }
-
-        if (relevance > 0) {
-          results.push({
-            id: index.fileId,
-            type: index.metadata.type === 'folder' ? 'folder' : 'file',
-            item: this.createItemFromIndex(index),
-            relevance,
-            matches,
-          });
-        }
-      });
-    } catch (error) {
-      console.error('Invalid regex pattern:', error);
-      throw errorService.createFromError(
-        error as Error,
-        'Pattern regex invalide ou dangereux',
-        errorService.ErrorTypes.VALIDATION
+    this.lastRegexTimedOut = budget.timedOut;
+    if (budget.timedOut) {
+      console.warn(
+        `[searchService] Budget d'expression régulière épuisé (${this.regexBudgetMs} ms) — résultats partiels`
       );
     }
 
     return results;
-  }
-
-  /**
-   * Test une regex avec un timeout pour éviter les ReDoS
-   * @param regex - Expression régulière à tester
-   * @param text - Texte sur lequel tester
-   * @param timeoutMs - Timeout en millisecondes
-   * @returns true si le regex matche, false sinon
-   * @throws Error si le timeout est dépassé
-   */
-  private testRegexWithTimeout(regex: RegExp, text: string, timeoutMs: number): boolean {
-    let timeoutHandle: NodeJS.Timeout | number | undefined;
-    let didTimeout = false;
-
-    return new Promise<boolean>((resolve) => {
-      timeoutHandle = setTimeout(() => {
-        didTimeout = true;
-        resolve(false);
-      }, timeoutMs);
-
-      try {
-        const result = regex.test(text);
-        if (!didTimeout) {
-          clearTimeout(timeoutHandle as NodeJS.Timeout);
-          resolve(result);
-        }
-      } catch (error) {
-        if (!didTimeout) {
-          clearTimeout(timeoutHandle as NodeJS.Timeout);
-          resolve(false);
-        }
-      }
-    }) as any;
   }
 
   /**
@@ -401,9 +378,7 @@ class SearchService {
     const lowerQuery = query.toLowerCase();
 
     // Extract file types
-    const fileTypePatterns = [
-      /\b(pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|gif|txt)\b/gi,
-    ];
+    const fileTypePatterns = [/\b(pdf|doc|docx|xls|xlsx|ppt|pptx|jpg|jpeg|png|gif|txt)\b/gi];
     fileTypePatterns.forEach((pattern) => {
       const matches = lowerQuery.match(pattern);
       if (matches) {

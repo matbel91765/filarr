@@ -19,6 +19,10 @@ const PROFILE_FILES = new Set([
   'appConfig.json',
   'password_manager.enc',
   'calendarReminders.json',
+  // Son frere manquait a l'appel : une migration depuis l'ancienne arborescence
+  // laissait les rappels de NOTE a la racine de FilarData, orphelins de tout
+  // profil — donc perdus, en silence.
+  'noteReminders.json',
   'notificationSettings.json',
   'storage.quota',
 ]);

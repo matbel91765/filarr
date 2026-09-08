@@ -123,6 +123,7 @@ const PinOverlay: React.FC<PinOverlayProps> = ({
       ref={containerRef}
       tabIndex={0}
       onKeyDown={handleKeyDown}
+    // chrome:free — ecran centre, aucun controle dans la bande haute.
       className="fixed inset-0 z-50 flex items-center justify-center
         bg-[var(--color-background)] animate-slideUp outline-none"
       style={{

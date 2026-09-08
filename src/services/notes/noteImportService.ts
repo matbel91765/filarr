@@ -7,11 +7,28 @@
  * - .html (HTML → TipTap JSON via DOMParser)
  * - .txt (plain text → TipTap paragraphs)
  */
+import {
+  imageNode,
+  isHtmlBlockStart,
+  isListStart,
+  isMathFence,
+  isTableStart,
+  bookmarkNode,
+  matchStandaloneImage,
+  matchStandaloneLink,
+  parseHtmlBlock,
+  parseList,
+  parseMathBlock,
+  parseTable,
+} from './markdownBlocks';
+import type { MarkdownImportOptions } from './markdownBlocks';
 
 import type { Note } from '../../types/notes';
 import { createNote } from './noteService';
 
 // ==================== Types ====================
+
+export type { MarkdownImportOptions } from './markdownBlocks';
 
 export type ImportFormat = 'filarr' | 'markdown' | 'html' | 'txt';
 
@@ -111,9 +128,22 @@ function parseInlineMarkdown(text: string): TipTapNode[] {
   return nodes;
 }
 
-export function markdownToTipTap(md: string): { title: string; doc: TipTapNode } {
+/**
+ * Markdown -> document de note.
+ *
+ * `options.resolveAsset` est ce qui permet a un import d'archive (Notion,
+ * Obsidian) de rapatrier ses images : sans lui, une image relative n'a aucun
+ * fichier derriere elle et ne peut devenir qu'du texte.
+ */
+export function markdownToTipTap(
+  md: string,
+  options: MarkdownImportOptions = {}
+): { title: string; doc: TipTapNode } {
   const lines = md.split('\n');
   const doc: TipTapNode = { type: 'doc', content: [] };
+  // Numerote les pieces jointes de CETTE note : deux images d'une meme note ne
+  // doivent pas partager un identifiant.
+  let assetIndex = 0;
   let title = '';
   let i = 0;
 
@@ -196,6 +226,60 @@ export function markdownToTipTap(md: string): { title: string; doc: TipTapNode }
       continue;
     }
 
+    // Image seule sur sa ligne : la forme que produit un export d'archive.
+    const image = matchStandaloneImage(line);
+    if (image) {
+      const node = imageNode(image.alt, image.href, assetIndex++, options);
+      if (node) doc.content!.push(node as TipTapNode);
+      i++;
+      continue;
+    }
+
+    // Lien SEUL sur sa ligne : c'est la forme d'un bloc signet a l'export.
+    // `options.linkAsBookmark` le demande explicitement — hors import
+    // d'archive, un lien seul reste un lien.
+    if (options.linkAsBookmark) {
+      const link = matchStandaloneLink(line);
+      if (link) {
+        doc.content!.push(bookmarkNode(link.label, link.href) as TipTapNode);
+        i++;
+        continue;
+      }
+    }
+
+    // Tableau Markdown (en-tete + ligne de separation).
+    if (isTableStart(lines, i)) {
+      const table = parseTable(lines, i, parseInlineMarkdown as never);
+      doc.content!.push(table.node as TipTapNode);
+      i = table.next;
+      continue;
+    }
+
+    // Formule sur plusieurs lignes.
+    if (isMathFence(line)) {
+      const math = parseMathBlock(lines, i);
+      doc.content!.push(math.node as TipTapNode);
+      i = math.next;
+      continue;
+    }
+
+    // Les deux seules balises HTML qu'un export Notion laisse passer.
+    const htmlTag = isHtmlBlockStart(line);
+    if (htmlTag) {
+      const block = parseHtmlBlock(lines, i, htmlTag, parseInlineMarkdown as never);
+      doc.content!.push(block.node as TipTapNode);
+      i = block.next;
+      continue;
+    }
+
+    // Listes (puces, numerotees, cases a cocher) AVEC leur imbrication.
+    if (isListStart(line)) {
+      const list = parseList(lines, i, parseInlineMarkdown as never);
+      doc.content!.push(list.node as TipTapNode);
+      i = list.next;
+      continue;
+    }
+
     // Task list
     const taskMatch = line.match(/^(\s*)- \[([ x])\] (.+)$/);
     if (taskMatch) {
@@ -269,6 +353,11 @@ export function htmlToTipTap(html: string): { title: string; doc: TipTapNode } {
 
   const body = parsed.body;
   const doc: TipTapNode = { type: 'doc', content: [] };
+
+  // Compteur d'images embarquées : `fileId` doit rester unique DANS le
+  // document. `Date.now()` seul ne suffit pas — plusieurs images d'un même
+  // import tombent sur la même milliseconde.
+  let importedImageCount = 0;
 
   function domToTipTap(el: Element): TipTapNode | null {
     const tag = el.tagName.toLowerCase();
@@ -346,9 +435,43 @@ export function htmlToTipTap(html: string): { title: string; doc: TipTapNode } {
     }
 
     if (tag === 'img') {
+      /**
+       * PAS de nœud `image` : ce type N'EXISTE PAS dans le schéma de l'éditeur
+       * (les images y sont des `fileEmbed`). ProseMirror ne l'ignore pas, il
+       * le SUPPRIME au parse — l'image restait visible dans le JSON persisté
+       * et à l'export, puis disparaissait définitivement dès que la note était
+       * ouverte et qu'un seul caractère y était tapé (le write-back sérialise
+       * le document parsé). Perte silencieuse, sans le moindre signal.
+       *
+       * Même prudence que le `parseHTML` de fileEmbedExtension sur `src` :
+       * seules les data-URI d'IMAGE sont embarquées. Une URL distante serait
+       * de toute façon bloquée par la CSP du renderer, et son chargement
+       * ferait fuiter l'ouverture de la note vers cet hôte — on la conserve
+       * donc comme LIEN, ce qui ne perd rien et n'appelle personne.
+       */
+      const src = el.getAttribute('src') || '';
+      const alt = el.getAttribute('alt') || '';
+      const width = Number.parseInt(el.getAttribute('width') || '', 10);
+
+      if (/^data:image\//i.test(src)) {
+        return {
+          type: 'fileEmbed',
+          attrs: {
+            fileId: `imported-${Date.now()}-${importedImageCount++}`,
+            fileName: alt || 'image',
+            fileType: src.slice(5).split(/[;,]/)[0] || 'image/png',
+            src,
+            width: Number.isFinite(width) && width > 0 ? width : null,
+          },
+        };
+      }
+
+      if (!src) return alt ? { type: 'paragraph', content: [{ type: 'text', text: alt }] } : null;
       return {
-        type: 'image',
-        attrs: { src: el.getAttribute('src') || '', alt: el.getAttribute('alt') || '' },
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: alt || src, marks: [{ type: 'link', attrs: { href: src } }] },
+        ],
       };
     }
 

@@ -1,0 +1,232 @@
+/**
+ * Largeur d'un bloc — rendu et poignée.
+ *
+ * PORTÉE VOLONTAIREMENT NUE : `.ProseMirror`, et rien d'autre. Les règles de
+ * NoteEditor.css sont préfixées `.note-editor__body`, qui n'existe pas dans la
+ * fenêtre d'un coffre partagé — une largeur écrite dans le document s'y
+ * afficherait alors comme si elle n'existait pas, alors qu'elle est bien là.
+ * Le fichier est importé par l'extension elle-même : toute surface qui monte le
+ * schéma monte aussi son rendu, sans qu'on ait à y penser.
+ *
+ * SÉLECTEURS DOUBLÉS (`[data-block-w][data-block-w]`), et ce n'est pas une
+ * coquetterie. NoteEditor.css pose des largeurs sur les blocs avec une
+ * spécificité de (0,2,1) — un simple `.ProseMirror [data-block-w]` vaut (0,2,0)
+ * et PERD. Le symptôme : un bloc qui refuse de bouger alors que le document, lui,
+ * a bien enregistré sa largeur. Doubler l'attribut porte le sélecteur à (0,3,0)
+ * et tranche.
+ */
+
+/*
+ * Chemin HTML : un document EXPORTé, ou relu par une surface sans vue React,
+ * porte sa largeur en `data-block-w` + `--block-w`. Aucune règle par palier
+ * n'est possible ici — la largeur est LIBRE (473 px est une valeur légitime).
+ */
+.ProseMirror [data-block-w][data-block-w] {
+  width: calc(var(--block-w, 0) * 1px);
+}
+
+/*
+ * LE PLAFOND, pour les deux chemins de rendu : la vue React (qui pose sa
+ * largeur en style EN LIGNE, donc hors de portée du sélecteur ci-dessus) et le
+ * HTML exporté. C'est la ceinture : la largeur enregistrée voyage avec le
+ * document, donc la même note relue dans un panneau étroit, dans la fenêtre
+ * d'un coffre partagé ou sur un petit écran ne doit jamais déborder. Le
+ * document garde sa valeur, l'affichage s'adapte.
+ */
+.ProseMirror .note-block-resizable,
+.ProseMirror [data-block-w][data-block-w] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/*
+ * Le bloc grandit vers la DROITE, bord gauche fixe — comme l'image. Aucune
+ * marge automatique : un bloc rétréci reste aligné sur le texte qui l'entoure,
+ * et le bord que la souris tient est le seul qui bouge.
+ */
+
+/* ---- Hauteur bornée ---- */
+
+/*
+ * LE BLOC NE DÉFILE PAS : C'EST SON DERNIER ENFANT.
+ *
+ * Faire défiler le bloc lui-même emporterait son en-tête et sa barre des vues —
+ * on perdrait le nom des colonnes dès la deuxième ligne d'un kanban, et le
+ * sélecteur de vue dès la troisième. Le bloc devient donc une colonne flex qui
+ * ne défile pas, et sa dernière partie — la vue active, quelle qu'elle soit —
+ * prend la place restante et défile chez elle.
+ *
+ * DEUXIÈME RAISON, moins visible mais aussi décisive : la poignée est un enfant
+ * ABSOLU du bloc. Si le bloc défilait, elle défilerait avec son contenu et
+ * disparaîtrait par le bas dès le premier tour de molette. Ici elle est ancrée
+ * à un conteneur qui ne bouge jamais. C'est aussi pourquoi la poignée est rendue
+ * en PREMIER par `useBlockResize` : `:last-child` doit désigner le contenu.
+ *
+ * `overscroll-behavior` empêche le chaînage : arrivé en bas d'un kanban borné,
+ * la molette ne doit pas se mettre à faire défiler la note. C'est le défaut qui
+ * rend un bloc défilant insupportable.
+ */
+.note-block-resizable--bounded {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note-block-resizable--bounded > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Les parties fixes gardent leur taille : sans cela, flex les comprimerait pour
+   faire de la place au contenu qui défile. */
+.note-block-resizable--bounded > :not(:last-child) {
+  flex: 0 0 auto;
+}
+
+/*
+ * Chemin HTML : même règle pour un document EXPORTÉ, qui porte sa hauteur en
+ * `data-block-h` sans qu'aucune vue React ne soit montée.
+ */
+.ProseMirror [data-block-h][data-block-h] {
+  height: calc(var(--block-h, 0) * 1px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---- Poignée ---- */
+
+/*
+ * Elle vit DANS la vue du bloc (et non hors du document, comme une décoration
+ * flottante) : c'est ce qui garantit qu'elle est au coin du bloc qu'elle règle,
+ * sans une seule mesure de position à tenir à jour au défilement.
+ *
+ * Le bloc redimensionnable prend `position: relative` par sa propre feuille de
+ * style s'il ne l'a pas déjà ; ici on ne pose que la poignée.
+ */
+/*
+ * Le bloc devient le repère de la poignée. `position: relative` sans décalage
+ * ne change RIEN au rendu d'un bloc qui n'en avait pas, et donne à celui-ci un
+ * coin bas-droit stable qui suit son contenu sans une seule mesure.
+ */
+.note-block-resizable {
+  position: relative;
+}
+
+.note-block-grip {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: nwse-resize;
+  color: var(--color-text-secondary);
+  /* Un fond opaque : sans lui la poignée se perd dans le contenu du bloc (un
+     tableau dense, un schéma clair) juste au moment où on la cherche. */
+  background: var(--color-surface);
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+/*
+ * Zone d'accroche PLUS LARGE que le dessin. Viser 20 px au coin d'un bloc est
+ * un exercice d'adresse ; le halo transparent porte la cible à 36 px sans rien
+ * ajouter à l'écran. C'est le même principe que les poignées de colonne.
+ */
+.note-block-grip::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+/*
+ * Invisible au repos, révélée au survol du bloc ou quand il est sélectionné :
+ * un bloc de note en porte déjà assez (poignée de glisser, menus de vue) pour
+ * qu'une prise permanente de plus se lise comme du bruit.
+ */
+.note-block-resizable:hover > .note-block-grip,
+.note-block-resizable:focus-within > .note-block-grip {
+  opacity: 1;
+}
+
+.note-block-grip:hover,
+.note-block-grip:focus-visible {
+  opacity: 1;
+  background: var(--color-primary-50, rgba(135, 206, 235, 0.2));
+  color: var(--color-primary-600, #4682b4);
+  outline: none;
+}
+
+.note-block-grip:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-primary-500);
+}
+
+/* Pendant le glissement : la poignée reste montrée même si la souris a quitté
+   le bloc, sinon la prise disparaît sous la main au premier pixel. */
+.note-block-resizable--resizing > .note-block-grip {
+  opacity: 1;
+  color: var(--color-primary-600, #4682b4);
+}
+
+/* Le contenu ne se sélectionne pas pendant qu'on tire : sans ça, un glissement
+   un peu large surligne la moitié de la note au passage. */
+.note-block-resizable--resizing {
+  user-select: none;
+}
+
+/* Contour pendant le glissement : sans lui on règle une largeur sans voir où
+   elle s'arrête, surtout sur un bloc au fond transparent. */
+.ProseMirror .note-block-resizable--resizing {
+  outline: 1px solid var(--color-primary-500);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Étiquette des pixels, suspendue au-dessus de la poignée pendant le geste. */
+.note-block-grip__badge {
+  position: absolute;
+  right: 0;
+  bottom: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-inverse, #fff);
+  background: var(--color-primary-500);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/*
+ * DEUX EXCEPTIONS DE PLACEMENT, et la même raison dans les deux cas : quelque
+ * chose occupe déjà le bord bas du bloc.
+ *
+ * La base inline fait défiler sa vue horizontalement (un kanban de cinq
+ * colonnes, une table large) : sa barre de défilement se pose pile au coin
+ * bas-droit. On remonte la poignée au-dessus, sinon on attrape l'une en visant
+ * l'autre — et la barre reste la prise la plus utilisée des deux.
+ */
+.inline-db > .note-block-grip {
+  bottom: 14px;
+}
+
+/*
+ * Le calendrier a déjà SA poignée au bord bas : une barre pleine largeur qui
+ * règle la hauteur des cases. On remonte celle de la largeur juste au-dessus,
+ * sinon les deux prises se superposent au coin et on tire l'une en visant
+ * l'autre.
+ */
+.ncal > .note-block-grip {
+  bottom: 14px;
+}

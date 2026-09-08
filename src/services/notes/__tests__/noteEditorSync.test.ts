@@ -6,11 +6,12 @@
  */
 
 import { syncEditorContent } from '../noteEditorSync';
+import { describe, it, expect, vi } from 'vitest';
 
 function makeMockEditor() {
   return {
     commands: {
-      setContent: jest.fn(),
+      setContent: vi.fn(),
     },
   };
 }

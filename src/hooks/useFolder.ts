@@ -200,7 +200,13 @@ export default function useFolder(folderId: string | null = null): UseFolderRetu
         dispatch(showSuccessNotification('Fichier uploadé avec succès'));
         return result;
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        // unwrap() d'un thunk rejeté via rejectWithValue lance le payload brut
+        // (objet { name, message, ... }, PAS une instance d'Error) — lire
+        // .message dans les deux cas pour faire remonter le détail français
+        // du main process (ex. refus > 5 Go de l'import V3) jusqu'au toast.
+        const rawMessage = (error as { message?: unknown } | null)?.message;
+        const message =
+          typeof rawMessage === 'string' && rawMessage ? rawMessage : 'Erreur inconnue';
         dispatch(showErrorNotification(`Erreur lors de l'upload: ${message}`));
         return null;
       }

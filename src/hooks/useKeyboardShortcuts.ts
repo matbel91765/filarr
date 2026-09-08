@@ -13,16 +13,38 @@ import { useNavigate } from 'react-router-dom';
 import shortcutsService, {
   KeyboardShortcut,
   ShortcutCategory,
-  ShortcutEvent
+  ShortcutEvent,
 } from '../services/platform/shortcutsService';
+import { isWebPlatform } from '../services/platform/isWebPlatform';
 import type { RootState, AppDispatch } from '../store';
 import { deleteFile } from '../store/slices/filesSlice';
 import { setCurrentFolder, deleteFolder } from '../store/slices/foldersSlice';
-import { toggleSidebar, setViewMode, openModal, addNotification } from '../store/slices/uiSlice';
+import {
+  toggleSidebar,
+  setViewMode,
+  setBarsMode,
+  setNotesFocusMode,
+  BARS_MODES,
+  openModal,
+  addNotification,
+} from '../store/slices/uiSlice';
+import type { BarsMode } from '../store/slices/uiSlice';
 import { createNewNote, getOrCreateDailyNote } from '../store/slices/notesSlice';
 import { selectFavoriteByShortcut } from '../store/slices/favoritesSlice';
-import { addTab, closeActiveTab, activateNextTab, activatePreviousTab, focusPanel, splitPanel, unsplit } from '../store/slices/tabsSlice';
-import { selectFocusedPanel, selectIsSplit, selectFocusedActiveTab } from '../store/selectors/tabSelectors';
+import {
+  addTab,
+  closeActiveTab,
+  activateNextTab,
+  activatePreviousTab,
+  focusPanel,
+  splitPanel,
+  unsplit,
+} from '../store/slices/tabsSlice';
+import {
+  selectFocusedPanel,
+  selectIsSplit,
+  selectFocusedActiveTab,
+} from '../store/selectors/tabSelectors';
 
 // Types pour le hook
 export interface UseKeyboardShortcutsOptions {
@@ -73,12 +95,7 @@ export interface UseKeyboardShortcutsReturn {
 export function useKeyboardShortcuts(
   options: UseKeyboardShortcutsOptions = {}
 ): UseKeyboardShortcutsReturn {
-  const {
-    enabled = true,
-    ignoreInputs = true,
-    actions = {},
-    onShortcut
-  } = options;
+  const { enabled = true, ignoreInputs = true, actions = {}, onShortcut } = options;
 
   const [shortcuts, setShortcuts] = useState<KeyboardShortcut[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -129,9 +146,12 @@ export function useKeyboardShortcuts(
         // Ignorer les touches modificatrices seules
         const key = event.key;
         if (!['Control', 'Alt', 'Shift', 'Meta'].includes(key)) {
-          // Normaliser la touche
+          // Normaliser la touche (avec Alt, event.key est composé par la
+          // disposition : on enregistre depuis le code physique)
           let normalizedKey = key;
-          if (key.length === 1) {
+          if (event.altKey && /^(Key|Digit)/.test(event.code)) {
+            normalizedKey = event.code.replace(/^(Key|Digit)/, '');
+          } else if (key.length === 1) {
             normalizedKey = key.toUpperCase();
           } else if (key.startsWith('Arrow')) {
             normalizedKey = key.replace('Arrow', '');
@@ -150,8 +170,12 @@ export function useKeyboardShortcuts(
 
       // Allow Ctrl+Shift shortcuts through even when an input/contenteditable is focused
       // (e.g. TipTap editor). These multi-modifier combos are clearly intentional shortcuts.
+      // Sur le web, le keymap par défaut vit sur Alt : tout aussi intentionnel
+      // (!ctrlKey exclut AltGr, qui se présente Ctrl+Alt et sert à taper).
       const hasCtrlShift = (event.ctrlKey || event.metaKey) && event.shiftKey;
-      if (ignoreInputs && isInputFocused() && !hasCtrlShift) return;
+      const hasIntentionalAlt =
+        isWebPlatform() && event.altKey && !event.ctrlKey && event.key !== 'Alt';
+      if (ignoreInputs && isInputFocused() && !hasCtrlShift && !hasIntentionalAlt) return;
 
       // Vérifier si le raccourci correspond
       const shortcut = shortcutsService.matchShortcut(event);
@@ -165,7 +189,7 @@ export function useKeyboardShortcuts(
       const shortcutEvent: ShortcutEvent = {
         shortcutId: shortcut.id,
         action: shortcut.action,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
 
       // Exécuter l'action personnalisée si elle existe
@@ -224,7 +248,7 @@ export function useKeyboardShortcuts(
   // Fonctions utilitaires
   const getShortcutsByCategory = useCallback(
     (category: ShortcutCategory): KeyboardShortcut[] => {
-      return shortcuts.filter(s => s.category === category);
+      return shortcuts.filter((s) => s.category === category);
     },
     [shortcuts]
   );
@@ -262,12 +286,9 @@ export function useKeyboardShortcuts(
     return shortcutsService.formatKeys(keys);
   }, []);
 
-  const hasConflict = useCallback(
-    (id: string, keys: string[]): KeyboardShortcut | undefined => {
-      return shortcutsService.hasConflict(id, keys);
-    },
-    []
-  );
+  const hasConflict = useCallback((id: string, keys: string[]): KeyboardShortcut | undefined => {
+    return shortcutsService.hasConflict(id, keys);
+  }, []);
 
   const startRecording = useCallback((shortcutId: string): void => {
     setIsRecording(true);
@@ -295,7 +316,7 @@ export function useKeyboardShortcuts(
     startRecording,
     stopRecording,
     recordedKeys,
-    recordingShortcutId
+    recordingShortcutId,
   };
 }
 
@@ -357,10 +378,12 @@ export function useGlobalShortcuts(): void {
   const navigate = useNavigate();
 
   // Get state from Redux
+  const notesFocusMode = useSelector((state: RootState) => state.ui.notesFocusMode);
   const selectedFileIds = useSelector((state: RootState) => state.files.selectedIds);
   const currentFolderId = useSelector((state: RootState) => state.folders.currentFolderId);
   const folders = useSelector((state: RootState) => state.folders.byId);
   const favorites = useSelector((state: RootState) => state.favorites.favorites);
+  const barsMode = useSelector((state: RootState) => state.ui.barsMode);
 
   // Clipboard state for copy/cut/paste
   const clipboardRef = useRef<{
@@ -370,164 +393,308 @@ export function useGlobalShortcuts(): void {
   }>({ items: [], action: null, sourceFolderId: null });
 
   // Command Palette (Ctrl+P / Ctrl+K)
-  useShortcutAction('palette:open', () => {
-    dispatch(openModal({ type: 'commandPalette', props: {} }));
-  }, [dispatch]);
+  useShortcutAction(
+    'palette:open',
+    () => {
+      dispatch(openModal({ type: 'commandPalette', props: {} }));
+    },
+    [dispatch]
+  );
 
-  useShortcutAction('search:quick', () => {
-    dispatch(openModal({ type: 'commandPalette', props: {} }));
-  }, [dispatch]);
+  useShortcutAction(
+    'search:quick',
+    () => {
+      dispatch(openModal({ type: 'commandPalette', props: {} }));
+    },
+    [dispatch]
+  );
 
   // File operations
-  useShortcutAction('file:new', () => {
-    dispatch(openModal({ type: 'newFile', props: { folderId: currentFolderId } }));
-  }, [dispatch, currentFolderId]);
+  useShortcutAction(
+    'file:new',
+    () => {
+      dispatch(openModal({ type: 'newFile', props: { folderId: currentFolderId } }));
+    },
+    [dispatch, currentFolderId]
+  );
 
-  useShortcutAction('folder:new', () => {
-    dispatch(openModal({ type: 'newFolder', props: { parentId: currentFolderId } }));
-  }, [dispatch, currentFolderId]);
+  useShortcutAction(
+    'folder:new',
+    () => {
+      dispatch(openModal({ type: 'newFolder', props: { parentId: currentFolderId } }));
+    },
+    [dispatch, currentFolderId]
+  );
 
-  useShortcutAction('item:delete', () => {
-    if (selectedFileIds.length > 0) {
-      dispatch(openModal({
-        type: 'deleteConfirmation',
-        props: { itemIds: selectedFileIds, folderId: currentFolderId }
-      }));
-    }
-  }, [dispatch, selectedFileIds, currentFolderId]);
+  useShortcutAction(
+    'item:delete',
+    () => {
+      if (selectedFileIds.length > 0) {
+        dispatch(
+          openModal({
+            type: 'deleteConfirmation',
+            props: { itemIds: selectedFileIds, folderId: currentFolderId },
+          })
+        );
+      }
+    },
+    [dispatch, selectedFileIds, currentFolderId]
+  );
 
-  useShortcutAction('item:rename', () => {
-    if (selectedFileIds.length === 1) {
-      dispatch(openModal({
-        type: 'rename',
-        props: { itemId: selectedFileIds[0], folderId: currentFolderId }
-      }));
-    }
-  }, [dispatch, selectedFileIds, currentFolderId]);
+  useShortcutAction(
+    'item:rename',
+    () => {
+      if (selectedFileIds.length === 1) {
+        dispatch(
+          openModal({
+            type: 'rename',
+            props: { itemId: selectedFileIds[0], folderId: currentFolderId },
+          })
+        );
+      }
+    },
+    [dispatch, selectedFileIds, currentFolderId]
+  );
 
   // Edit operations
-  useShortcutAction('edit:copy', () => {
-    if (selectedFileIds.length > 0) {
-      clipboardRef.current = {
-        items: [...selectedFileIds],
-        action: 'copy',
-        sourceFolderId: currentFolderId
-      };
-      dispatch(addNotification({
-        type: 'info',
-        message: `${selectedFileIds.length} élément(s) copié(s)`,
-        duration: 2000
-      }));
-    }
-  }, [dispatch, selectedFileIds, currentFolderId]);
-
-  useShortcutAction('edit:cut', () => {
-    if (selectedFileIds.length > 0) {
-      clipboardRef.current = {
-        items: [...selectedFileIds],
-        action: 'cut',
-        sourceFolderId: currentFolderId
-      };
-      dispatch(addNotification({
-        type: 'info',
-        message: `${selectedFileIds.length} élément(s) coupé(s)`,
-        duration: 2000
-      }));
-    }
-  }, [dispatch, selectedFileIds, currentFolderId]);
-
-  useShortcutAction('edit:paste', () => {
-    const clipboard = clipboardRef.current;
-    if (clipboard.items.length > 0 && clipboard.action) {
-      dispatch(openModal({
-        type: 'moveCopy',
-        props: {
-          itemIds: clipboard.items,
-          action: clipboard.action,
-          sourceFolderId: clipboard.sourceFolderId,
-          targetFolderId: currentFolderId
-        }
-      }));
-      // Clear clipboard after cut operation
-      if (clipboard.action === 'cut') {
-        clipboardRef.current = { items: [], action: null, sourceFolderId: null };
+  useShortcutAction(
+    'edit:copy',
+    () => {
+      if (selectedFileIds.length > 0) {
+        clipboardRef.current = {
+          items: [...selectedFileIds],
+          action: 'copy',
+          sourceFolderId: currentFolderId,
+        };
+        dispatch(
+          addNotification({
+            type: 'info',
+            message: `${selectedFileIds.length} élément(s) copié(s)`,
+            duration: 2000,
+          })
+        );
       }
-    }
-  }, [dispatch, currentFolderId]);
+    },
+    [dispatch, selectedFileIds, currentFolderId]
+  );
 
-  useShortcutAction('edit:select-all', () => {
-    // This needs to be handled by the component that displays items
-    // We dispatch a custom event that components can listen to
-    window.dispatchEvent(new CustomEvent('filarr:select-all'));
-  }, []);
+  useShortcutAction(
+    'edit:cut',
+    () => {
+      if (selectedFileIds.length > 0) {
+        clipboardRef.current = {
+          items: [...selectedFileIds],
+          action: 'cut',
+          sourceFolderId: currentFolderId,
+        };
+        dispatch(
+          addNotification({
+            type: 'info',
+            message: `${selectedFileIds.length} élément(s) coupé(s)`,
+            duration: 2000,
+          })
+        );
+      }
+    },
+    [dispatch, selectedFileIds, currentFolderId]
+  );
+
+  useShortcutAction(
+    'edit:paste',
+    () => {
+      const clipboard = clipboardRef.current;
+      if (clipboard.items.length > 0 && clipboard.action) {
+        dispatch(
+          openModal({
+            type: 'moveCopy',
+            props: {
+              itemIds: clipboard.items,
+              action: clipboard.action,
+              sourceFolderId: clipboard.sourceFolderId,
+              targetFolderId: currentFolderId,
+            },
+          })
+        );
+        // Clear clipboard after cut operation
+        if (clipboard.action === 'cut') {
+          clipboardRef.current = { items: [], action: null, sourceFolderId: null };
+        }
+      }
+    },
+    [dispatch, currentFolderId]
+  );
+
+  useShortcutAction(
+    'edit:select-all',
+    () => {
+      // This needs to be handled by the component that displays items
+      // We dispatch a custom event that components can listen to
+      window.dispatchEvent(new CustomEvent('filarr:select-all'));
+    },
+    []
+  );
 
   // Navigation
-  useShortcutAction('navigation:home', () => {
-    dispatch(setCurrentFolder(null));
-    navigate('/');
-  }, [dispatch, navigate]);
+  useShortcutAction(
+    'navigation:home',
+    () => {
+      dispatch(setCurrentFolder(null));
+      navigate('/');
+    },
+    [dispatch, navigate]
+  );
 
-  useShortcutAction('navigation:back', () => {
-    navigate(-1);
-  }, [navigate]);
+  useShortcutAction(
+    'navigation:back',
+    () => {
+      navigate(-1);
+    },
+    [navigate]
+  );
 
-  useShortcutAction('navigation:forward', () => {
-    navigate(1);
-  }, [navigate]);
+  useShortcutAction(
+    'navigation:forward',
+    () => {
+      navigate(1);
+    },
+    [navigate]
+  );
 
-  useShortcutAction('navigation:parent', () => {
-    if (currentFolderId) {
-      const currentFolder = folders[currentFolderId];
-      if (currentFolder?.parentId) {
-        dispatch(setCurrentFolder(currentFolder.parentId));
-        navigate(`/folder/${currentFolder.parentId}`);
-      } else {
-        dispatch(setCurrentFolder(null));
-        navigate('/');
+  useShortcutAction(
+    'navigation:parent',
+    () => {
+      if (currentFolderId) {
+        const currentFolder = folders[currentFolderId];
+        if (currentFolder?.parentId) {
+          dispatch(setCurrentFolder(currentFolder.parentId));
+          navigate(`/folder/${currentFolder.parentId}`);
+        } else {
+          dispatch(setCurrentFolder(null));
+          navigate('/');
+        }
       }
-    }
-  }, [dispatch, navigate, currentFolderId, folders]);
+    },
+    [dispatch, navigate, currentFolderId, folders]
+  );
 
   // View operations
-  useShortcutAction('view:toggle-sidebar', () => {
-    dispatch(toggleSidebar());
-  }, [dispatch]);
+  useShortcutAction(
+    'view:toggle-sidebar',
+    () => {
+      dispatch(toggleSidebar());
+    },
+    [dispatch]
+  );
 
-  useShortcutAction('view:toggle-mode', () => {
-    // Toggle between grid and list
-    dispatch(setViewMode('grid')); // Will be toggled based on current mode
-    window.dispatchEvent(new CustomEvent('filarr:toggle-view-mode'));
-  }, [dispatch]);
+  // Mode sans distraction. Le combo porte Ctrl+Maj, donc il passe le filtre de
+  // saisie (`hasCtrlShift`) : il fonctionne en pleine frappe, ce qui est le
+  // moment où on en a envie.
+  useShortcutAction(
+    'view:toggle-focus',
+    () => {
+      dispatch(setNotesFocusMode(!notesFocusMode));
+    },
+    [dispatch, notesFocusMode]
+  );
+
+  // Cycle l'affichage des barres, du plus garni au plus nu : toutes →
+  // flottante → rail → haut au survol → onglets seuls → recherche seule →
+  // aucune (l'ordre exact est celui de BARS_MODES).
+  // La notification nomme le mode atteint : c'est le seul repère une fois
+  // que toutes les barres ont disparu.
+  useShortcutAction(
+    'view:toggle-header',
+    () => {
+      const current = BARS_MODES.indexOf(barsMode);
+      const next = BARS_MODES[(current + 1) % BARS_MODES.length];
+      const labels: Record<BarsMode, string> = {
+        all: t('settings.barsMode.all', 'Toutes les barres'),
+        floating: t('settings.barsMode.floating', 'Barre flottante'),
+        side: t('settings.barsMode.side', 'Rail latéral'),
+        autohide: t('settings.barsMode.autohide', 'Barre du haut au survol'),
+        'tabs-only': t('settings.barsMode.tabsOnly', 'Onglets seuls'),
+        'search-only': t('settings.barsMode.searchOnly', 'Recherche seule'),
+        none: t('settings.barsMode.none', 'Aucune barre'),
+      };
+      dispatch(setBarsMode(next));
+      dispatch(
+        addNotification({
+          type: 'info',
+          message: t('settings.barsMode.changed', { mode: labels[next] }),
+          duration: 2000,
+        })
+      );
+    },
+    [dispatch, barsMode, t]
+  );
+
+  useShortcutAction(
+    'view:toggle-mode',
+    () => {
+      // Toggle between grid and list
+      dispatch(setViewMode('grid')); // Will be toggled based on current mode
+      window.dispatchEvent(new CustomEvent('filarr:toggle-view-mode'));
+    },
+    [dispatch]
+  );
 
   // System operations
-  useShortcutAction('system:settings', () => {
-    navigate('/settings');
-  }, [navigate]);
+  useShortcutAction(
+    'system:settings',
+    () => {
+      navigate('/settings');
+    },
+    [navigate]
+  );
 
-  useShortcutAction('system:help', () => {
-    dispatch(openModal({ type: 'help', props: {} }));
-  }, [dispatch]);
+  useShortcutAction(
+    'system:help',
+    () => {
+      dispatch(openModal({ type: 'help', props: {} }));
+    },
+    [dispatch]
+  );
 
-  useShortcutAction('system:refresh', () => {
-    window.location.reload();
-  }, []);
+  useShortcutAction(
+    'system:refresh',
+    () => {
+      window.location.reload();
+    },
+    []
+  );
 
   // Tab shortcuts
-  useShortcutAction('tab:new', () => {
-    dispatch(addTab({ route: '/', title: t('tabs.home') }));
-  }, [dispatch]);
+  useShortcutAction(
+    'tab:new',
+    () => {
+      dispatch(addTab({ route: '/', title: t('tabs.home') }));
+    },
+    [dispatch]
+  );
 
-  useShortcutAction('tab:close', () => {
-    dispatch(closeActiveTab());
-  }, [dispatch]);
+  useShortcutAction(
+    'tab:close',
+    () => {
+      dispatch(closeActiveTab());
+    },
+    [dispatch]
+  );
 
-  useShortcutAction('tab:next', () => {
-    dispatch(activateNextTab());
-  }, [dispatch]);
+  useShortcutAction(
+    'tab:next',
+    () => {
+      dispatch(activateNextTab());
+    },
+    [dispatch]
+  );
 
-  useShortcutAction('tab:prev', () => {
-    dispatch(activatePreviousTab());
-  }, [dispatch]);
+  useShortcutAction(
+    'tab:prev',
+    () => {
+      dispatch(activatePreviousTab());
+    },
+    [dispatch]
+  );
 
   // Panel shortcuts
   const panels = useSelector((state: RootState) => state.tabs.panels);
@@ -535,59 +702,85 @@ export function useGlobalShortcuts(): void {
   const isSplit = useSelector(selectIsSplit);
   const focusedActiveTab = useSelector(selectFocusedActiveTab);
 
-  useShortcutAction('panel:focus-other', () => {
-    if (isSplit && panels.length > 1) {
-      const otherPanel = panels.find(p => p.id !== focusedPanelId);
-      if (otherPanel) {
-        dispatch(focusPanel(otherPanel.id));
+  useShortcutAction(
+    'panel:focus-other',
+    () => {
+      if (isSplit && panels.length > 1) {
+        const otherPanel = panels.find((p) => p.id !== focusedPanelId);
+        if (otherPanel) {
+          dispatch(focusPanel(otherPanel.id));
+        }
       }
-    }
-  }, [dispatch, isSplit, panels, focusedPanelId]);
+    },
+    [dispatch, isSplit, panels, focusedPanelId]
+  );
 
-  useShortcutAction('panel:close', () => {
-    if (isSplit) {
-      dispatch(unsplit());
-    }
-  }, [dispatch, isSplit]);
+  useShortcutAction(
+    'panel:close',
+    () => {
+      if (isSplit) {
+        dispatch(unsplit());
+      }
+    },
+    [dispatch, isSplit]
+  );
 
-  useShortcutAction('panel:split-right', () => {
-    if (!isSplit && focusedActiveTab && focusedActiveTab.closable) {
-      dispatch(splitPanel({
-        tabId: focusedActiveTab.id,
-        sourcePanelId: focusedPanelId,
-        side: 'right',
-      }));
-    }
-  }, [dispatch, isSplit, focusedActiveTab, focusedPanelId]);
+  useShortcutAction(
+    'panel:split-right',
+    () => {
+      if (!isSplit && focusedActiveTab && focusedActiveTab.closable) {
+        dispatch(
+          splitPanel({
+            tabId: focusedActiveTab.id,
+            sourcePanelId: focusedPanelId,
+            side: 'right',
+          })
+        );
+      }
+    },
+    [dispatch, isSplit, focusedActiveTab, focusedPanelId]
+  );
 
   // Favorites shortcuts (Ctrl+1-9) - using single handler for all
-  const handleFavoriteShortcut = useCallback((shortcutKey: number) => {
-    const favorite = favorites.find(f => f.shortcutKey === shortcutKey);
-    if (favorite) {
-      if (favorite.itemType === 'folder') {
-        dispatch(setCurrentFolder(favorite.itemId));
-        navigate(`/folder/${favorite.itemId}`);
-      } else {
-        dispatch(openModal({
-          type: 'filePreview',
-          props: { fileId: favorite.itemId, fileName: favorite.name }
-        }));
+  const handleFavoriteShortcut = useCallback(
+    (shortcutKey: number) => {
+      const favorite = favorites.find((f) => f.shortcutKey === shortcutKey);
+      if (favorite) {
+        if (favorite.itemType === 'folder') {
+          dispatch(setCurrentFolder(favorite.itemId));
+          navigate(`/folder/${favorite.itemId}`);
+        } else {
+          dispatch(
+            openModal({
+              type: 'filePreview',
+              props: { fileId: favorite.itemId, fileName: favorite.name },
+            })
+          );
+        }
       }
-    }
-  }, [dispatch, navigate, favorites]);
+    },
+    [dispatch, navigate, favorites]
+  );
 
   // Notes shortcuts
-  useShortcutAction('note:new', () => {
-    dispatch(createNewNote({ title: '' }));
-    navigate('/notes');
-  }, [dispatch, navigate]);
+  useShortcutAction(
+    'note:new',
+    () => {
+      dispatch(createNewNote({ title: '' }));
+      navigate('/notes');
+    },
+    [dispatch, navigate]
+  );
 
-  useShortcutAction('note:daily', () => {
-    dispatch(getOrCreateDailyNote());
-    navigate('/notes');
-  }, [dispatch, navigate]);
+  useShortcutAction(
+    'note:daily',
+    () => {
+      dispatch(getOrCreateDailyNote());
+      navigate('/notes');
+    },
+    [dispatch, navigate]
+  );
 
-  // note:focus-mode is handled locally in NoteEditor.tsx (Ctrl+Shift+F)
   // note:graph is handled locally in NotesView.tsx (Ctrl+Shift+G)
 
   useShortcutAction('favorite:1', () => handleFavoriteShortcut(1), [handleFavoriteShortcut]);

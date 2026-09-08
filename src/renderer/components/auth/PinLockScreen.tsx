@@ -12,6 +12,7 @@ import ProfileAvatar from '../profiles/ProfileAvatar';
 import type { RootState, AppDispatch } from '../../../store';
 import { unlockApp } from '../../../store/slices/authSlice';
 import { tryRestoreFEKFromSafeStorage } from '../../../services/auth/hybridCrypto';
+import { selectIsPolicyDegraded } from '../../../store/slices/governanceSlice';
 
 const PIN_LENGTH = 6;
 const MAX_ATTEMPTS = 5;
@@ -20,6 +21,7 @@ const LOCKOUT_DURATION = 30000; // 30s
 export const PinLockScreen: React.FC = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
+  const policyDegraded = useSelector(selectIsPolicyDegraded);
   const localProfile = useSelector((state: RootState) => state.auth.localProfile);
   const manifest = useSelector((state: RootState) => state.profiles.manifest);
   const activeProfileMeta = manifest?.profiles.find((p) => p.id === manifest.activeProfileId);
@@ -111,6 +113,7 @@ export const PinLockScreen: React.FC = () => {
   const initial = localProfile?.name?.charAt(0)?.toUpperCase() || '?';
 
   return (
+    // chrome:free — ecran centre, aucun controle dans la bande haute.
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[var(--color-background)]">
       <div className="flex flex-col items-center max-w-sm w-full px-6">
         {/* Logo */}
@@ -136,6 +139,23 @@ export const PinLockScreen: React.FC = () => {
           {localProfile?.name || 'User'}
         </p>
         <p className="text-sm text-[var(--color-text-tertiary)] mb-8">{t('pin.subtitle')}</p>
+
+        {/* E9-10: degraded-mode disclosure (org policy went stale offline → vault locked). */}
+        {policyDegraded && (
+          <div
+            className="w-full mb-5 rounded-xl px-4 py-3 text-sm text-left"
+            style={{
+              backgroundColor: 'color-mix(in srgb, #f59e0b 14%, var(--color-surface))',
+              border: '1px solid color-mix(in srgb, #f59e0b 40%, transparent)',
+              color: 'var(--color-text-secondary)',
+            }}
+          >
+            {t('org.governance.degraded.lock', {
+              defaultValue:
+                'Your organization requires a policy re-sync. This device has been offline past the allowed grace window, so the vault was locked. Reconnect to restore full access — offline unlock remains best-effort.',
+            })}
+          </div>
+        )}
 
         {/* PIN inputs */}
         <div className="flex gap-3 mb-4">

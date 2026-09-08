@@ -4,28 +4,41 @@
 
 import electronMiddleware, { setupIpcListeners } from '../electronMiddleware';
 import { AnyAction } from '@reduxjs/toolkit';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+/**
+ * `window` N'EXISTE PAS DANS L'ENVIRONNEMENT `node` DE VITEST.
+ *
+ * Ces tests viennent de Jest, ou l'environnement JSDOM etait le defaut et ou
+ * `window === globalThis`. Ils ne testent aucun DOM — ils posent seulement
+ * `window.electron` pour doubler le pont IPC. Aliaser suffit donc, et evite
+ * d'ajouter jsdom (une dependance de plusieurs megaoctets) pour cinq lignes.
+ */
+if (typeof (globalThis as { window?: unknown }).window === 'undefined') {
+  (globalThis as { window?: unknown }).window = globalThis;
+}
 
 describe('electronMiddleware', () => {
   let mockStore: any;
-  let mockNext: jest.Mock;
+  let mockNext: vi.Mock;
   let mockElectron: any;
   let mockIpcRenderer: any;
 
   beforeEach(() => {
     // Setup mocks
-    mockNext = jest.fn((action) => action);
+    mockNext = vi.fn((action) => action);
     mockStore = {
-      getState: jest.fn(),
-      dispatch: jest.fn(),
+      getState: vi.fn(),
+      dispatch: vi.fn(),
     };
 
     mockIpcRenderer = {
-      invoke: jest.fn(),
-      on: jest.fn(),
-      send: jest.fn(),
-      once: jest.fn(),
-      removeListener: jest.fn(),
-      removeAllListeners: jest.fn(),
+      invoke: vi.fn(),
+      on: vi.fn(),
+      send: vi.fn(),
+      once: vi.fn(),
+      removeListener: vi.fn(),
+      removeAllListeners: vi.fn(),
     };
 
     mockElectron = {
@@ -37,7 +50,7 @@ describe('electronMiddleware', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     delete (window as any).electron;
   });
 
@@ -258,7 +271,7 @@ describe('electronMiddleware', () => {
     });
 
     it('should warn when electron IPC is not available', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation();
       (window as any).electron = undefined;
 
       setupIpcListeners(mockStore);

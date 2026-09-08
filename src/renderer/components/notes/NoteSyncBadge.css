@@ -1,0 +1,72 @@
+/* NoteSyncBadge — sync state indicator for a single note. */
+
+.note-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.note-sync-badge--full {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.note-sync-badge--compact {
+  width: 14px;
+  height: 14px;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.note-sync-badge__label {
+  white-space: nowrap;
+}
+
+/* ── State colors ───────────────────────────────────────────────── */
+
+.note-sync-badge--synced {
+  color: #22c55e;
+}
+
+.note-sync-badge--syncing {
+  color: #3b82f6;
+}
+
+.note-sync-badge--pending {
+  color: #f59e0b;
+}
+
+.note-sync-badge--offline {
+  color: #94a3b8;
+}
+
+/* Compact variant: synced is intentionally subtle — a dim dot that
+   won't compete with the note title in the list. */
+.note-sync-badge--compact.note-sync-badge--synced {
+  color: color-mix(in srgb, #22c55e 55%, transparent);
+}
+
+/* ── Animation ───────────────────────────────────────────────────── */
+
+.note-sync-badge__spin {
+  animation: note-sync-badge-spin 1s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes note-sync-badge-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

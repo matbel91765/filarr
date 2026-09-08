@@ -37,7 +37,9 @@
   padding: 5px 8px;
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
   border: 1px solid transparent;
   margin-bottom: 1px;
 }
@@ -47,8 +49,8 @@
 }
 
 .note-tree__node-row--selected {
-  background: var(--color-primary-50, rgba(135, 206, 235, 0.1));
-  border-color: var(--color-primary-200, rgba(135, 206, 235, 0.3));
+  background: var(--color-selected);
+  border-color: var(--color-selected-border);
 }
 
 .note-tree__node-row--pinned {
@@ -86,7 +88,9 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   padding: 0;
-  transition: transform 0.18s ease, background 0.12s;
+  transition:
+    transform 0.18s ease,
+    background 0.12s;
 }
 
 .note-tree__chevron:hover {
@@ -220,7 +224,10 @@
   color: var(--color-text-secondary);
   font-size: 0.6875rem;
   opacity: 0;
-  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    border-color 0.15s,
+    background 0.15s;
   pointer-events: none;
 }
 

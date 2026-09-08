@@ -1,7 +1,14 @@
 /* ==================== Page Cover ==================== */
 
+/* Hauteur relative a la fenetre, pas absolue.
+
+   180 px fixes coutaient la moitie de la hauteur utile sur un portable, et le
+   bandeau ne peut pas defiler hors de l'ecran : l'en-tete est un frere fige
+   au-dessus du conteneur qui defile (voir NoteEditor.css). Ce qu'il prend, il
+   le prend tant qu'il est deploye. Les bornes evitent les deux exces : jamais
+   un filet sur un ecran bas, jamais une affiche sur un grand. */
 .page-cover__banner {
-  height: 180px;
+  height: clamp(96px, 13vh, 160px);
   width: 100%;
   border-radius: 0 0 var(--radius-md, 8px) var(--radius-md, 8px);
   cursor: pointer;

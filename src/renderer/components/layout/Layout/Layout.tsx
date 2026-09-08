@@ -6,14 +6,30 @@
  * pas par {children} (qui n'est plus utilise).
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 import { Header } from '../Header';
 import { Sidebar } from '../Sidebar';
 import { SplitContainer } from '../SplitContainer/SplitContainer';
 import { ErrorBoundary } from '../../ui/ErrorBoundary';
 import { UITour } from '../../features/UITour';
+import SyncProgressBar from '../../sync/SyncProgressBar';
+import GovernanceBanner from '../../governance/GovernanceBanner';
+import { checkForUpdate } from '../../../../services/platform/versionService';
 import { useAutoLock } from '../../../../hooks/useAutoLock';
+import {
+  setSidebarOpen as setSidebarOpenAction,
+  toggleSidebar,
+} from '../../../../store/slices/uiSlice';
+import {
+  selectHeaderBarAutohide,
+  selectHeaderBarFloating,
+  selectHeaderBarSide,
+  selectHeaderBarVisible,
+  selectTabBarVisible,
+  selectSidebarOpen,
+} from '../../../../store/selectors/uiSelectors';
 import './Layout.css';
 
 export interface LayoutProps {
@@ -31,8 +47,37 @@ export const Layout: React.FC<LayoutProps> = ({
   className,
 }) => {
   const { t } = useTranslation();
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  const [, setIsMobile] = useState<boolean>(window.innerWidth < 1024);
+  const dispatch = useDispatch();
+  // La sidebar vit dans Redux : c'est ce que Ctrl+B et la palette de commandes
+  // pilotent (un useState local ici rendait ces raccourcis sans effet).
+  const sidebarOpen = useSelector(selectSidebarOpen);
+  // Dérivés du réglage « Affichage des barres » : la barre d'onglets, elle,
+  // est branchée panneau par panneau dans PanelView.
+  const barsShowHeader = useSelector(selectHeaderBarVisible);
+  /**
+   * PERSONNE NE TIENT LA BANDE.
+   *
+   * En mode « aucune barre », ni le bandeau ni les onglets ne sont rendus : le
+   * contenu commence donc a y=0, sous les boutons de fenetre que l'OS peint
+   * par-dessus. Tous les autres modes ont une barre qui reserve (bandeau,
+   * onglets, pilule bornee, rail) — celui-ci n'en a aucune, et c'etait le seul
+   * trou restant de la primitive.
+   */
+  const barsShowTabs = useSelector(selectTabBarVisible);
+  const barsAutohideHeader = useSelector(selectHeaderBarAutohide);
+  const barsFloatingHeader = useSelector(selectHeaderBarFloating);
+  const barsSideHeader = useSelector(selectHeaderBarSide);
+  const setSidebarOpen = useCallback(
+    (open: boolean): void => {
+      dispatch(setSidebarOpenAction(open));
+    },
+    [dispatch]
+  );
+  // Largeur observée au dernier resize. Sert à ne réagir qu'aux vrais
+  // franchissements du seuil : sur téléphone, l'ouverture du clavier virtuel
+  // émet un resize (la hauteur change, pas la largeur) et refermait jusqu'ici
+  // la sidebar à chaque frappe.
+  const prevWidthRef = useRef<number>(window.innerWidth);
   const [updateState, setUpdateState] = useState<UpdateState>('idle');
   const [updateVersion, setUpdateVersion] = useState<string>('');
   const [downloadPercent, setDownloadPercent] = useState(0);
@@ -72,6 +117,11 @@ export const Layout: React.FC<LayoutProps> = ({
     };
   }, [updateVersion]);
 
+  // Anonymous telemetry ping (version, OS) — fire-and-forget, throttled to once per 24h
+  useEffect(() => {
+    checkForUpdate().catch(() => {});
+  }, []);
+
   // Open sidebar automatically when tour starts so sidebar targets are visible
   useEffect(() => {
     const shouldShowTour =
@@ -83,7 +133,7 @@ export const Layout: React.FC<LayoutProps> = ({
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, []);
+  }, [setSidebarOpen]);
 
   // Also open sidebar when tour is relaunched from Settings
   useEffect(() => {
@@ -92,19 +142,22 @@ export const Layout: React.FC<LayoutProps> = ({
     };
     window.addEventListener('filarr-tour-relaunch', handleTourRelaunch);
     return () => window.removeEventListener('filarr-tour-relaunch', handleTourRelaunch);
-  }, []);
+  }, [setSidebarOpen]);
 
   useEffect(() => {
     const handleResize = (): void => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (mobile && sidebarOpen) {
+      const previousWidth = prevWidthRef.current;
+      const width = window.innerWidth;
+      prevWidthRef.current = width;
+      // Uniquement la transition desktop → étroit, pas « toute largeur < 1024 ».
+      const crossedIntoNarrow = previousWidth >= 1024 && width < 1024;
+      if (crossedIntoNarrow && sidebarOpen) {
         setSidebarOpen(false);
       }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarOpen]);
+  }, [sidebarOpen, setSidebarOpen]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent): void => {
@@ -114,15 +167,15 @@ export const Layout: React.FC<LayoutProps> = ({
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [sidebarOpen]);
+  }, [sidebarOpen, setSidebarOpen]);
 
   const handleSidebarToggle = useCallback((): void => {
-    setSidebarOpen((prev) => !prev);
-  }, []);
+    dispatch(toggleSidebar());
+  }, [dispatch]);
 
   const handleSidebarClose = useCallback((): void => {
     setSidebarOpen(false);
-  }, []);
+  }, [setSidebarOpen]);
 
   const handleRestart = useCallback(() => {
     window.electron?.ipcRenderer?.send('restart_app', null);
@@ -130,14 +183,113 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const showToast = updateState !== 'idle' && !updateDismissed;
 
+  // Les modes sans barre supérieure la retirent du DOM ; 'autohide' la sort
+  // du flux (CSS) et la révèle à l'approche du bord haut ou dès qu'elle prend
+  // le focus clavier. 'floating' et 'side' la gardent montée mais changent sa
+  // géométrie (pilule centrée / rail vertical), pilotée par les classes du
+  // conteneur et du créneau.
+  const headerVisible = showHeader && barsShowHeader;
+  const headerAutohide = headerVisible && barsAutohideHeader;
+  const headerFloating = headerVisible && barsFloatingHeader;
+  const headerSide = headerVisible && barsSideHeader;
+  // Vrai uniquement quand la barre occupe une vraie ligne du flux ('all',
+  // 'search-only', 'floating'). Sinon le tiroir latéral, ancré sous
+  // --spacing-layout-header-height, laisserait un vide de 64 px en haut.
+  const headerInFlow = headerVisible && !headerAutohide && !headerSide;
+
+  // Dépliage du mode « au survol », piloté en JS et NON en CSS.
+  //
+  // Les 40 premiers pixels de la fenêtre n'appartiennent pas au DOM : 0-7 px
+  // sont la bordure de redimensionnement (HTTOP) et 8-39 px la bande de
+  // déplacement de WindowDragRegion (-webkit-app-region: drag). Sonde Electron
+  // avec un VRAI curseur : la dernière rangée qui émet encore un mousemove est
+  // y = 40, aucune en dessous — une bande de survol collée au bord haut ne peut
+  // donc jamais s'armer, quel que soit son :hover. On ouvre à l'approche depuis
+  // la première rangée atteignable, avec hystérésis pour ne pas battre ; la
+  // barre elle-même se déplie SOUS les onglets (cf. Layout.css) pour ne jamais
+  // leur voler un clic.
+  const [headerPeek, setHeaderPeek] = useState(false);
+  const headerPeekRef = useRef(false);
+
+  useEffect(() => {
+    if (!headerAutohide) {
+      headerPeekRef.current = false;
+      setHeaderPeek(false);
+      return undefined;
+    }
+    const handleMouseMove = (e: MouseEvent): void => {
+      // 48 px pour ouvrir (la rangée 40 suffit donc), 112 px pour se refermer :
+      // la barre dépliée descend jusqu'à ~101 px, on reste ouvert tant que le
+      // pointeur est dessus.
+      const limit = headerPeekRef.current ? 112 : 48;
+      const next = e.clientY <= limit;
+      if (next !== headerPeekRef.current) {
+        headerPeekRef.current = next;
+        setHeaderPeek(next);
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [headerAutohide]);
+
+  const layoutModeClass = headerAutohide
+    ? 'layout--header-autohide'
+    : headerFloating
+      ? 'layout--header-floating'
+      : headerSide
+        ? 'layout--header-side'
+        : '';
+
+  const headerSlotClass = headerAutohide
+    ? `layout__header-slot--auto ${headerPeek ? 'layout__header-slot--peek' : ''}`
+    : headerFloating
+      ? 'layout__header-slot--floating'
+      : headerSide
+        ? 'layout__header-slot--side'
+        : '';
+
   return (
-    <div className={`layout ${className || ''}`}>
-      {showHeader && <Header onMenuToggle={handleSidebarToggle} sidebarOpen={sidebarOpen} />}
+    <div
+      className={`layout ${layoutModeClass} ${
+        headerInFlow ? '' : 'layout--header-out-of-flow'
+      } ${!barsShowHeader && !barsShowTabs ? 'layout--no-chrome' : ''} ${className || ''}`}
+    >
+      {/* Skip link: first focusable element, jumps keyboard users past the
+          header/sidebar straight to the content. */}
+      <a href="#main-content" className="skip-link">
+        Aller au contenu
+      </a>
+      {headerVisible && (
+        <div
+          className={`layout__header-slot ${headerSlotClass}`}
+          /* En rail, la barre est une colonne FIXE qui mange le bord gauche de
+             la fenêtre, au-dessus des panneaux flottants (z 1041 contre 1000).
+             Les menus et panneaux sont portés par <body> : le padding de
+             .layout ne les décale pas, et ils se glissaient sous le rail, qui
+             leur rognait leur marge gauche. L'attribut déclare l'obstruction ;
+             sa LARGEUR est mesurée, jamais recopiée (cf. overlayBounds). */
+          data-overlay-obstruction={headerSide ? 'left' : undefined}
+        >
+          <Header onMenuToggle={handleSidebarToggle} sidebarOpen={sidebarOpen} />
+        </div>
+      )}
+      <SyncProgressBar />
+      <GovernanceBanner />
 
       <div className="layout__body">
-        {showSidebar && <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />}
+        {/* Le tiroir est en position:fixed : le décalage du rail, posé en
+            padding sur .layout, ne l'atteint pas. On le lui donne par classe. */}
+        {showSidebar && (
+          <Sidebar
+            isOpen={sidebarOpen}
+            onClose={handleSidebarClose}
+            className={headerSide ? 'layout__sidebar--railed' : ''}
+          />
+        )}
 
         <main
+          id="main-content"
+          tabIndex={-1}
           className={`layout__content ${sidebarOpen && showSidebar ? 'layout__content--with-sidebar' : ''}`}
         >
           <ErrorBoundary>

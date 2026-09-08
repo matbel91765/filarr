@@ -177,46 +177,45 @@ function yieldToUI(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-export async function parseObsidianVault(
-  entries: SourceEntry[],
-  options: ExternalImportOptions,
-  onProgress?: ProgressCallback
-): Promise<ExternalImportResult> {
-  const result: ExternalImportResult = {
-    notes: [],
-    tags: [],
-    notebooks: [],
-    notesImported: 0,
-    tagsCreated: 0,
-    linksResolved: 0,
-    warnings: [],
-    errors: [],
-  };
+/** True if this entry is a Markdown file the Obsidian importer handles. */
+export function isObsidianMarkdown(entry: SourceEntry): boolean {
+  return !entry.isDirectory && /\.(md|markdown)$/i.test(entry.relativePath);
+}
 
-  // Filter to only .md files
-  const mdFiles = entries.filter(
-    (e) =>
-      !e.isDirectory && (e.relativePath.endsWith('.md') || e.relativePath.endsWith('.markdown'))
-  );
+/**
+ * Incremental vault parser.
+ *
+ * Split out of `parseObsidianVault` so a large vault can be imported in
+ * batches: the caller reads a few hundred files, feeds them here, and drops
+ * the raw strings before reading the next batch. Cross-file state (the tag
+ * registry, the folder→notebook map) lives on the instance, so batching
+ * produces exactly the same result as one big array — peak memory is the
+ * batch, not the vault.
+ */
+export class ObsidianVaultAccumulator {
+  private readonly options: ExternalImportOptions;
+  private readonly allTags = new Map<
+    string,
+    { name: string; parentName?: string; color?: string }
+  >();
+  /** Top-level folder name → IDs of the notes below it (becomes a notebook). */
+  private readonly folderNotes = new Map<string, string[]>();
+  private readonly notes: Note[] = [];
+  private readonly errors: string[] = [];
+  private readonly warnings: string[] = [];
 
-  const allTags = new Map<string, { name: string; parentName?: string; color?: string }>();
+  constructor(options: ExternalImportOptions) {
+    this.options = options;
+  }
 
-  // Map top-level folders → notebooks
-  const folderNotes = new Map<string, string[]>(); // folder name → note IDs
+  /** Number of notes converted so far — drives batched progress reporting. */
+  get count(): number {
+    return this.notes.length;
+  }
 
-  for (let i = 0; i < mdFiles.length; i++) {
-    const entry = mdFiles[i];
-
-    // Yield every 200 files so the UI can repaint progress
-    if (i % 200 === 0) {
-      onProgress?.({
-        phase: 'converting',
-        current: i,
-        total: mdFiles.length,
-        detail: entry.relativePath,
-      });
-      await yieldToUI();
-    }
+  /** Convert one Markdown entry. Non-Markdown entries are ignored. */
+  addEntry(entry: SourceEntry): void {
+    if (!isObsidianMarkdown(entry)) return;
 
     try {
       // Parse frontmatter
@@ -238,7 +237,7 @@ export async function parseObsidianVault(
 
       // Collect tags
       const noteTags: string[] = [];
-      if (options.importTags) {
+      if (this.options.importTags) {
         // From frontmatter
         const fmTags = Array.isArray(frontmatter.tags) ? frontmatter.tags : [];
         for (const tag of fmTags) {
@@ -259,13 +258,13 @@ export async function parseObsidianVault(
             const parts = tagName.split('/');
             let parentName: string | undefined;
             for (const part of parts) {
-              if (!allTags.has(part)) {
-                allTags.set(part, { name: part, parentName });
+              if (!this.allTags.has(part)) {
+                this.allTags.set(part, { name: part, parentName });
               }
               parentName = part;
             }
-          } else if (!allTags.has(tagName)) {
-            allTags.set(tagName, { name: tagName });
+          } else if (!this.allTags.has(tagName)) {
+            this.allTags.set(tagName, { name: tagName });
           }
         }
       }
@@ -300,28 +299,77 @@ export async function parseObsidianVault(
       // Track folder → note mapping
       if (topLevelFolder) {
         (note as Note & { _folderName?: string })._folderName = topLevelFolder;
-        const existing = folderNotes.get(topLevelFolder) || [];
+        const existing = this.folderNotes.get(topLevelFolder) || [];
         existing.push(note.id);
-        folderNotes.set(topLevelFolder, existing);
+        this.folderNotes.set(topLevelFolder, existing);
       }
 
-      result.notes.push(note);
-      result.notesImported++;
+      this.notes.push(note);
     } catch (err) {
-      result.errors.push(
+      this.errors.push(
         `Failed to import ${entry.relativePath}: ${err instanceof Error ? err.message : String(err)}`
       );
     }
   }
 
-  result.tags = Array.from(allTags.values());
-  result.tagsCreated = result.tags.length;
+  /** Convert a batch of entries. */
+  addBatch(entries: SourceEntry[]): void {
+    for (const entry of entries) {
+      this.addEntry(entry);
+    }
+  }
 
-  // Build notebooks from top-level folders
-  result.notebooks = Array.from(folderNotes.entries()).map(([name, noteIds]) => ({
-    name,
-    noteIds,
-  }));
+  /** Record a non-fatal problem to surface in the wizard's summary. */
+  addWarning(message: string): void {
+    this.warnings.push(message);
+  }
 
-  return result;
+  /** Collapse the accumulated state into the shape the wizard consumes. */
+  finalize(): ExternalImportResult {
+    const tags = Array.from(this.allTags.values());
+    return {
+      notes: this.notes,
+      tags,
+      notebooks: Array.from(this.folderNotes.entries()).map(([name, noteIds]) => ({
+        name,
+        noteIds,
+      })),
+      notesImported: this.notes.length,
+      tagsCreated: tags.length,
+      linksResolved: 0,
+      warnings: this.warnings,
+      errors: this.errors,
+    };
+  }
+}
+
+/**
+ * One-shot vault parse: convert an array of already-read entries.
+ *
+ * Prefer `ObsidianVaultAccumulator` when the source may be large — this
+ * signature requires every file's content to be in memory at once.
+ */
+export async function parseObsidianVault(
+  entries: SourceEntry[],
+  options: ExternalImportOptions,
+  onProgress?: ProgressCallback
+): Promise<ExternalImportResult> {
+  const mdFiles = entries.filter(isObsidianMarkdown);
+  const accumulator = new ObsidianVaultAccumulator(options);
+
+  for (let i = 0; i < mdFiles.length; i++) {
+    // Yield every 200 files so the UI can repaint progress
+    if (i % 200 === 0) {
+      onProgress?.({
+        phase: 'converting',
+        current: i,
+        total: mdFiles.length,
+        detail: mdFiles[i].relativePath,
+      });
+      await yieldToUI();
+    }
+    accumulator.addEntry(mdFiles[i]);
+  }
+
+  return accumulator.finalize();
 }

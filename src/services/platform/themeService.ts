@@ -10,6 +10,9 @@
  */
 
 import { generateUniqueId } from '../../utils/idGenerator';
+import * as profileStorage from '../core/profileStorage';
+import { applyCustomTheme, loadCustomTheme, unapplyCustomTheme } from '../theme/customThemeStore';
+import { isWebPlatform } from './isWebPlatform';
 
 // ==================== TYPES ====================
 
@@ -224,6 +227,16 @@ export const DEFAULT_THEME_PREFERENCES: ThemePreferences = {
 const STORAGE_KEY_PREFERENCES = 'filarr-theme-preferences';
 const STORAGE_KEY_DENSITY = 'filarr-density-settings';
 
+// Ces deux clés sont des préférences d'affichage DURABLES : elles passent par
+// profileStorage pour rester propres à un profil (lecture de repli sur
+// l'ancienne clé nue, jamais d'écriture dessus).
+//
+// La clé `theme` brute reste globale, mais elle n'ARBITRE plus : c'est un cache
+// d'amorçage, écrit après coup pour que le prochain démarrage pose data-theme
+// avant le premier rendu (le processus principal le double sur disque). La
+// préséance appartient au profil — cf. `loadProfileAppearance` en fin de
+// fichier, seul point de résolution du thème et de l'accent.
+
 // ==================== SERVICE FUNCTIONS ====================
 
 /**
@@ -231,7 +244,7 @@ const STORAGE_KEY_DENSITY = 'filarr-density-settings';
  */
 export const loadThemePreferences = (): ThemePreferences => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_PREFERENCES);
+    const stored = profileStorage.getItemWithLegacyFallback(STORAGE_KEY_PREFERENCES);
     if (stored) {
       const parsed = JSON.parse(stored);
       return {
@@ -254,7 +267,7 @@ export const loadThemePreferences = (): ThemePreferences => {
  */
 export const saveThemePreferences = (preferences: ThemePreferences): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_PREFERENCES, JSON.stringify(preferences));
+    profileStorage.setItem(STORAGE_KEY_PREFERENCES, JSON.stringify(preferences));
   } catch (error) {
     console.error('Erreur lors de la sauvegarde des préférences de thème:', error);
   }
@@ -536,7 +549,7 @@ export const generateAccentColors = (
  */
 export const saveDensitySettings = (settings: DensitySettings): void => {
   try {
-    localStorage.setItem(STORAGE_KEY_DENSITY, JSON.stringify(settings));
+    profileStorage.setItem(STORAGE_KEY_DENSITY, JSON.stringify(settings));
   } catch (error) {
     console.error('Erreur lors de la sauvegarde des paramètres de densité:', error);
   }
@@ -547,7 +560,7 @@ export const saveDensitySettings = (settings: DensitySettings): void => {
  */
 export const loadDensitySettings = (): DensitySettings => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_DENSITY);
+    const stored = profileStorage.getItemWithLegacyFallback(STORAGE_KEY_DENSITY);
     if (stored) {
       return {
         ...DEFAULT_DENSITY_SETTINGS,
@@ -787,6 +800,10 @@ export function generateAccentPaletteFromHex(hex: string): AccentColorPalette {
 
 /** Apply an accent color palette to CSS custom properties */
 export function applyAccentColorPalette(hex: string): void {
+  // Garde SSR/tests : ces deux fonctions sont désormais appelées depuis
+  // `applyProfileAppearance`, donc depuis un reducer que les suites `node`
+  // exécutent sans document.
+  if (typeof document === 'undefined') return;
   const palette = ACCENT_COLOR_PALETTES[hex] || generateAccentPaletteFromHex(hex);
   const root = document.documentElement;
   const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
@@ -797,10 +814,177 @@ export function applyAccentColorPalette(hex: string): void {
 
 /** Reset accent color palette to defaults */
 export function resetAccentColorPalette(): void {
+  if (typeof document === 'undefined') return;
   const root = document.documentElement;
   for (const shade of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) {
     root.style.removeProperty(`--color-primary-${shade}`);
   }
+}
+
+// ==================== APPARENCE DU PROFIL ACTIF ====================
+
+/**
+ * L'APPARENCE APPARTIENT AU PROFIL, PAS À LA MACHINE.
+ *
+ * Le thème s'écrivait dans `localStorage['theme']` — une clé listée GLOBALE
+ * dans `profileStorage` — et dans le drapeau disque `theme`, tous deux communs
+ * à tous les profils du poste. La couleur d'accent, elle, n'était appliquée
+ * qu'au montage de l'écran Réglages. Résultat : on ouvrait un profil et on
+ * héritait du thème et de l'accent de celui qu'on venait de quitter, jusqu'à
+ * passer par les Réglages. Sur une connexion au nuage, le profil restauré
+ * arrivait donc habillé par quelqu'un d'autre.
+ *
+ * La vérité par profil existait déjà, personne ne la lisait à l'ouverture :
+ * `filarr-settings` (portée profil, écrit par Réglages) porte `theme` et
+ * `primaryColor`, `filarr-theme-preferences` porte `useSystemTheme`.
+ *
+ * Ces deux fonctions sont le seul endroit qui les résout et les applique. Elles
+ * sont appelées à l'amorçage (App) ET à chaque activation de profil sans
+ * rechargement (`hydrateDisplayPreferences`).
+ */
+
+/**
+ * Les thèmes stockables.
+ *
+ * `custom` en faisait EXCEPTION tant que ses couleurs ne vivaient qu'en mémoire
+ * (`ui.customTheme`, non persisté) : le poser au démarrage aurait donné un
+ * `data-theme` sans la moindre couleur derrière. Depuis l'atelier de thème, la
+ * composition est retenue par profil (`customThemeStore`) et se repose donc au
+ * démarrage comme n'importe quel autre thème — à une différence près, traitée
+ * dans `applyProfileAppearance` : si la composition a disparu, on retombe sur
+ * le thème par défaut plutôt que d'afficher un écran à moitié peint.
+ */
+export type StoredThemeName =
+  | 'custom'
+  | 'light'
+  | 'dark'
+  | 'space'
+  | 'lofi'
+  | 'sky'
+  | 'aurora'
+  | 'sakura'
+  | 'crepuscule'
+  | 'foret'
+  | 'terracotta'
+  | 'papier'
+  | 'minuit';
+
+const STORED_THEME_NAMES: readonly StoredThemeName[] = [
+  'custom',
+  'light',
+  'dark',
+  'space',
+  'lofi',
+  'sky',
+  'aurora',
+  'sakura',
+  'crepuscule',
+  'foret',
+  'terracotta',
+  'papier',
+  'minuit',
+];
+
+const STORAGE_KEY_SETTINGS = 'filarr-settings';
+
+/** La couleur d'accent livrée d'origine : la stocker ou non revient au même,
+ *  et « pas de couleur propre » doit RÉINITIALISER la palette, pas la garder. */
+export const DEFAULT_ACCENT_COLOR = '#87CEEB';
+
+export function isStoredThemeName(value: unknown): value is StoredThemeName {
+  return typeof value === 'string' && (STORED_THEME_NAMES as readonly string[]).includes(value);
+}
+
+export interface ProfileAppearance {
+  /** Le thème à poser, déjà résolu si le profil suit le système. */
+  theme: StoredThemeName;
+  useSystemTheme: boolean;
+  /** `null` = aucune couleur propre → palette par défaut (et non celle du
+   *  profil précédent, qui reste sinon inscrite en style inline sur `:root`). */
+  accentColor: string | null;
+}
+
+/**
+ * Lit l'apparence du profil ACTIF (celui vers lequel `profileStorage` pointe).
+ *
+ * @param fallbackTheme thème retenu quand ce profil n'a jamais rien choisi.
+ *        Passer le défaut de la plateforme, JAMAIS le thème courant à l'écran :
+ *        ce serait réintroduire l'héritage qu'on corrige.
+ */
+export function loadProfileAppearance(fallbackTheme?: StoredThemeName): ProfileAppearance {
+  const useSystemTheme = loadThemePreferences().useSystemTheme;
+
+  let storedTheme: StoredThemeName | null = null;
+  let accentColor: string | null = null;
+  try {
+    const raw = profileStorage.getItemWithLegacyFallback(STORAGE_KEY_SETTINGS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (isStoredThemeName(parsed?.theme)) storedTheme = parsed.theme;
+      if (
+        typeof parsed?.primaryColor === 'string' &&
+        parsed.primaryColor !== DEFAULT_ACCENT_COLOR
+      ) {
+        accentColor = parsed.primaryColor;
+      }
+    }
+  } catch {
+    /* blob illisible — on retombe sur les défauts, jamais sur le profil d'avant */
+  }
+
+  return {
+    theme: useSystemTheme
+      ? detectSystemTheme()
+      : (storedTheme ?? fallbackTheme ?? defaultThemeName()),
+    useSystemTheme,
+    accentColor,
+  };
+}
+
+/** Le thème d'un profil qui n'a jamais choisi : papier sur le web, light sur
+ *  desktop — la règle d'origine de `App.initTheme`, ramenée ici pour que les
+ *  deux appelants ne puissent plus en donner deux versions. */
+export function defaultThemeName(): StoredThemeName {
+  return isWebPlatform() ? 'papier' : 'light';
+}
+
+/** Pose l'apparence sur le document. Le rôle du store est distinct : lui porte
+ *  `ui.theme`, d'où la valeur de retour à dispatcher. */
+export function applyProfileAppearance(appearance: ProfileAppearance): StoredThemeName {
+  /**
+   * ⚠ LE THÈME COMPOSÉ SE POSE ET SE RETIRE AUTREMENT QUE LES AUTRES.
+   *
+   * Ses quarante-deux jetons sont écrits en STYLE EN LIGNE sur `:root`, ce qui
+   * bat tous les blocs `[data-theme='…']` de la feuille de style — y compris
+   * celui du thème vers lequel on va. Sans le retrait explicite ci-dessous,
+   * changer de profil pour un profil au thème « Minuit » changerait l'attribut
+   * sans rien changer à l'écran.
+   */
+  if (appearance.theme === 'custom') {
+    const composed = loadCustomTheme();
+    if (composed) {
+      applyCustomTheme(composed);
+      return 'custom';
+    }
+    // La composition a disparu (profil neuf sur cet appareil, stockage vidé).
+    // Mieux vaut un thème entier qu'un `data-theme` sans couleurs.
+    const fallback = defaultThemeName();
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', fallback);
+    }
+    return fallback;
+  }
+
+  unapplyCustomTheme();
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-theme', appearance.theme);
+  }
+  if (appearance.accentColor) {
+    applyAccentColorPalette(appearance.accentColor);
+  } else {
+    resetAccentColorPalette();
+  }
+  return appearance.theme;
 }
 
 // Export default object for convenience
@@ -826,4 +1010,7 @@ export default {
   saveDensitySettings,
   loadDensitySettings,
   resetToDefaults,
+  loadProfileAppearance,
+  applyProfileAppearance,
+  defaultThemeName,
 };

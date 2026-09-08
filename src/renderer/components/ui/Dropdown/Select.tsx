@@ -49,6 +49,8 @@ export interface SelectProps {
   className?: string;
   /** Classe CSS pour le conteneur */
   containerClassName?: string;
+  /** Accessible name for the trigger when there is no visible `label` (a11y). */
+  ariaLabel?: string;
 }
 
 /**
@@ -71,11 +73,16 @@ export const Select: React.FC<SelectProps> = ({
   fullWidth = false,
   className,
   containerClassName,
+  ariaLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
-  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const selectRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,15 +94,20 @@ export const Select: React.FC<SelectProps> = ({
 
   // Normaliser la valeur en array pour faciliter la gestion
   const selectedValues = multiple
-    ? Array.isArray(value) ? value : (value ? [value] : [])
-    : value ? [value as string] : [];
+    ? Array.isArray(value)
+      ? value
+      : value
+        ? [value]
+        : []
+    : value
+      ? [value as string]
+      : [];
 
   // Filtrer les options selon la recherche
-  const filteredOptions = searchable && searchQuery
-    ? options.filter(opt =>
-        opt.label.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : options;
+  const filteredOptions =
+    searchable && searchQuery
+      ? options.filter((opt) => opt.label.toLowerCase().includes(searchQuery.toLowerCase()))
+      : options;
 
   // Calculer la position du dropdown
   const updateDropdownPosition = useCallback(() => {
@@ -128,7 +140,7 @@ export const Select: React.FC<SelectProps> = ({
   const handleSelectOption = (optionValue: string) => {
     if (multiple) {
       const newValues = selectedValues.includes(optionValue)
-        ? selectedValues.filter(v => v !== optionValue)
+        ? selectedValues.filter((v) => v !== optionValue)
         : [...selectedValues, optionValue];
       onChange?.(newValues);
     } else {
@@ -141,7 +153,7 @@ export const Select: React.FC<SelectProps> = ({
   const handleRemoveValue = (e: React.MouseEvent, valueToRemove: string) => {
     e.stopPropagation();
     if (multiple) {
-      const newValues = selectedValues.filter(v => v !== valueToRemove);
+      const newValues = selectedValues.filter((v) => v !== valueToRemove);
       onChange?.(newValues);
     }
   };
@@ -173,7 +185,7 @@ export const Select: React.FC<SelectProps> = ({
         if (!isOpen) {
           setIsOpen(true);
         } else {
-          setFocusedIndex(prev => {
+          setFocusedIndex((prev) => {
             let next = prev + 1;
             while (next < filteredOptions.length && filteredOptions[next].disabled) {
               next++;
@@ -185,7 +197,7 @@ export const Select: React.FC<SelectProps> = ({
       case 'ArrowUp':
         e.preventDefault();
         if (isOpen) {
-          setFocusedIndex(prev => {
+          setFocusedIndex((prev) => {
             let next = prev - 1;
             while (next >= 0 && filteredOptions[next].disabled) {
               next--;
@@ -258,12 +270,12 @@ export const Select: React.FC<SelectProps> = ({
 
   // Obtenir le label d'une valeur
   const getOptionLabel = (val: string) => {
-    return options.find(opt => opt.value === val)?.label || val;
+    return options.find((opt) => opt.value === val)?.label || val;
   };
 
   // Obtenir l'icône d'une valeur
   const getOptionIcon = (val: string) => {
-    return options.find(opt => opt.value === val)?.icon;
+    return options.find((opt) => opt.value === val)?.icon;
   };
 
   // Classes CSS
@@ -289,13 +301,9 @@ export const Select: React.FC<SelectProps> = ({
     className
   );
 
-  const dropdownClasses = clsx(
-    'select-dropdown',
-    `select-dropdown--${size}`,
-    {
-      'select-dropdown--open': isOpen,
-    }
-  );
+  const dropdownClasses = clsx('select-dropdown', `select-dropdown--${size}`, {
+    'select-dropdown--open': isOpen,
+  });
 
   // Rendu du dropdown (via portal)
   const renderDropdown = () => {
@@ -354,17 +362,31 @@ export const Select: React.FC<SelectProps> = ({
                   onMouseEnter={() => !option.disabled && setFocusedIndex(index)}
                 >
                   {multiple && (
-                    <span className={clsx('select-dropdown__checkbox', {
-                      'select-dropdown__checkbox--checked': isSelected,
-                    })} />
+                    <span
+                      className={clsx('select-dropdown__checkbox', {
+                        'select-dropdown__checkbox--checked': isSelected,
+                      })}
+                    />
                   )}
                   {option.icon && (
                     <span className="select-dropdown__option-icon">{option.icon}</span>
                   )}
                   <span className="select-dropdown__option-label">{option.label}</span>
                   {!multiple && isSelected && (
-                    <svg className="select-dropdown__check" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M13.5 4L6 11.5L2.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <svg
+                      className="select-dropdown__check"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                    >
+                      <path
+                        d="M13.5 4L6 11.5L2.5 8"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   )}
                 </div>
@@ -394,16 +416,13 @@ export const Select: React.FC<SelectProps> = ({
         onKeyDown={handleKeyDown}
         tabIndex={disabled ? -1 : 0}
         role="button"
+        aria-label={!label ? ariaLabel : undefined}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-disabled={disabled}
         aria-invalid={hasError}
         aria-describedby={
-          error
-            ? `${selectId}-error`
-            : helperText
-            ? `${selectId}-helper`
-            : undefined
+          error ? `${selectId}-error` : helperText ? `${selectId}-helper` : undefined
         }
       >
         <input
@@ -431,7 +450,12 @@ export const Select: React.FC<SelectProps> = ({
                     aria-label={`Retirer ${getOptionLabel(val)}`}
                   >
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      <path
+                        d="M9 3L3 9M3 3L9 9"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
                     </svg>
                   </button>
                 </span>
@@ -440,16 +464,26 @@ export const Select: React.FC<SelectProps> = ({
           ) : (
             <span className="select__single-value">
               {getOptionIcon(selectedValues[0]) && (
-                <span className="select__single-value-icon">{getOptionIcon(selectedValues[0])}</span>
+                <span className="select__single-value-icon">
+                  {getOptionIcon(selectedValues[0])}
+                </span>
               )}
-              <span className="select__single-value-label">{getOptionLabel(selectedValues[0])}</span>
+              <span className="select__single-value-label">
+                {getOptionLabel(selectedValues[0])}
+              </span>
             </span>
           )}
         </div>
 
         <span className="select__chevron" aria-hidden="true">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path
+              d="M4 6L8 10L12 6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </span>
       </div>

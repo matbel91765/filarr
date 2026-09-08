@@ -5,6 +5,12 @@
     "target": "ES2020",
     "lib": ["ES2020"],
     "outDir": "../dist-electron",
+    // LA RACINE EST EPINGLEE. Sans elle, tsc la deduit du plus petit dossier
+    // commun a TOUTES les entrees ; des que les tests (qui importent ../../src)
+    // sont inclus, elle remonte au depot et le main sort dans
+    // dist-electron/electron/main.js — pendant qu'Electron charge
+    // dist-electron/main.js, fige a jamais. Le paquet 3.0.6 a ete livre ainsi.
+    "rootDir": ".",
     "moduleResolution": "node",
     "types": ["node"],
     "esModuleInterop": true,
@@ -14,11 +20,9 @@
     "noEmit": false,
     "skipLibCheck": true
   },
-  "include": [
-    "**/*.ts"
-, "main.js"  ],
-  "exclude": [
-    "node_modules",
-    "../node_modules"
-  ]
+  "include": ["**/*.ts", "main.js"],
+  // Les tests du processus principal sont types par tsconfig.test.json (voir
+  // type-check:electron). ICI ils sont EXCLUS : ce fichier EMET, et les tests
+  // importent ../../src, ce qui deplacait la racine d'emission (voir rootDir).
+  "exclude": ["node_modules", "../node_modules", "**/__tests__/**"]
 }

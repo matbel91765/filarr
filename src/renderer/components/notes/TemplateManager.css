@@ -12,8 +12,12 @@
 }
 
 @keyframes tmFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .template-manager {
@@ -306,10 +310,153 @@
 
 /* ---- Dark Mode ---- */
 
-[data-theme="dark"] .template-manager {
+[data-theme='dark'] .template-manager {
   background: var(--color-surface, #1a1f2e);
 }
 
-[data-theme="dark"] .template-manager__preview-content {
+[data-theme='dark'] .template-manager__preview-content {
   background: rgba(0, 0, 0, 0.2);
+}
+
+/* Réglage de la proposition en note vierge : il vit ici parce que c'est ici
+   qu'on revient quand on veut un modèle — refusé depuis la note, il serait
+   autrement sans retour. */
+.template-manager__suggest-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 10px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.template-manager__suggest-toggle input {
+  accent-color: var(--color-primary-500, #4682b4);
+  cursor: pointer;
+}
+
+/* ==================== Fenêtre des modèles (création d'une note) ==================== */
+
+.template-picker__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.template-picker__search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-background, transparent);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+}
+
+.template-picker__search:focus {
+  outline: none;
+  border-color: var(--color-primary-400, #87ceeb);
+}
+
+.template-picker__grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.template-picker__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.12s,
+    background 0.12s;
+}
+
+.template-picker__item:hover {
+  border-color: var(--color-primary-300, #87ceeb);
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.02));
+}
+
+.template-picker__icon {
+  font-size: 1.25rem;
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+
+.template-picker__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.template-picker__name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.template-picker__desc {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+  opacity: 0.8;
+}
+
+.template-picker__empty {
+  margin: 0;
+  padding: 20px;
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+/* Le pied : le refus à gauche, la sortie à droite — jamais l'inverse. */
+.template-picker__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.template-picker__never {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.template-picker__never input {
+  accent-color: var(--color-primary-500, #4682b4);
+  cursor: pointer;
+}
+
+.template-picker__blank {
+  padding: 7px 14px;
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.14));
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.template-picker__blank:hover {
+  background: var(--color-surface-hover, rgba(0, 0, 0, 0.04));
 }

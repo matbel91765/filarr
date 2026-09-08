@@ -10,6 +10,8 @@ import errorService from '../../services/platform/errorService';
 import searchService from '../../services/search/searchService';
 import type { Note } from '../../types/notes';
 import type { RootState } from '../index';
+import { vaultFolderRoute } from '../../renderer/components/layout/RouteContent/routeCompat';
+import { vaultRefOf } from '../selectors/fileShortcutSelectors';
 
 // Types pour la recherche
 export interface SearchState {
@@ -35,7 +37,7 @@ export interface SerializedError {
 export interface SearchResult {
   id: string;
   name: string;
-  type: 'file' | 'folder' | 'note' | 'setting';
+  type: 'file' | 'folder' | 'note' | 'setting' | 'vault-item';
   path: string;
   lastModified: string;
   size: number | null;
@@ -130,17 +132,25 @@ const convertSearchResults = (
   results: import('../../types').SearchResult[],
   sortOrder: SortOrder
 ): SearchResult[] => {
-  const converted = results.map((result) => ({
-    id: result.id,
-    name: result.item.name,
-    type: result.type,
-    path: searchService.getIndexedFolderPath(result.id),
-    lastModified: result.item.updatedAt || result.item.createdAt || new Date().toISOString(),
-    size: 'size' in result.item ? result.item.size : null,
-    relevance: result.relevance,
-    excerpt: result.matches.length > 0 ? result.matches[0].value.substring(0, 100) : null,
-    tags: [],
-  }));
+  const converted = results.map((result) => {
+    // Un RACCOURCI trouvé par la recherche s'ouvre dans le coffre, sur
+    // l'élément : ses octets ne sont plus dans le dossier qui le porte.
+    const shortcutRef = vaultRefOf(result.item);
+    return {
+      id: result.id,
+      name: result.item.name,
+      type: result.type,
+      path: searchService.getIndexedFolderPath(result.id),
+      lastModified: result.item.updatedAt || result.item.createdAt || new Date().toISOString(),
+      size: 'size' in result.item ? result.item.size : null,
+      relevance: result.relevance,
+      excerpt: result.matches.length > 0 ? result.matches[0].value.substring(0, 100) : null,
+      tags: [],
+      route: shortcutRef
+        ? vaultFolderRoute(shortcutRef.vaultId, { itemId: shortcutRef.itemId })
+        : undefined,
+    };
+  });
 
   // Apply sorting
   return converted.sort((a, b) => {
@@ -212,6 +222,47 @@ const SETTINGS_ENTRIES: Array<{ id: string; name: string; keywords: string; rout
     route: '/settings?section=about',
   },
 ];
+
+interface VaultsStateLike {
+  itemsByVault?: Record<
+    string,
+    Array<{
+      id: string;
+      itemType?: string;
+      sizeBytes?: number;
+      updatedAt?: string;
+      meta?: { fileName?: string; title?: string };
+    }>
+  >;
+  vaults?: Record<string, { name?: string }>;
+}
+
+function searchVaultItems(vaultsState: VaultsStateLike, query: string): SearchResult[] {
+  const q = query.toLowerCase();
+  const out: SearchResult[] = [];
+  const parVault = vaultsState.itemsByVault ?? {};
+  for (const [vaultId, items] of Object.entries(parVault)) {
+    const nomCoffre = vaultsState.vaults?.[vaultId]?.name || '';
+    for (const it of items ?? []) {
+      const nom = it.meta?.fileName || it.meta?.title || '';
+      if (!nom.toLowerCase().includes(q)) continue;
+      out.push({
+        id: `${vaultId}:${it.id}`,
+        name: nom,
+        type: 'vault-item',
+        // Le « chemin » d'un élément de coffre est le coffre qui le porte.
+        path: nomCoffre,
+        lastModified: it.updatedAt ?? '',
+        size: it.sizeBytes ?? null,
+        relevance: nom.toLowerCase().startsWith(q) ? 0.9 : 0.7,
+        excerpt: null,
+        tags: [],
+        route: vaultFolderRoute(vaultId),
+      });
+    }
+  }
+  return out;
+}
 
 function searchNotes(notes: Note[], query: string): SearchResult[] {
   const q = query.toLowerCase();
@@ -330,10 +381,30 @@ export const executeSearch = createAsyncThunk<
     // --- Settings search ---
     const settingResults = searchSettings(search.query);
 
-    // --- Merge all results, sorted by relevance ---
-    const allResults = [...convertedFileResults, ...noteResults, ...settingResults].sort(
-      (a, b) => b.relevance - a.relevance
+    /**
+     * QUATRIÈME SOURCE : les éléments des coffres partagés DÉVERROUILLÉS.
+     *
+     * La recherche fusionnait trois mondes — fichiers, notes, réglages — et
+     * ignorait les coffres : un document partagé n'existait pour la recherche
+     * que si on savait déjà dans quel coffre le chercher. On parcourt ici
+     * `itemsByVault`, c'est-à-dire les métadonnées DÉJÀ déchiffrées des coffres
+     * ouverts pendant la session. Les coffres VERROUILLÉS sont légitimement
+     * hors de portée : leurs noms sont chiffrés et doivent le rester — c'est
+     * une propriété du produit, pas une lacune, et l'écran l'assume plutôt que
+     * de le taire.
+     */
+    const vaultItemResults = searchVaultItems(
+      (state as { vaults?: VaultsStateLike }).vaults ?? {},
+      search.query
     );
+
+    // --- Merge all results, sorted by relevance ---
+    const allResults = [
+      ...convertedFileResults,
+      ...noteResults,
+      ...settingResults,
+      ...vaultItemResults,
+    ].sort((a, b) => b.relevance - a.relevance);
 
     const startIndex = (search.pagination.page - 1) * search.pagination.itemsPerPage;
     const endIndex = startIndex + search.pagination.itemsPerPage;

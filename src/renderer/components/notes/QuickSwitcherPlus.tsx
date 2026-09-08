@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
+import { extractHeadingsFromJson } from '../../../services/notes/transclusionHelpers';
 import './QuickSwitcherPlus.css';
 
 // ==================== Types ====================
@@ -78,34 +79,19 @@ type SearchMode = 'notes' | 'headings' | 'commands' | 'tags';
 
 // ==================== Helpers ====================
 
-function extractText(node: any): string {
-  if (typeof node === 'string') return node;
-  if (node.text) return node.text;
-  if (node.content) return node.content.map(extractText).join('');
-  return '';
-}
-
-function extractHeadings(content: string): { text: string; level: number; pos: number }[] {
-  try {
-    const doc = JSON.parse(content);
-    if (!doc?.content) return [];
-    const headings: { text: string; level: number; pos: number }[] = [];
-    let pos = 0;
-    function walk(node: any) {
-      if (node.type === 'heading') {
-        const text = extractText(node).trim();
-        if (text) {
-          headings.push({ text, level: node.attrs?.level || 1, pos });
-        }
-      }
-      pos += 1;
-      if (node.content) node.content.forEach(walk);
-    }
-    walk(doc);
-    return headings;
-  } catch {
-    return [];
-  }
+/**
+ * Titres d'une note, via l'extracteur PARTAGÉ.
+ *
+ * Ce fichier portait sa propre copie. Elle était récursive (donc juste sur le
+ * contenu), mais son `pos` comptait TOUS les nœuds visités, pas les titres :
+ * la valeur remontée à `onSelectHeading` ne désignait rien de résoluble. On
+ * rend maintenant le rang du titre, la convention de `extractHeadings`, de la
+ * carte mentale et de `pendingScrollToHeading`.
+ */
+function noteHeadings(content: string): { text: string; level: number; pos: number }[] {
+  return extractHeadingsFromJson(content)
+    .filter((entry) => entry.text.trim().length > 0)
+    .map((entry) => ({ text: entry.text.trim(), level: entry.level, pos: entry.index }));
 }
 
 function highlightMatch(text: string, query: string): React.ReactNode {
@@ -224,7 +210,7 @@ const QuickSwitcherPlus: React.FC<QuickSwitcherPlusProps> = ({
 
       case 'headings': {
         for (const note of allNotes) {
-          const headings = extractHeadings(note.content);
+          const headings = noteHeadings(note.content);
           for (const h of headings) {
             if (fuzzyMatch(h.text, query)) {
               items.push({

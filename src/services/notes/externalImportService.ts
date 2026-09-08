@@ -51,9 +51,142 @@ export interface SourceEntry {
   relativePath: string;
   content: string;
   isDirectory: boolean;
+  /**
+   * `base64` pour une entree BINAIRE (image, PDF, police...).
+   *
+   * Le principal decodait deja les binaires en base64 et l'annoncait ici — mais
+   * le champ etait JETE a la lecture de l'archive, si bien qu'aucun importateur
+   * ne pouvait distinguer une image d'un fichier texte. Toutes les images d'un
+   * export Notion etaient donc perdues avant meme d'atteindre le convertisseur.
+   */
+  encoding?: 'utf8' | 'base64';
 }
 
 // ==================== Orchestrator ====================
+
+/**
+ * Files read per `import:readBatch` round-trip.
+ *
+ * The point of batching is that only one batch of raw file content is alive
+ * at a time, so this is the knob that decides peak memory during a large
+ * import. A few hundred keeps the IPC round-trips cheap without letting the
+ * transient payload grow past a few MB.
+ */
+const OBSIDIAN_BATCH_SIZE = 400;
+
+/** Obsidian notes are Markdown — never ask the main process for anything else. */
+const OBSIDIAN_EXTENSIONS = ['.md', '.markdown'];
+
+function emptyResult(errors: string[] = [], warnings: string[] = []): ExternalImportResult {
+  return {
+    notes: [],
+    tags: [],
+    notebooks: [],
+    notesImported: 0,
+    tagsCreated: 0,
+    linksResolved: 0,
+    warnings,
+    errors,
+  };
+}
+
+/** Let the UI repaint and make the previous batch's strings collectable. */
+function yieldToUI(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Obsidian import, streamed.
+ *
+ * Lists the vault's Markdown paths first, then reads and converts them in
+ * batches. Nothing ever holds the whole vault: each batch's raw content is
+ * dropped once converted, so memory tracks OBSIDIAN_BATCH_SIZE rather than
+ * the number of notes. Attachments are never read at all — the importer only
+ * consumes Markdown, and reading images just to discard them was what made
+ * large vaults exhaust the heap.
+ */
+async function runObsidianImport(
+  options: ExternalImportOptions,
+  onProgress?: ProgressCallback
+): Promise<ExternalImportResult> {
+  const { ObsidianVaultAccumulator } = await import('./importers/obsidianImporter');
+
+  // Phase 1: enumerate paths only — cheap regardless of vault size
+  onProgress?.({ phase: 'reading', current: 0, total: 1, detail: 'Listing vault files...' });
+
+  const listing = (await window.electron.ipcRenderer.invoke('import:listFiles', {
+    dirPath: options.sourcePath,
+    extensions: OBSIDIAN_EXTENSIONS,
+  })) as { files: string[]; truncated: boolean; oversized: number } | null;
+
+  const files = listing?.files ?? [];
+  if (files.length === 0) {
+    return emptyResult(['No Markdown file found in this folder — is it an Obsidian vault?']);
+  }
+
+  onProgress?.({ phase: 'reading', current: 1, total: 1, detail: `${files.length} notes found` });
+
+  const accumulator = new ObsidianVaultAccumulator(options);
+
+  // Surface what the walk left out. A silently partial import is worse than a
+  // failed one: it looks like a success and the user never goes looking.
+  if (listing?.truncated) {
+    accumulator.addWarning(
+      `Vault too large to enumerate fully — only the first ${files.length} notes were imported. ` +
+        'Split the vault and import the rest separately.'
+    );
+  }
+  if (listing?.oversized && listing.oversized > 0) {
+    accumulator.addWarning(
+      `${listing.oversized} file(s) skipped: larger than the 10 MB per-file limit.`
+    );
+  }
+
+  // Phase 2: read + convert, one batch at a time
+  for (let offset = 0; offset < files.length; offset += OBSIDIAN_BATCH_SIZE) {
+    const batch = files.slice(offset, offset + OBSIDIAN_BATCH_SIZE);
+
+    onProgress?.({
+      phase: 'converting',
+      current: offset,
+      total: files.length,
+      detail: batch[0],
+    });
+
+    const entries = (await window.electron.ipcRenderer.invoke('import:readBatch', {
+      dirPath: options.sourcePath,
+      relativePaths: batch,
+    })) as SourceEntry[] | null;
+
+    if (!entries || entries.length === 0) {
+      accumulator.addWarning(
+        `Could not read ${batch.length} file(s) starting at "${batch[0]}" — skipped.`
+      );
+      continue;
+    }
+
+    accumulator.addBatch(entries);
+    await yieldToUI();
+  }
+
+  const result = accumulator.finalize();
+
+  // Phase 3: resolve internal links across every note
+  if (options.preserveLinks && result.notes.length > 1) {
+    onProgress?.({ phase: 'linking', current: 0, total: result.notes.length });
+    result.linksResolved = resolveInternalLinks(result.notes);
+    onProgress?.({ phase: 'linking', current: result.notes.length, total: result.notes.length });
+  }
+
+  onProgress?.({
+    phase: 'done',
+    current: result.notesImported,
+    total: result.notesImported,
+    detail: 'Import complete',
+  });
+
+  return result;
+}
 
 export async function runExternalImport(
   options: ExternalImportOptions,
@@ -61,50 +194,38 @@ export async function runExternalImport(
 ): Promise<ExternalImportResult> {
   const { source, sourcePath } = options;
 
+  // Obsidian reads a directory, which can be arbitrarily large — it gets the
+  // streaming path. ZIP/ENEX sources are a single bounded file.
+  if (source === 'obsidian') {
+    return await runObsidianImport(options, onProgress);
+  }
+
   // Phase 1: Read source data
   onProgress?.({ phase: 'reading', current: 0, total: 1, detail: 'Reading source files...' });
 
   let entries: SourceEntry[];
 
-  if (source === 'obsidian') {
-    // Read directory via IPC
-    entries = await window.electron.ipcRenderer.invoke('import:readDirectory', sourcePath);
-  } else if (source === 'notion') {
+  if (source === 'notion') {
     // Read ZIP via existing vault:importZip IPC
     const zipResult = await window.electron.ipcRenderer.invoke('vault:importZip', {
       filePath: sourcePath,
     });
     if (!zipResult?.entries) {
-      return {
-        notes: [],
-        tags: [],
-        notebooks: [],
-        notesImported: 0,
-        tagsCreated: 0,
-        linksResolved: 0,
-        warnings: [],
-        errors: ['Failed to read ZIP file'],
-      };
+      return emptyResult(['Failed to read ZIP file']);
     }
-    entries = zipResult.entries.map((e: { path: string; data: string }) => ({
-      relativePath: e.path,
-      content: e.data,
-      isDirectory: e.path.endsWith('/'),
-    }));
+    entries = zipResult.entries.map(
+      (e: { path: string; data: string; encoding?: 'utf8' | 'base64' }) => ({
+        relativePath: e.path,
+        content: e.data,
+        isDirectory: e.path.endsWith('/'),
+        encoding: e.encoding ?? 'utf8',
+      })
+    );
   } else {
     // Evernote: read single .enex file
     const fileResult = await window.electron.ipcRenderer.invoke('import:readFile', sourcePath);
     if (!fileResult) {
-      return {
-        notes: [],
-        tags: [],
-        notebooks: [],
-        notesImported: 0,
-        tagsCreated: 0,
-        linksResolved: 0,
-        warnings: [],
-        errors: ['Failed to read .enex file'],
-      };
+      return emptyResult(['Failed to read .enex file']);
     }
     entries = [
       { relativePath: fileResult.fileName, content: fileResult.content, isDirectory: false },
@@ -123,10 +244,7 @@ export async function runExternalImport(
 
   let result: ExternalImportResult;
 
-  if (source === 'obsidian') {
-    const { parseObsidianVault } = await import('./importers/obsidianImporter');
-    result = await parseObsidianVault(entries, options, onProgress);
-  } else if (source === 'notion') {
+  if (source === 'notion') {
     const { parseNotionExport } = await import('./importers/notionImporter');
     result = await parseNotionExport(entries, options, onProgress);
   } else {

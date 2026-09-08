@@ -35,6 +35,7 @@ export const QuickLookModal: React.FC<QuickLookModalProps> = ({ file, folderId, 
 
   return (
     <div
+    // chrome:free — cadre centre a 85vh : son bord haut depasse 40px.
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)' }}
       onClick={(e) => {

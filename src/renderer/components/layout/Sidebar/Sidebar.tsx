@@ -4,16 +4,23 @@
  * Barre laterale de navigation avec favoris et fichiers recents.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { FavoritesSection } from '../../sidebar/FavoritesSection';
 import type { RootState, AppDispatch } from '../../../../store';
+import { checkPluginUpdates } from '../../../../store/slices/marketplaceSlice';
 import { setCurrentFolder } from '../../../../store/slices/foldersSlice';
 import { addTab, updateTabRoute } from '../../../../store/slices/tabsSlice';
 import { routeToTitle } from '../../../../hooks/useTabNavigation';
 import { selectFilesStats } from '../../../../store/selectors/fileSelectors';
+import {
+  selectCanManageOrg,
+  selectIsOrgSpaceEntered,
+  selectRealOrgs,
+} from '../../../../store/selectors/authSelectors';
+import { selectMarketplaceAllowed } from '../../../../store/slices/governanceSlice';
 import './Sidebar.css';
 
 interface NavItem {
@@ -21,6 +28,15 @@ interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
+  badge?: number;
+  /**
+   * Ce que la pastille DIT à un lecteur d'écran. Sans ce champ, toute pastille
+   * héritait de « N en retard » — une phrase écrite pour les rappels, en
+   * français dans le code, annoncée telle quelle à un utilisateur anglophone
+   * regardant le compteur de mises à jour du marketplace. Le repli est
+   * désormais traduit, et chaque entrée peut dire sa propre phrase.
+   */
+  badgeLabel?: string;
 }
 
 const formatBytes = (bytes: number): string => {
@@ -65,6 +81,82 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(function Sidebar({
   const foldersById = useSelector((state: RootState) => state.folders.byId);
   const filesById = useSelector((state: RootState) => state.files?.byId ?? {});
   const isSplit = useSelector((state: RootState) => state.tabs.panels.length > 1);
+  // Ni « Coffres partagés » ni « Partagé avec moi » ici (lot A, C5-C6) : les
+  // coffres sont mêlés aux dossiers de l'accueil, les partages reçus vivent
+  // dans son bandeau (`VaultInboxBanner`), et les anciennes routes se replient
+  // sur `/` ou `/vault-folder/<id>` (routeCompat). Seule canManageOrg reste
+  // liée à l'espace entreprise — et reste fermée.
+  const cloudUserId = useSelector((s: RootState) => s.auth.cloudUser?.id ?? null);
+  /**
+   * Pastille de mise à jour des plugins — le fetch vit ICI (montage de l'app),
+   * pas seulement dans l'écran : rien d'autre ne déclencherait la lecture. Un
+   * plugin installé se mettait à jour uniquement si son propriétaire pensait à
+   * visiter le marketplace. La sentinelle 'idle' évite la boucle ; le thunk ne
+   * rejette jamais (une pastille ne casse pas un écran).
+   */
+  // Politique de poste de l'organisation : la place de marché est-elle joignable ?
+  const marketplaceAllowed = useSelector(selectMarketplaceAllowed);
+  const updatesAvailable = useSelector((s: RootState) => s.marketplace.updatesAvailable);
+  const updatesStatus = useSelector((s: RootState) => s.marketplace.updatesStatus);
+  useEffect(() => {
+    if (cloudUserId && updatesStatus === 'idle') void dispatch(checkPluginUpdates(cloudUserId));
+  }, [cloudUserId, updatesStatus, dispatch]);
+  const canManageOrg = useSelector(selectCanManageOrg);
+  /**
+   * L'entrée « Organisation » s'affiche aussi pour un compte d'organisation qui
+   * n'appartient encore à AUCUNE : c'est la seule porte par où en créer ou en
+   * rejoindre une. Sans elle, un compte fraîchement créé se retrouvait devant
+   * une application ordinaire, sans le moindre moyen d'aller plus loin.
+   */
+  const inOrgSpace = useSelector(selectIsOrgSpaceEntered);
+  const hasNoOrg = useSelector(selectRealOrgs).length === 0;
+  const showOrgEntry = canManageOrg || (inOrgSpace && hasNoOrg);
+
+  // Count overdue (not completed, fire date in the past) reminders. We
+  // listen to the main process's `upcomingReminders` push (fired on
+  // every CRUD + every 15 min), so the count includes folder, file,
+  // calendar AND note reminders — note reminders live outside Redux.
+  const [overdueFromIpc, setOverdueFromIpc] = useState<number>(0);
+  useEffect(() => {
+    const ipc = window.electron?.ipcRenderer;
+    if (!ipc) return;
+    const handler = (list: any[]) => {
+      if (!Array.isArray(list)) return;
+      const now = Date.now();
+      let c = 0;
+      for (const r of list) {
+        if (!r || r.completed || r.isCompleted) continue;
+        const fireAt = new Date(r.snoozedUntil ?? r.date).getTime();
+        if (Number.isNaN(fireAt)) continue;
+        if (fireAt < now) c++;
+      }
+      setOverdueFromIpc(c);
+    };
+    ipc.on('upcomingReminders', handler);
+    return () => ipc.removeListener('upcomingReminders', handler);
+  }, []);
+
+  // Redux-derived fallback (covers the initial render before the first
+  // IPC push lands, and stays in sync when reminders change inline).
+  const overdueFromRedux = useMemo(() => {
+    const now = Date.now();
+    let count = 0;
+    const tally = (reminders: any[] | undefined) => {
+      if (!Array.isArray(reminders)) return;
+      for (const r of reminders) {
+        if (!r || r.completed || r.isCompleted) continue;
+        const fireAt = new Date(r.snoozedUntil ?? r.date).getTime();
+        if (Number.isNaN(fireAt)) continue;
+        if (fireAt < now) count++;
+      }
+    };
+    for (const folder of Object.values(foldersById)) tally((folder as any).reminders);
+    for (const file of Object.values(filesById)) tally((file as any).reminders);
+    return count;
+  }, [foldersById, filesById]);
+
+  // Prefer the IPC count once it has fired at least once (it sees notes).
+  const overdueCount = overdueFromIpc || overdueFromRedux;
   const focusedPanelId = useSelector((state: RootState) => state.tabs.focusedPanelId);
   const focusedPanel = useSelector((state: RootState) =>
     state.tabs.panels.find((p) => p.id === state.tabs.focusedPanelId)
@@ -136,6 +228,31 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(function Sidebar({
         ),
       },
       {
+        // Le canevas libre des notes. Il existait déjà, mais uniquement comme
+        // 4e icône sans libellé d'une barre flottante DANS la section Notes :
+        // pour le trouver il fallait déjà savoir qu'il existait. Ici c'est une
+        // destination comme une autre, et elle montre TOUTES les notes.
+        id: 'board',
+        label: t('sidebar.board', 'Tableau'),
+        path: '/board',
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z"
+            />
+          </svg>
+        ),
+      },
+      {
         id: 'collections',
         label: t('sidebar.collections', 'Collections'),
         path: '/collections',
@@ -199,6 +316,111 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(function Sidebar({
         ),
       },
       {
+        id: 'reminders',
+        label: t('sidebar.reminders', 'Rappels'),
+        path: '/reminders',
+        badge: overdueCount,
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+            />
+          </svg>
+        ),
+      },
+      {
+        id: 'shares',
+        label: t('sidebar.shares', 'Partages'),
+        path: '/shares',
+        icon: (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"
+            />
+          </svg>
+        ),
+      },
+      /**
+       * Marketplace de greffons (P2) : compte cloud requis (catalogue
+       * authentifié) — parcourir est libre, publier exige la paire de clés.
+       *
+       * L'ORGANISATION PEUT LA COUPER. L'entrée disparaît alors de la barre au
+       * lieu de mener à un écran que le serveur refuse — un menu qui propose une
+       * porte fermée fait passer une décision d'administrateur pour une panne.
+       * Ce masquage est du CONFORT : le vrai verrou est le refus du Worker sur le
+       * catalogue et sur les paquets, qui tient quel que soit l'état du poste.
+       */
+      ...(cloudUserId && marketplaceAllowed
+        ? [
+            {
+              id: 'marketplace',
+              label: t('sidebar.marketplace', 'Marketplace'),
+              path: '/marketplace',
+              badge: updatesAvailable,
+              badgeLabel: t('marketplace.updatesBadge', { count: updatesAvailable }),
+              icon: (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z"
+                  />
+                </svg>
+              ),
+            },
+          ]
+        : []),
+      ...(showOrgEntry
+        ? [
+            {
+              id: 'organization',
+              label: t('sidebar.organization', 'Organisation'),
+              path: '/organization',
+              icon: (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
+                  />
+                </svg>
+              ),
+            },
+          ]
+        : []),
+      {
         id: 'settings',
         label: t('sidebar.settings', 'Parametres'),
         path: '/settings',
@@ -225,7 +447,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(function Sidebar({
         ),
       },
     ],
-    [t]
+    [t, overdueCount, showOrgEntry, cloudUserId, updatesAvailable, marketplaceAllowed]
   );
 
   const handleNavigate = useCallback(
@@ -314,6 +536,7 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(function Sidebar({
       {/* Backdrop pour mobile */}
       {isOpen && (
         <div
+          // chrome:free — voile de rejet uniforme, et deja decale sous le header.
           className="fixed inset-0 bg-black/40 z-[calc(var(--z-index-sidebar)-1)] lg:hidden cursor-pointer"
           style={{ top: 'var(--spacing-layout-header-height)' }}
           onClick={handleBackdropClick}
@@ -367,6 +590,16 @@ export const Sidebar: React.FC<SidebarProps> = React.memo(function Sidebar({
                         {item.icon}
                       </span>
                       <span className="flex-1 truncate">{item.label}</span>
+                      {typeof item.badge === 'number' && item.badge > 0 && (
+                        <span
+                          className="inline-flex items-center justify-center shrink-0 min-w-[20px] h-5 px-1.5 text-[10px] font-semibold rounded-full bg-red-500 text-white"
+                          aria-label={
+                            item.badgeLabel ?? t('sidebar.remindersOverdue', { count: item.badge })
+                          }
+                        >
+                          {item.badge > 99 ? '99+' : item.badge}
+                        </span>
+                      )}
                     </button>
                   </li>
                 );

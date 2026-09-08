@@ -10,6 +10,7 @@
 
 import profileStorage from '../core/profileStorage';
 import { getAppVersion } from './appVersion';
+import { isWebPlatform } from './isWebPlatform';
 
 // Cloudflare Worker endpoint
 const VERSION_CHECK_URL = 'https://filarr-version.filarr-app.workers.dev/version';
@@ -60,6 +61,13 @@ function compareVersions(current: string, latest: string): boolean {
  * Returns null if skipped due to throttle.
  */
 export async function checkForUpdate(force: boolean = false): Promise<VersionCheckResult | null> {
+  // Web: nothing to update — app.filarr.com always serves the latest build
+  // (index.html is never cached, infra/web-app/worker.js). The request would be
+  // refused anyway: the version Worker is outside the page's connect-src. The
+  // anonymous ping (OS, version) goes with it, on purpose — web telemetry is
+  // opt-in (ESW-1605), and "dev-web" measured nothing useful.
+  if (isWebPlatform()) return null;
+
   const currentVersion = getCurrentVersion();
 
   // Throttle: skip if checked recently (unless forced)

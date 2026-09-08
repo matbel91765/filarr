@@ -1,0 +1,36 @@
+/* ==================== Traits d'aimantation ==================== */
+
+/**
+ * Posés dans le PLAN (`.sticky-notes-view__canvas`), donc en position absolue
+ * comme les cartes. `z-index` au-dessus des cartes au repos mais SOUS la carte
+ * saisie (`.board-card--dragging` monte à 100) : le trait doit se lire par
+ * dessus les voisines qu'il traverse, sans jamais barrer celle qu'on tient.
+ *
+ * `pointer-events: none` : ils apparaissent exactement sous le curseur en plein
+ * geste — le moindre pixel cliquable ici volerait le relâchement de la souris.
+ *
+ * L'épaisseur est posée en style en ligne (elle dépend du zoom, voir le
+ * composant). Tout le reste est du token.
+ */
+.board-guide {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+  background: var(--color-primary-400);
+  /* Le halo décolle le trait des cartes qu'il traverse : sur un thème clair, un
+     filet d'un pixel sur une surface blanche est presque invisible. */
+  box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-primary-400) 35%, transparent);
+}
+
+/* Les deux orientations ne diffèrent que par la géométrie, posée en ligne.
+   Ces sélecteurs existent pour rester accrochables (thème, test, débogage). */
+.board-guide--x,
+.board-guide--y {
+  opacity: 0.95;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-guide {
+    box-shadow: none;
+  }
+}

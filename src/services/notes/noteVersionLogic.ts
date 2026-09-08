@@ -151,9 +151,11 @@ export function applyRetention(
   const discard: NoteVersionMeta[] = [];
 
   for (const v of sorted) {
-    const ageMs = nowMs - Date.parse(v.savedAt);
+    // A malformed savedAt parses to NaN — treat it as NOT-too-old (keep; never age-prune a version we
+    // can't date). The count cap below is the backstop so a corrupt entry can't accumulate forever.
+    const parsed = Date.parse(v.savedAt);
     const countFull = keep.length >= maxCount;
-    const tooOld = ageMs > maxAgeMs;
+    const tooOld = Number.isFinite(parsed) ? nowMs - parsed > maxAgeMs : false;
 
     if (countFull || tooOld) {
       discard.push(v);
@@ -163,6 +165,21 @@ export function applyRetention(
   }
 
   return { keep, discard };
+}
+
+/**
+ * E9-2: resolve the effective retention window in DAYS. An org governance policy value (when set)
+ * OVERRIDES the personal default — a compliance retention may be shorter (prune sooner) or longer
+ * (keep more) — and falls back to the default when the org value is unset/invalid. Pure + shared by
+ * the version-retention (main) and trash-retention (renderer) paths.
+ */
+export function effectiveRetentionDays(
+  orgDays: number | null | undefined,
+  defaultDays: number
+): number {
+  return typeof orgDays === 'number' && Number.isFinite(orgDays) && orgDays > 0
+    ? orgDays
+    : defaultDays;
 }
 
 // ── IDs / filenames ─────────────────────────────────────────────────────────

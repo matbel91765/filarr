@@ -29,7 +29,22 @@ export interface ProfileMetadata {
     email: string;
     tier: string;
     linkedAt: string;
+    /** Strict account type (0059) — the reliable pre-activation space signal. */
+    accountType?: 'personal' | 'enterprise';
   } | null;
+  /**
+   * Last-known workspace space for this profile. Denormalized from the
+   * authoritative per-profile .space file so the pre-activation ProfilePicker
+   * can badge/default the space without an active profile. The .space file
+   * remains the source of truth; this is only a hint. Defaults to 'personal'.
+   */
+  spaceMode?: 'personal' | 'enterprise';
+  /**
+   * Last-known list of REAL (non-personal) organizations this profile's cloud
+   * account belongs to. Lets the picker decide whether to offer the Enterprise
+   * toggle at all, before any network call. Refreshed on each org:list fetch.
+   */
+  orgs?: import('./org').OrgHint[];
 }
 
 export interface ProfilesManifest {

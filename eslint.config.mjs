@@ -21,6 +21,40 @@ export default [
     ],
   },
   {
+    // Le bundle de plugin DÉPOSÉ (compilé hors du cœur, relu par ce lint) vit
+    // en .js et parle au navigateur — mêmes globals que le bloc TypeScript.
+    files: ['src/plugins/external/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        atob: 'readonly',
+        btoa: 'readonly',
+        Blob: 'readonly',
+        FileReader: 'readonly',
+        Image: 'readonly',
+        URL: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        crypto: 'readonly',
+        HTMLElement: 'readonly',
+        KeyboardEvent: 'readonly',
+        MouseEvent: 'readonly',
+        requestAnimationFrame: 'readonly',
+        cancelAnimationFrame: 'readonly',
+        // mammoth (import docx) accepte {buffer} sous Node — la garde
+        // typeof Buffer du bundle est légitime dans les deux environnements.
+        Buffer: 'readonly',
+      },
+    },
+  },
+  {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsParser,

@@ -1,14 +1,15 @@
 /**
  * Onboarding Wizard — Filarr
  *
- * 7-step wizard shown on first launch (local-only):
+ * 8-step wizard shown on first launch:
  * 1. Welcome — splash with feature highlights
- * 2. Profile — name, avatar color, optional PIN
- * 3. Appearance — theme (light/dark/system) + accent color
- * 4. Use Case — personal/student/professional/creative → starter content
- * 5. Discovery — visual tour of 4 app areas
- * 6. Security — encryption warning + checkbox
- * 7. Ready — recap + "Let's go" button
+ * 2. Language — FR/EN choice (applies immediately)
+ * 3. Profile — name, avatar color, optional PIN
+ * 4. Appearance — theme (light/dark/system) + accent color
+ * 5. Use Case — personal/student/professional/creative → starter content
+ * 6. Discovery — visual tour of 4 app areas
+ * 7. Security — encryption warning + checkbox
+ * 8. Ready — recap + "Let's go" button
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -16,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { setTheme, setUseSystemTheme } from '../../../store/slices/uiSlice';
 import { createProfile, activateProfile } from '../../../store/slices/profilesSlice';
+import { setCloudAuth, setSyncEnabled } from '../../../store/slices/authSlice';
 import { createFolder } from '../../../store/slices/foldersSlice';
 import { createNewNote } from '../../../store/slices/notesSlice';
 import { createTag } from '../../../store/slices/tagsSlice';
@@ -30,10 +32,19 @@ import {
   STARTER_TEMPLATES,
   DISCOVERY_AREAS,
   getWelcomeNoteContent,
+  getWelcomeNotePlainText,
   type UseCase,
 } from '../../../services/onboarding/starterTemplates';
 import { avatarGradient } from '../../../utils/avatarGradient';
+import { ENTERPRISE_ACCESSIBLE, isEnterpriseHidden } from '../../../config/enterprise';
 import { FilarrLogo } from '../ui/FilarrLogo';
+import { CloudRegisterStep, CloudRecoveryStep, CloudVerifyStep } from '../auth/cloud';
+import * as authApi from '../../../services/auth/authApi';
+import { restoreCloudProfiles } from '../../../services/core/cloudProfileRestore';
+import * as profileStorage from '../../../services/core/profileStorage';
+import { profilesOfAccount, landingForAccount } from '../../../services/core/accountProfiles';
+import { beginPendingCloudSession } from '../../../services/core/pendingCloudSession';
+import OnboardingPairingStep from './OnboardingPairingStep';
 import './Onboarding.css';
 
 // ==================== Constants ====================
@@ -82,21 +93,85 @@ const AVATAR_COLORS = [
 ];
 
 type StepId =
+  | 'space'
+  | 'choice'
   | 'welcome'
   | 'profile'
   | 'appearance'
   | 'usecase'
   | 'discovery'
   | 'security'
-  | 'ready';
+  | 'ready'
+  | 'cloud-register'
+  | 'cloud-recovery'
+  | 'cloud-verify'
+  | 'cloud-pairing'
+  | 'ent-welcome'
+  | 'org';
 
 const LOCAL_STEPS: StepId[] = [
+  'space',
+  'choice',
   'welcome',
   'profile',
   'appearance',
   'usecase',
   'discovery',
   'security',
+  'ready',
+];
+const CLOUD_STEPS: StepId[] = [
+  'space',
+  'choice',
+  'cloud-register',
+  'cloud-recovery',
+  'cloud-verify',
+  'profile',
+  'appearance',
+  'usecase',
+  'discovery',
+  'ready',
+];
+// Enterprise: cloud is forced (no local/cloud choice); an org join/create step
+// sits after email verification and before profile setup.
+/**
+ * Le parcours d'entrée dans l'espace entreprise.
+ *
+ * ── CE QU'IL AVAIT DE FAUX ───────────────────────────────────────────────────
+ *
+ * Il réutilisait les écrans du parcours personnel tels quels : on choisissait
+ * « Entreprise » au premier écran et on atterrissait sur une inscription
+ * rigoureusement identique à celle d'un particulier, sans un mot sur le fait que
+ * ce compte est distinct, ni la moindre porte pour celui qui en avait DÉJÀ créé
+ * un sur le site — lequel repartait donc avec un second compte.
+ *
+ * Deux changements, et ils vont dans des sens opposés :
+ *
+ *   · 'ent-welcome' EST AJOUTÉ en tête. C'est l'écran qui nomme les deux portes
+ *     — « j'en ai déjà un » et « je n'en ai pas » — et qui dit où sont passés les
+ *     profils personnels, la première question de quelqu'un qui ne les voit plus.
+ *   · 'usecase' et 'discovery' SONT RETIRÉS. Demander à quelqu'un qui installe
+ *     l'outil parce que son employeur le lui demande s'il compte plutôt prendre
+ *     des notes ou ranger ses photos n'appelle aucune réponse utile. L'écran
+ *     final le remplace par l'ordre de marche de son organisation.
+ */
+const ENTERPRISE_STEPS: StepId[] = [
+  'space',
+  'ent-welcome',
+  'cloud-register',
+  'cloud-recovery',
+  'cloud-verify',
+  'org',
+  'profile',
+  'appearance',
+  'ready',
+];
+// Login on secondary device: pairing → done (skip profile/appearance/etc.)
+const CLOUD_PAIRING_STEPS: StepId[] = [
+  'space',
+  'choice',
+  'cloud-register',
+  'cloud-pairing',
   'ready',
 ];
 
@@ -246,6 +321,21 @@ function generateRecoveryPhrase(): string {
 
 interface OnboardingState {
   stepIndex: number;
+  mode: 'local' | 'cloud' | null;
+  /** The chosen workspace space. Enterprise forces cloud + an org step. */
+  spaceType: 'personal' | 'enterprise' | null;
+  /**
+   * Connexion ou inscription, choisi aux deux portes de l'écran d'accueil
+   * entreprise. C'est un ÉTAT et non une prop parce que la personne le décide
+   * en cours de parcours ; le figer à l'ouverture rendait la seconde porte
+   * inopérante.
+   *
+   * `null` = RIEN N'EST ENCORE CHOISI, et cette troisième valeur n'est pas un
+   * détail : sans elle, une des deux portes serait cochée d'office à l'ouverture
+   * de l'écran, et « Suivant » emmènerait quelque part sans que personne n'ait
+   * rien décidé.
+   */
+  authMode: 'register' | 'login' | null;
   language: 'en' | 'fr';
   name: string;
   avatarColor: string;
@@ -273,15 +363,87 @@ interface OnboardingState {
   recoveryPhraseSaved: boolean;
   isFinishing: boolean;
   finishError: string | null;
+  // Cloud registration
+  cloudEmail: string;
+  cloudPassword: string;
+  cloudPasswordConfirm: string;
+  cloudRegistering: boolean;
+  cloudRegisterError: string | null;
+  cloudRecoveryCodes: string[] | null;
+  cloudRecoveryAcknowledged: boolean;
+  // Cloud vault password
+  vaultPassword: string;
+  vaultPasswordConfirm: string;
+  vaultAcknowledged: boolean;
+  // Secondary device pairing
+  isSecondaryDevice: boolean;
+  // Enterprise org onboarding (join via invite token / create)
+  orgAction: 'join' | 'create' | null;
+  orgInviteToken: string;
+  orgName: string;
+  orgWorking: boolean;
+  orgError: string | null;
+  /** Set once the user has joined or created an org during onboarding. */
+  joinedOrgId: string | null;
 }
 
 // ==================== Component ====================
 
 interface OnboardingProps {
   onComplete: () => void;
+  /**
+   * "Add account" mode: reuse the wizard to provision an ADDITIONAL profile
+   * (not first run). When set, the space step is skipped and the flow starts
+   * directly in that space (used for "create an enterprise account" from the
+   * enterprise picker, since personal/enterprise are distinct accounts).
+   */
+  initialSpace?: 'personal' | 'enterprise';
+  /**
+   * Which auth form to show first. 'login' is used for "connect to an existing
+   * enterprise account" (add a profile to an account you already have) vs
+   * 'register' for creating a brand-new account.
+   */
+  initialAuthMode?: 'register' | 'login';
+  /**
+   * Quitter la démarche « ajouter un compte » sans rien provisionner. Rendu
+   * comme un lien discret : sans lui, le « + » du sélecteur était une porte à
+   * sens unique — on entrait dans l'assistant et on ne pouvait plus en sortir
+   * qu'en le menant à son terme.
+   */
+  onCancel?: () => void;
+  /**
+   * Le compte ajouté possède PLUSIEURS profils : à l'appelant de rendre la main
+   * au sélecteur, où ils apparaissent désormais groupés sous leur adresse. On ne
+   * choisit pas à la place de la personne, et on n'invente pas un second
+   * sélecteur au milieu de l'assistant.
+   *
+   * La session reste en attente : c'est le profil qu'elle activera qui
+   * l'adoptera (cf. `profile:activate`).
+   */
+  onProfilesRestored?: (info: { email: string; profileIds: string[] }) => void;
 }
 
-const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+/**
+ * L'étape par laquelle l'assistant COMMENCE.
+ *
+ * 0 au premier lancement : on demande l'espace. Entrer par « ajouter un compte »
+ * saute ce choix — il vient d'être fait au portail — et, en entreprise, saute
+ * aussi l'écran des deux portes, que le sélecteur de profils vient de poser.
+ * Reposer une question à laquelle on vient de répondre se lit comme une panne.
+ */
+function entryIndexFor(space?: 'personal' | 'enterprise'): number {
+  if (!space) return 0;
+  return space === 'enterprise' ? 2 : 1;
+}
+
+const Onboarding: React.FC<OnboardingProps> = ({
+  onComplete,
+  initialSpace,
+  initialAuthMode,
+  onCancel,
+  onProfilesRestored,
+}) => {
+  const ENTRY_INDEX = entryIndexFor(initialSpace);
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -293,7 +455,16 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   })();
 
   const [s, setS] = useState<OnboardingState>({
-    stepIndex: 0,
+    // Add mode with a forced space skips the space step and starts in that flow.
+    // Entrer par « ajouter un compte » saute le choix d'espace — il est déjà
+    // fait — ET, en entreprise, l'écran des deux portes : le sélecteur de
+    // profils vient de poser la question, la reposer serait la contredire.
+    stepIndex: ENTRY_INDEX,
+    mode: initialSpace === 'enterprise' ? 'cloud' : null,
+    spaceType: initialSpace ?? null,
+    // Entrer par « ajouter un compte » a DÉJÀ répondu (le sélecteur de profils
+    // vient de poser la question), et l'écran des deux portes est sauté.
+    authMode: initialAuthMode ?? null,
     language: detectedLang,
     name: '',
     avatarColor: AVATAR_COLORS[0],
@@ -311,6 +482,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     recoveryPhraseSaved: false,
     isFinishing: false,
     finishError: null,
+    cloudEmail: '',
+    cloudPassword: '',
+    cloudPasswordConfirm: '',
+    cloudRegistering: false,
+    cloudRegisterError: null,
+    cloudRecoveryCodes: null,
+    cloudRecoveryAcknowledged: false,
+    vaultPassword: '',
+    vaultPasswordConfirm: '',
+    vaultAcknowledged: false,
+    isSecondaryDevice: false,
+    orgAction: null,
+    orgInviteToken: '',
+    orgName: '',
+    orgWorking: false,
+    orgError: null,
+    joinedOrgId: null,
   });
 
   const update = useCallback((patch: Partial<OnboardingState>) => {
@@ -324,11 +512,67 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     }
   }, []);
 
-  const steps = LOCAL_STEPS;
+  /**
+   * Mode « ajouter un compte » : la zone d'attente s'ouvre AVANT la première
+   * saisie, pas après.
+   *
+   * Tout ce que l'authentification qui suit va écrire — jetons, cache
+   * utilisateur, enveloppe de la FEK — doit atterrir hors de tout profil. Ouvrir
+   * après coup ne rattraperait rien : les octets seraient déjà chez le profil
+   * précédent, et `initHybridCrypto` y aurait déjà lu l'enveloppe du MAUVAIS
+   * compte, celle qui ne s'ouvre pas avec le mot de passe qu'on vient de saisir.
+   *
+   * Au premier lancement (pas de mode ajout), il n'y a aucun profil à protéger :
+   * le repli historique fait l'affaire, et l'adoption n'a pas lieu d'être.
+   */
+  const isAddAccount = !!initialSpace;
+  const [pendingRealmReady, setPendingRealmReady] = useState(!initialSpace);
+  useEffect(() => {
+    if (!isAddAccount) return;
+    let vivant = true;
+    void beginPendingCloudSession().finally(() => {
+      if (vivant) setPendingRealmReady(true);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, [isAddAccount]);
+
+  const steps = s.isSecondaryDevice
+    ? CLOUD_PAIRING_STEPS
+    : s.spaceType === 'enterprise'
+      ? ENTERPRISE_STEPS
+      : s.mode === 'cloud'
+        ? CLOUD_STEPS
+        : LOCAL_STEPS;
   const currentStep = steps[s.stepIndex];
+
+  /** L'utilisateur est entre par la porte entreprise : memes ecrans, autres phrases. */
+  const isEnterpriseSpace = s.spaceType === 'enterprise';
 
   const canNext = (): boolean => {
     switch (currentStep) {
+      case 'space':
+        return false; // clicking a card advances directly
+      case 'choice':
+        return false; // clicking a card advances directly
+      case 'ent-welcome':
+        // On CHOISIT, puis on avance. L'écran portait un bouton « Suivant » — et
+        // cliquer une porte emmenait aussitôt ailleurs : la carte se comportait
+        // comme un lien tout en ressemblant à un choix, et le bouton restait gris
+        // sans qu'on sache quoi en faire. Il fallait trancher, et c'est ce sens-là
+        // qui respecte ce que l'écran MONTRE.
+        return s.authMode !== null;
+      case 'org':
+        return false; // join/create/skip buttons handle advancement
+      case 'cloud-register':
+        return false; // submit button handles advancement
+      case 'cloud-recovery':
+        return s.cloudRecoveryAcknowledged;
+      case 'cloud-verify':
+        return false; // auto-advances on email verification
+      case 'cloud-pairing':
+        return false; // pairing step handles its own flow
       case 'profile':
         if (!s.name.trim()) return false;
         if (s.pinEnabled) {
@@ -339,6 +583,14 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       case 'usecase':
         return s.useCase !== null;
       case 'security':
+        if (s.mode === 'cloud') {
+          // Cloud: vault password only (recovery codes were shown in cloud-recovery)
+          return (
+            s.securityAcknowledged &&
+            s.encryptionPassword.length >= 8 &&
+            s.encryptionPassword === s.encryptionPasswordConfirm
+          );
+        }
         return (
           s.securityAcknowledged &&
           s.encryptionPassword.length >= 8 &&
@@ -351,7 +603,23 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   };
 
   const handleNext = () => update({ stepIndex: Math.min(s.stepIndex + 1, steps.length - 1) });
-  const handleBack = () => update({ stepIndex: Math.max(s.stepIndex - 1, 0) });
+  const handleBack = () => {
+    // In add-account mode the space is fixed by the entry point (enterprise "+"),
+    // so the space step is skipped and Back must never reach it — clamp to the
+    // first real step and never clear spaceType/mode.
+    const minIndex = ENTRY_INDEX;
+    const prevIndex = Math.max(s.stepIndex - 1, minIndex);
+    const prevStep = steps[prevIndex];
+    if (!initialSpace && prevStep === 'space') {
+      // Back to the space choice resets the whole downstream branch.
+      update({ stepIndex: 0, mode: null, spaceType: null });
+    } else if (prevStep === 'choice') {
+      // Back to the local/cloud choice resets the mode.
+      update({ stepIndex: prevIndex, mode: null });
+    } else {
+      update({ stepIndex: prevIndex });
+    }
+  };
 
   // ==================== Finish ====================
 
@@ -359,6 +627,161 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     update({ isFinishing: true, finishError: null });
 
     try {
+      // ── Secondary device: the FEK first, THEN the profiles it unlocks ──
+      if (s.isSecondaryDevice) {
+        /**
+         * LA CLÉ AVANT LES PROFILS, et c'est tout le correctif.
+         *
+         * Cette branche lisait le manifeste local, n'y trouvait rien sur un
+         * appareil neuf, et créait un profil nommé d'après l'adresse e-mail —
+         * puis installait la FEK. Or les métadonnées d'un profil (nom, couleur)
+         * vivent dans `manifest.enc`, chiffré : la restauration ne peut avoir
+         * lieu qu'une fois la clé en place. L'ordre condamnait donc le seul
+         * geste capable de ramener les profils, avant même de l'avoir tenté.
+         */
+        try {
+          const hasKey = await window.electron?.ipcRenderer?.invoke('hybrid:hasKey');
+          if (!hasKey && s.cloudPassword) {
+            const { initHybridCrypto } = await import('../../../services/auth/hybridCrypto');
+            await initHybridCrypto(s.cloudPassword);
+          } else if (hasKey) {
+            const { tryRestoreFEKFromSafeStorage } =
+              await import('../../../services/auth/hybridCrypto');
+            await tryRestoreFEKFromSafeStorage();
+          }
+        } catch {
+          /* non-fatal — user can set password manually from Settings */
+        }
+
+        /**
+         * RAMENER LES PROFILS DU NUAGE. Le commentaire précédent affirmait ici
+         * qu'ils l'avaient été « par pairingService.joinPairing » — vrai
+         * uniquement quand on passait par les six chiffres. Les deux branches
+         * qui sautent l'appairage (le serveur détient une copie enveloppée de
+         * la FEK, ou l'appareil a déjà la sienne) n'appelaient donc jamais la
+         * restauration, et tombaient droit sur le repli.
+         *
+         * Idempotent, donc sans danger quand l'appairage l'a déjà faite.
+         */
+        let restoredIds: string[] = [];
+        try {
+          restoredIds = (await restoreCloudProfiles()).profileIds;
+        } catch {
+          /* non-fatal — on se rabat sur ce qui existe en local */
+        }
+
+        const profileManifest = await window.electron.ipcRenderer.invoke('profile:getManifest');
+        const allProfiles: any[] = profileManifest?.profiles ?? [];
+
+        /**
+         * LES PROFILS DE CE COMPTE — pas « les profils ».
+         *
+         * Cette branche prenait `profiles.find(isDefault) || profiles[0]` sur le
+         * manifeste LOCAL ENTIER. Depuis l'onboarding d'un appareil vierge,
+         * c'était juste : tout ce qui s'y trouvait venait du compte qui venait
+         * de se connecter. Depuis le sélecteur, la machine porte déjà des
+         * profils — un autre compte, du travail purement local — et « prendre le
+         * premier » ouvre celui de quelqu'un d'autre, avec sa session, ses
+         * fichiers et son nom à l'écran.
+         *
+         * La règle vit dans `accountProfiles` : c'est elle qui décide qui entre
+         * dans quoi, elle mérite d'être éprouvée seule.
+         */
+        const landing = landingForAccount(
+          profilesOfAccount(allProfiles, s.cloudEmail, restoredIds)
+        );
+
+        if (landing.kind === 'choose' && onProfilesRestored) {
+          /**
+           * PLUSIEURS : on rend la main. Le sélecteur sait déjà les grouper sous
+           * l'adresse du compte, et c'est à la personne de dire lequel elle
+           * ouvre — pas à l'assistant de parier sur `isDefault`, qui désigne le
+           * profil par défaut de l'APPAREIL, pas celui du compte.
+           *
+           * La session reste en attente : le profil qu'elle activera l'adoptera.
+           */
+          update({ isFinishing: false });
+          onProfilesRestored({ email: s.cloudEmail, profileIds: landing.profileIds });
+          return;
+        }
+
+        if (landing.kind === 'enter') {
+          await dispatch(activateProfile(landing.profileId)).unwrap();
+        } else if (landing.kind === 'choose') {
+          // Personne pour arbitrer (premier lancement, sans appelant) : le
+          // défaut de l'appareil reste le meilleur choix disponible.
+          const mine = profilesOfAccount(allProfiles, s.cloudEmail, restoredIds);
+          const defaultProfile = mine.find((p: any) => p.isDefault) || mine[0];
+          await dispatch(activateProfile(defaultProfile.id)).unwrap();
+        } else if (!isAddAccount && allProfiles.length > 0) {
+          // PREMIER LANCEMENT, restauration bredouille (manifestes illisibles,
+          // hors ligne) mais des profils existent déjà sur l'appareil : on entre
+          // dans celui-là plutôt que d'en fabriquer un doublon. Comportement
+          // d'origine, préservé tel quel — hors mode ajout, il n'y a aucun autre
+          // compte à qui ce profil pourrait appartenir.
+          const defaultProfile = allProfiles.find((p: any) => p.isDefault) || allProfiles[0];
+          await dispatch(activateProfile(defaultProfile.id)).unwrap();
+        } else {
+          // DERNIER RECOURS, et il l'est enfin : ni profil restauré, ni profil
+          // local. Avant, ce chemin était le chemin ORDINAIRE d'une connexion.
+          const profile = await dispatch(
+            createProfile({
+              name: s.cloudEmail.split('@')[0] || 'User',
+              avatarColor: AVATAR_COLORS[0],
+            })
+          ).unwrap();
+          await dispatch(activateProfile(profile.id)).unwrap();
+        }
+
+        // Activate cloud sync
+        const meResult = await authApi.getMe();
+        let effectiveSpace: 'personal' | 'enterprise' =
+          s.spaceType === 'enterprise' ? 'enterprise' : 'personal';
+        if (meResult.success && meResult.user) {
+          dispatch(setCloudAuth(meResult.user));
+          if (meResult.user.accountType) {
+            effectiveSpace = meResult.user.accountType === 'enterprise' ? 'enterprise' : 'personal';
+          }
+          await authApi.setSyncEnabled(true);
+          dispatch(setSyncEnabled(true));
+        }
+
+        // Trigger initial sync
+        try {
+          const manifest = await window.electron.ipcRenderer.invoke('profile:getManifest');
+          const pid = manifest?.activeProfileId;
+          if (pid) {
+            await window.electron.ipcRenderer.invoke('sync:triggerSync', pid);
+          }
+        } catch {
+          /* non-fatal */
+        }
+
+        // Persist the space from the AUTHORITATIVE account type (0059), not the
+        // raw choice — a login can resolve to a different type than was picked.
+        try {
+          await window.electron?.ipcRenderer?.invoke(
+            'space:set',
+            effectiveSpace,
+            effectiveSpace === 'enterprise' ? (s.joinedOrgId ?? undefined) : undefined
+          );
+        } catch {
+          /* non-fatal — defaults to personal, user can switch from the profile */
+        }
+
+        localStorage.setItem('i18nextLng', s.language);
+        localStorage.setItem('filarr-onboarding-complete', 'true');
+        try {
+          await window.electron?.ipcRenderer?.invoke('flag:set', 'onboarding-complete', 'true');
+        } catch {
+          /* non-fatal */
+        }
+        onComplete();
+        return;
+      }
+
+      // ── Normal flow (first device or local) ─────────────────────────────────
+
       // 1. Profile (FATAL if fails)
       const profile = await dispatch(
         createProfile({
@@ -371,15 +794,29 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       // 1b. Activate the profile so StorageService points to the right directory
       await dispatch(activateProfile(profile.id)).unwrap();
 
-      // 1c. Initialize hybrid encryption with the master password
-      if (s.encryptionPassword) {
-        try {
-          const { initHybridCrypto, wrapFEKWithRecoveryPhrase } =
-            await import('../../../services/auth/hybridCrypto');
-          await initHybridCrypto(s.encryptionPassword);
+      /**
+       * Le pointeur de `profileStorage` suit, et il doit suivre ICI.
+       *
+       * Tout ce que la suite de cette fonction enregistre — thème, accent,
+       * langue — est une préférence de PROFIL. Sans ce pointeur, ces écritures
+       * atterrissent sur les clés nues, communes au poste : le profil suivant
+       * créé sur cette machine en hériterait par le repli hérité de
+       * `getItemWithLegacyFallback`, et s'ouvrirait habillé comme celui-ci.
+       */
+      profileStorage.setActiveProfile(profile.id);
 
-          // Also wrap FEK with recovery phrase so it can be recovered later
-          if (s.recoveryPhrase) {
+      // 1c. Initialize hybrid encryption with the master password
+      // In cloud mode, the account password doubles as the vault password (Option B)
+      const cryptoPassword = s.mode === 'cloud' ? s.cloudPassword : s.encryptionPassword;
+      if (cryptoPassword) {
+        try {
+          const { initHybridCrypto, wrapFEKWithRecoveryPhrase, applyRecoveryPhrase } =
+            await import('../../../services/auth/hybridCrypto');
+          await initHybridCrypto(cryptoPassword);
+
+          // Wrap the FEK (and keypair) under the recovery phrase so the account
+          // can be recovered later.
+          if (s.recoveryPhrase && s.mode !== 'cloud') {
             const recoveryData = await wrapFEKWithRecoveryPhrase(s.recoveryPhrase);
             // Update the wrapped key file to include recovery data
             const existingWrapped =
@@ -390,6 +827,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 ...recoveryData,
               });
             }
+            // E2-5: the keypair MUST get its recovery wrap at the same moment as
+            // the FEK — otherwise we'd create a keypair that can't be recovered by
+            // phrase (its private key would orphan after a password reset).
+            const { attachRecoveryWrap } = await import('../../../services/auth/userKeypairSync');
+            await attachRecoveryWrap(s.recoveryPhrase);
+          } else if (s.mode === 'cloud' && s.cloudRecoveryCodes?.length) {
+            // Cloud accounts get a server-issued recovery phrase but the FEK was
+            // never wrapped under it — so phrase recovery (recoverCloudAccount)
+            // was impossible. Wrap FEK + keypair under the codes now and publish.
+            // (Return value ignored here — a transient cloud-push miss self-heals
+            // via backfill on the next launch; the regenerate path surfaces it.)
+            await applyRecoveryPhrase(s.cloudRecoveryCodes.join(' '), cryptoPassword);
           }
         } catch (err) {
           console.warn('[Onboarding] Encryption init failed (non-fatal):', err);
@@ -415,7 +864,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         applyAccentColorPalette(s.accentColor);
       }
       try {
-        localStorage.setItem(
+        profileStorage.setItem(
           'filarr-settings',
           JSON.stringify({
             theme: s.themeChoice === 'system' ? detectSystemTheme() : s.themeChoice,
@@ -500,7 +949,48 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         }
       }
 
-      // 6. Complete — write to disk via IPC (survives localStorage resets)
+      // The account's server-side type is authoritative (0059). It equals the
+      // onboarding choice for a fresh REGISTER, but for a LOGIN to an existing
+      // account it wins over the chosen space (e.g. logging into a personal
+      // account while the enterprise flow was selected → the profile is personal).
+      let effectiveSpace: 'personal' | 'enterprise' =
+        s.spaceType === 'enterprise' ? 'enterprise' : 'personal';
+
+      // 6. Cloud mode: activate sync in Redux + trigger initial sync
+      if (s.mode === 'cloud') {
+        try {
+          const meResult = await authApi.getMe();
+          if (meResult.success && meResult.user) {
+            dispatch(setCloudAuth(meResult.user));
+            if (meResult.user.accountType) {
+              effectiveSpace =
+                meResult.user.accountType === 'enterprise' ? 'enterprise' : 'personal';
+            }
+            await authApi.setSyncEnabled(true);
+            dispatch(setSyncEnabled(true));
+          }
+          // Trigger initial sync so data uploads immediately
+          window.electron?.ipcRenderer?.invoke('sync:triggerSync', profile.id).catch(() => {});
+        } catch {
+          /* non-fatal — auth state will be hydrated on next startup */
+        }
+      }
+
+      // 6b. Persist the space for this profile from the AUTHORITATIVE account type
+      // (never the raw choice — see effectiveSpace above). Enterprise binds the org
+      // joined/created during onboarding (X-Org-Id + gating); personal forces the
+      // org context off.
+      try {
+        await window.electron?.ipcRenderer?.invoke(
+          'space:set',
+          effectiveSpace,
+          effectiveSpace === 'enterprise' ? (s.joinedOrgId ?? undefined) : undefined
+        );
+      } catch {
+        /* non-fatal — defaults to personal, user can switch from the profile */
+      }
+
+      // 7. Complete — write to disk via IPC (survives localStorage resets)
       localStorage.setItem('filarr-onboarding-complete', 'true');
       try {
         await window.electron?.ipcRenderer?.invoke('flag:set', 'onboarding-complete', 'true');
@@ -550,7 +1040,27 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   // ==================== Render ====================
 
+  /**
+   * Rien ne s'affiche tant que la zone d'attente n'est pas ouverte.
+   *
+   * Ce n'est pas une coquetterie : montrer le formulaire avant, c'est offrir la
+   * possibilité — mince, mais réelle — d'envoyer une connexion pendant que les
+   * domaines visent encore le profil précédent. Les jetons du nouveau compte
+   * atterriraient alors chez l'ancien, et l'adoption n'aurait plus rien à
+   * déménager. On préfère une fraction de seconde de vide.
+   */
+  if (!pendingRealmReady) {
+    return (
+      // chrome:free — voile d'attente vide, aucun controle.
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ backgroundColor: 'var(--color-background)' }}
+      />
+    );
+  }
+
   return (
+    // chrome:free — fenetre centree (max-w-2xl), aucun controle dans la bande.
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ backgroundColor: 'var(--color-background)' }}
@@ -582,7 +1092,844 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         </div>
 
         <div style={{ padding: '2rem', overflowY: 'auto', flex: 1, minHeight: 0 }}>
-          {/* ======== Step: Welcome ======== */}
+          {/* ======== Step 0: Space (personal / enterprise) ======== */}
+          {currentStep === 'space' && (
+            <div>
+              <div className="text-center mb-6">
+                <div className="mx-auto mb-4">
+                  <FilarrLogo size={56} />
+                </div>
+                <h1
+                  className="text-2xl font-bold mb-2"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  {t('onboarding.space.title', 'Comment allez-vous utiliser Filarr ?')}
+                </h1>
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  {t(
+                    'onboarding.space.subtitle',
+                    'Vous pourrez basculer entre les deux à tout moment.'
+                  )}
+                </p>
+
+                {/* Language quick-switch */}
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      update({ language: 'fr' });
+                      i18n.changeLanguage('fr');
+                    }}
+                    className="px-3 py-1 text-xs rounded-lg transition-all"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      background: s.language === 'fr' ? 'var(--color-primary-50)' : 'transparent',
+                      fontWeight: s.language === 'fr' ? 600 : 400,
+                      color: 'var(--color-text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    FR
+                  </button>
+                  <button
+                    onClick={() => {
+                      update({ language: 'en' });
+                      i18n.changeLanguage('en');
+                    }}
+                    className="px-3 py-1 text-xs rounded-lg transition-all"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      background: s.language === 'en' ? 'var(--color-primary-50)' : 'transparent',
+                      fontWeight: s.language === 'en' ? 600 : 400,
+                      color: 'var(--color-text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    EN
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Personal card */}
+                <button
+                  onClick={() => update({ spaceType: 'personal', stepIndex: 1 })}
+                  className="text-left p-5 rounded-xl border-2 transition-all hover:shadow-md"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary-400)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+                  }}
+                >
+                  <div className="mb-3">
+                    <svg
+                      className="w-8 h-8"
+                      style={{ color: 'var(--color-primary-600)' }}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  </div>
+                  <h3
+                    className="text-base font-semibold mb-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.space.personalTitle', 'Personnel')}
+                  </h3>
+                  <p className="text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t(
+                      'onboarding.space.personalDesc',
+                      'Pour votre usage individuel. Local ou avec sync cloud.'
+                    )}
+                  </p>
+                </button>
+
+                {/* Enterprise card — "coming soon" (disabled) while enterprise is
+                    not yet shipped; hidden entirely if the user opted out. */}
+                {!isEnterpriseHidden() && (
+                  <button
+                    onClick={() => {
+                      if (ENTERPRISE_ACCESSIBLE)
+                        update({ spaceType: 'enterprise', mode: 'cloud', stepIndex: 1 });
+                    }}
+                    disabled={!ENTERPRISE_ACCESSIBLE}
+                    className={`relative text-left p-5 rounded-xl border-2 transition-all ${ENTERPRISE_ACCESSIBLE ? 'hover:shadow-md' : 'cursor-not-allowed'}`}
+                    style={{
+                      borderColor: 'var(--color-primary-400)',
+                      backgroundColor: 'var(--color-surface)',
+                      cursor: ENTERPRISE_ACCESSIBLE ? 'pointer' : 'not-allowed',
+                      opacity: ENTERPRISE_ACCESSIBLE ? 1 : 0.6,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!ENTERPRISE_ACCESSIBLE) return;
+                      e.currentTarget.style.borderColor = 'var(--color-primary-600)';
+                      e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!ENTERPRISE_ACCESSIBLE) return;
+                      e.currentTarget.style.borderColor = 'var(--color-primary-400)';
+                      e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+                    }}
+                  >
+                    {!ENTERPRISE_ACCESSIBLE && (
+                      <span
+                        className="absolute top-2.5 right-2.5 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: 'var(--color-neutral-200)',
+                          color: 'var(--color-neutral-600)',
+                        }}
+                      >
+                        {t('spaces.comingSoon', 'Prochainement')}
+                      </span>
+                    )}
+                    <div className="mb-3">
+                      <svg
+                        className="w-8 h-8"
+                        style={{ color: 'var(--color-primary-600)' }}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"
+                        />
+                      </svg>
+                    </div>
+                    <h3
+                      className="text-base font-semibold mb-1"
+                      style={{ color: 'var(--color-text-primary)' }}
+                    >
+                      {t('onboarding.space.enterpriseTitle', 'Entreprise / Équipe')}
+                    </h3>
+                    <p className="text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                      {t(
+                        'onboarding.space.enterpriseDesc',
+                        'Coffres partagés, administration et gouvernance. Requiert un compte cloud.'
+                      )}
+                    </p>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ======== Step 0: Choice (local / cloud) ======== */}
+          {currentStep === 'choice' && (
+            <div>
+              <div className="text-center mb-6">
+                <div className="mx-auto mb-4">
+                  <FilarrLogo size={56} />
+                </div>
+                <h1
+                  className="text-2xl font-bold mb-2"
+                  style={{ color: 'var(--color-text-primary)' }}
+                >
+                  {t('onboarding.cloud.choiceTitle', 'Comment voulez-vous utiliser Filarr ?')}
+                </h1>
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  {t(
+                    'onboarding.cloud.choiceSubtitle',
+                    'Vous pourrez changer plus tard dans les Paramètres.'
+                  )}
+                </p>
+
+                {/* Language quick-switch */}
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      update({ language: 'fr' });
+                      i18n.changeLanguage('fr');
+                    }}
+                    className="px-3 py-1 text-xs rounded-lg transition-all"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      background: s.language === 'fr' ? 'var(--color-primary-50)' : 'transparent',
+                      fontWeight: s.language === 'fr' ? 600 : 400,
+                      color: 'var(--color-text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    FR
+                  </button>
+                  <button
+                    onClick={() => {
+                      update({ language: 'en' });
+                      i18n.changeLanguage('en');
+                    }}
+                    className="px-3 py-1 text-xs rounded-lg transition-all"
+                    style={{
+                      border: '1px solid var(--color-border)',
+                      background: s.language === 'en' ? 'var(--color-primary-50)' : 'transparent',
+                      fontWeight: s.language === 'en' ? 600 : 400,
+                      color: 'var(--color-text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    EN
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Local card */}
+                <button
+                  onClick={() => update({ mode: 'local', stepIndex: 2 })}
+                  className="text-left p-5 rounded-xl border-2 transition-all hover:shadow-md"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                    backgroundColor: 'var(--color-surface)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary-400)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-border)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+                  }}
+                >
+                  <div className="mb-3">
+                    <svg
+                      className="w-8 h-8"
+                      style={{ color: 'var(--color-primary-600)' }}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z"
+                      />
+                    </svg>
+                  </div>
+                  <h3
+                    className="text-base font-semibold mb-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.cloud.localCard.title', 'Local uniquement')}
+                  </h3>
+                  <p
+                    className="text-xs font-medium mb-3"
+                    style={{ color: 'var(--color-primary-600)' }}
+                  >
+                    {t('onboarding.cloud.localCard.price', 'Gratuit')}
+                  </p>
+                  <ul className="space-y-1.5">
+                    {[
+                      t('onboarding.cloud.localCard.bullet1', 'Aucun compte requis'),
+                      t('onboarding.cloud.localCard.bullet2', 'Données sur votre machine'),
+                      t('onboarding.cloud.localCard.bullet3', 'Toujours disponible'),
+                    ].map((text, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-2 text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        <svg
+                          className="w-3.5 h-3.5 flex-shrink-0"
+                          style={{ color: '#10b981' }}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4.5 12.75l6 6 9-13.5"
+                          />
+                        </svg>
+                        {text}
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+
+                {/* Cloud card */}
+                <button
+                  onClick={() => update({ mode: 'cloud', stepIndex: 2 })}
+                  className="relative text-left p-5 rounded-xl border-2 transition-all hover:shadow-md"
+                  style={{
+                    borderColor: 'var(--color-primary-400)',
+                    backgroundColor: 'var(--color-surface)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary-600)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-primary-50)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--color-primary-400)';
+                    e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+                  }}
+                >
+                  {/* Badge */}
+                  <span
+                    className="absolute -top-2.5 right-3 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                    style={{ backgroundColor: 'var(--color-primary-600)', color: '#fff' }}
+                  >
+                    {t('onboarding.cloud.cloudCard.badge', 'Recommandé')}
+                  </span>
+
+                  <div className="mb-3">
+                    <svg
+                      className="w-8 h-8"
+                      style={{ color: 'var(--color-primary-600)' }}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z"
+                      />
+                    </svg>
+                  </div>
+                  <h3
+                    className="text-base font-semibold mb-1"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.cloud.cloudCard.title', 'Avec sync cloud')}
+                  </h3>
+                  <p
+                    className="text-xs font-medium mb-3"
+                    style={{ color: 'var(--color-primary-600)' }}
+                  >
+                    {t('onboarding.cloud.cloudCard.price', '4\u20AC/mois')}
+                  </p>
+                  <ul className="space-y-1.5">
+                    {[
+                      t('onboarding.cloud.cloudCard.bullet1', 'Sync entre appareils'),
+                      t('onboarding.cloud.cloudCard.bullet2', 'Backup automatique'),
+                      t('onboarding.cloud.cloudCard.bullet3', 'Acces multi-devices'),
+                    ].map((text, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-2 text-xs"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        <svg
+                          className="w-3.5 h-3.5 flex-shrink-0"
+                          style={{ color: '#10b981' }}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M4.5 12.75l6 6 9-13.5"
+                          />
+                        </svg>
+                        {text}
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ======== Cloud Step 1: Register ======== */}
+          {currentStep === 'cloud-register' && (
+            <CloudRegisterStep
+              language={s.language}
+              accountType={s.spaceType === 'enterprise' ? 'enterprise' : 'personal'}
+              initialMode={s.authMode ?? 'register'}
+              onSuccess={({ user, recoveryCodes, password }) => {
+                update({
+                  cloudRecoveryCodes: recoveryCodes,
+                  cloudEmail: user.email,
+                  cloudPassword: password,
+                  stepIndex: s.stepIndex + 1,
+                });
+              }}
+              onPasskeyLogin={async (user) => {
+                /**
+                 * UNE CLÉ D'ACCÈS OUVRE LE COMPTE, PAS LE COFFRE.
+                 *
+                 * Les jetons sont posés ; reste la clé qui déchiffre, dérivée du
+                 * mot de passe et gardée sur l'appareil après la première fois.
+                 * Cet appareil l'a déjà : on entre, et la clé d'accès a remplacé
+                 * le mot de passe pour de bon. Il ne l'a pas : on le DIT et on
+                 * laisse saisir le mot de passe une fois, plutôt que d'ouvrir un
+                 * coffre vide que personne ne comprendrait.
+                 */
+                let hasLocalFEK = false;
+                try {
+                  hasLocalFEK = await window.electron.ipcRenderer.invoke('hybrid:hasKey');
+                } catch {
+                  /* pas de clé sur cet appareil */
+                }
+                if (!hasLocalFEK) return { needsPassword: true };
+                update({
+                  cloudEmail: user.email,
+                  isSecondaryDevice: true,
+                  stepIndex: CLOUD_PAIRING_STEPS.indexOf('ready'),
+                });
+                return { needsPassword: false };
+              }}
+              onLogin={async ({ user, password }) => {
+                // Check if this account has synced profiles with data
+                // (manifestVersion > 0 means Device A already synced)
+                let hasSyncedData = false;
+                try {
+                  const syncResult =
+                    await window.electron.ipcRenderer.invoke('sync:getCloudProfiles');
+                  if (syncResult?.profiles?.length > 0) {
+                    hasSyncedData = syncResult.profiles.some(
+                      (p: { manifestVersion: number }) => p.manifestVersion > 0
+                    );
+                  }
+                } catch {
+                  // If endpoint fails, assume first device
+                }
+
+                // Check if this device already has a FEK (returning device, not new)
+                let hasLocalFEK = false;
+                try {
+                  hasLocalFEK = await window.electron.ipcRenderer.invoke('hybrid:hasKey');
+                } catch {
+                  /* assume no */
+                }
+
+                // Check if the server holds a wrapped FEK for this account.
+                // If yes, we can bootstrap the new device directly from cloud
+                // without a physical pairing handshake — initHybridCrypto will
+                // fetch + unwrap during the secondary-device branch below.
+                let hasServerWrappedKey = false;
+                try {
+                  const serverKey = await window.electron.ipcRenderer.invoke(
+                    'hybrid:fetchWrappedKeyFromCloud'
+                  );
+                  hasServerWrappedKey = !!serverKey;
+                } catch {
+                  /* assume no */
+                }
+
+                if (hasSyncedData && !hasLocalFEK && hasServerWrappedKey) {
+                  // New device + cloud has data + server has the wrapped FEK
+                  // → skip the 6-digit pairing flow entirely. The
+                  // secondary-device branch in handleFinish() calls
+                  // initHybridCrypto(password) which fetches + unwraps from
+                  // the server copy.
+                  update({
+                    cloudEmail: user.email,
+                    cloudPassword: password,
+                    isSecondaryDevice: true,
+                    stepIndex: CLOUD_PAIRING_STEPS.indexOf('ready'),
+                  });
+                } else if (hasSyncedData && !hasLocalFEK) {
+                  // Legacy path: cloud has data but the server has no wrapped
+                  // FEK copy (account created before the server-side wrapped
+                  // key deploy). Falls back to device-to-device pairing.
+                  update({
+                    cloudEmail: user.email,
+                    cloudPassword: password,
+                    isSecondaryDevice: true,
+                    stepIndex: CLOUD_PAIRING_STEPS.indexOf('cloud-pairing'),
+                  });
+                } else if (hasSyncedData && hasLocalFEK) {
+                  // Returning device — already has FEK, just activate sync
+                  update({
+                    cloudEmail: user.email,
+                    cloudPassword: password,
+                    isSecondaryDevice: true,
+                    stepIndex: CLOUD_PAIRING_STEPS.indexOf('ready'),
+                  });
+                } else {
+                  // First device, LOGIN to an existing account → straight to
+                  // profile setup. We never show the join/create org step on
+                  // login: an existing enterprise account already carries its org
+                  // membership (server truth), restored by initOrgContext. The
+                  // org step is only for a freshly REGISTERED enterprise account
+                  // (handled on the onSuccess/register path via ENTERPRISE_STEPS).
+                  const targetIndex = steps.indexOf('profile');
+                  update({
+                    cloudEmail: user.email,
+                    cloudPassword: password,
+                    stepIndex: targetIndex >= 0 ? targetIndex : s.stepIndex + 3,
+                  });
+                }
+              }}
+            />
+          )}
+
+          {/* ======== Cloud Step 2: Recovery Codes ======== */}
+          {currentStep === 'cloud-recovery' && s.cloudRecoveryCodes && (
+            <CloudRecoveryStep
+              recoveryCodes={s.cloudRecoveryCodes}
+              language={s.language}
+              accountType={s.spaceType === 'enterprise' ? 'enterprise' : 'personal'}
+              onAcknowledged={() => {
+                update({ cloudRecoveryAcknowledged: true });
+              }}
+            />
+          )}
+
+          {/* ======== Cloud Step 3: Email Verification ======== */}
+          {currentStep === 'cloud-verify' &&
+            (() => {
+              const maskedEmail = (() => {
+                const [local, domain] = s.cloudEmail.split('@');
+                if (!domain) return s.cloudEmail;
+                return local.slice(0, 3) + '***@' + domain;
+              })();
+              return (
+                <CloudVerifyStep
+                  email={s.cloudEmail}
+                  maskedEmail={maskedEmail}
+                  language={s.language}
+                  onVerified={async () => {
+                    // Auto-login after email verification to save tokens
+                    try {
+                      await authApi.login(s.cloudEmail, s.cloudPassword);
+                    } catch {
+                      // Non-fatal — user can login manually later
+                    }
+                    // Keep cloudRecoveryCodes in state: the finish handler wraps
+                    // the FEK + keypair under them (the FEK only exists after
+                    // initHybridCrypto runs there). They're discarded on unmount.
+                    update({ stepIndex: s.stepIndex + 1 });
+                  }}
+                  onChangeEmail={() => {
+                    const registerIndex = steps.indexOf('cloud-register');
+                    update({
+                      stepIndex: registerIndex >= 0 ? registerIndex : 1,
+                      cloudEmail: '',
+                      cloudPassword: '',
+                      cloudPasswordConfirm: '',
+                      cloudRecoveryCodes: null,
+                      cloudRecoveryAcknowledged: false,
+                      cloudRegisterError: null,
+                    });
+                  }}
+                />
+              );
+            })()}
+
+          {/* ======== Cloud Step: Device Pairing (secondary device) ======== */}
+          {currentStep === 'cloud-pairing' && (
+            <OnboardingPairingStep
+              language={s.language}
+              cloudPassword={s.cloudPassword}
+              onComplete={() => {
+                update({ stepIndex: s.stepIndex + 1 });
+              }}
+            />
+          )}
+
+          {/* ======== Enterprise Step: Organization (join / create) ======== */}
+          {currentStep === 'ent-welcome' && (
+            <div>
+              <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+                {t('onboarding.entWelcome.title', 'Bienvenue dans l’espace de votre organisation')}
+              </h2>
+              <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
+                {t(
+                  'onboarding.entWelcome.subtitle',
+                  'Cet espace est séparé de vos comptes personnels — c’est ce qui garantit qu’aucune donnée privée n’entre dans le cadre professionnel. Vous aurez donc un compte distinct, même si vous utilisez déjà Filarr.'
+                )}
+              </p>
+
+              {/* Deux portes NOMMÉES. Les confondre est exactement ce qui envoyait
+                  créer un second compte à qui venait d'en créer un sur le site. */}
+              <div className="space-y-3">
+                <RadioCard
+                  selected={s.authMode === 'login'}
+                  onClick={() => update({ authMode: 'login' })}
+                >
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.entWelcome.haveTitle', 'J’ai déjà un compte d’organisation')}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t(
+                      'onboarding.entWelcome.haveDesc',
+                      'Créé sur filarr.com, ou reçu par invitation de votre équipe.'
+                    )}
+                  </p>
+                </RadioCard>
+
+                <RadioCard
+                  selected={s.authMode === 'register'}
+                  onClick={() => update({ authMode: 'register' })}
+                >
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.entWelcome.newTitle', 'Je n’en ai pas encore')}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t(
+                      'onboarding.entWelcome.newDesc',
+                      'On le crée maintenant, puis vous rejoignez ou fondez votre organisation.'
+                    )}
+                  </p>
+                </RadioCard>
+              </div>
+
+              <p
+                className="text-xs mt-5 pt-4"
+                style={{
+                  color: 'var(--color-text-tertiary)',
+                  borderTop: '1px solid var(--color-border-light)',
+                }}
+              >
+                {t(
+                  'onboarding.entWelcome.foot',
+                  'Vos profils personnels ne disparaissent pas : ils restent dans l’espace Personnel, que vous retrouvez à tout moment depuis le portail de lancement.'
+                )}
+              </p>
+            </div>
+          )}
+
+          {currentStep === 'org' && (
+            <div>
+              <h2 className="text-xl font-bold mb-1" style={{ color: 'var(--color-text-primary)' }}>
+                {t('onboarding.org.title', 'Votre organisation')}
+              </h2>
+              <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
+                {t(
+                  'onboarding.org.subtitle',
+                  'Rejoignez une organisation existante ou créez la vôtre.'
+                )}
+              </p>
+
+              <div className="space-y-3">
+                <RadioCard
+                  selected={s.orgAction === 'join'}
+                  onClick={() => update({ orgAction: 'join', orgError: null })}
+                >
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.org.joinTitle', 'Rejoindre une organisation')}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t('onboarding.org.joinDesc', 'Avec le code d’invitation reçu par email.')}
+                  </p>
+                  {s.orgAction === 'join' && (
+                    <input
+                      type="text"
+                      value={s.orgInviteToken}
+                      onChange={(e) => update({ orgInviteToken: e.target.value, orgError: null })}
+                      placeholder={t('onboarding.org.tokenPlaceholder', 'Code d’invitation')}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full mt-2 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2"
+                      style={{
+                        backgroundColor: 'var(--color-background)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    />
+                  )}
+                </RadioCard>
+
+                <RadioCard
+                  selected={s.orgAction === 'create'}
+                  onClick={() => update({ orgAction: 'create', orgError: null })}
+                >
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {t('onboarding.org.createTitle', 'Créer une organisation')}
+                  </h3>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    {t('onboarding.org.createDesc', 'Vous en devenez le propriétaire.')}
+                  </p>
+                  {s.orgAction === 'create' && (
+                    <input
+                      type="text"
+                      value={s.orgName}
+                      onChange={(e) => update({ orgName: e.target.value, orgError: null })}
+                      placeholder={t('onboarding.org.namePlaceholder', "Nom de l'organisation")}
+                      autoFocus
+                      maxLength={100}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full mt-2 px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2"
+                      style={{
+                        backgroundColor: 'var(--color-background)',
+                        border: '1px solid var(--color-border)',
+                        color: 'var(--color-text-primary)',
+                      }}
+                    />
+                  )}
+                </RadioCard>
+              </div>
+
+              {s.orgError && (
+                <p className="text-xs mt-3" style={{ color: '#ef4444' }}>
+                  {s.orgError}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const profileIndex = steps.indexOf('profile');
+                    update({
+                      orgAction: null,
+                      orgError: null,
+                      joinedOrgId: null,
+                      stepIndex: profileIndex >= 0 ? profileIndex : s.stepIndex + 1,
+                    });
+                  }}
+                  className="text-sm"
+                  style={{
+                    color: 'var(--color-text-tertiary)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {t('onboarding.org.skip', "Passer pour l'instant")}
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    s.orgWorking ||
+                    (s.orgAction === 'join'
+                      ? !s.orgInviteToken.trim()
+                      : s.orgAction === 'create'
+                        ? !s.orgName.trim()
+                        : true)
+                  }
+                  onClick={async () => {
+                    if (!s.orgAction) return;
+                    update({ orgWorking: true, orgError: null });
+                    const ipc = window.electron?.ipcRenderer;
+                    const profileIndex = steps.indexOf('profile');
+                    const nextIndex = profileIndex >= 0 ? profileIndex : s.stepIndex + 1;
+                    try {
+                      if (s.orgAction === 'join') {
+                        const res = await ipc?.invoke(
+                          'org:acceptInvitation',
+                          s.orgInviteToken.trim()
+                        );
+                        if (!res?.success) throw new Error(res?.error || 'join_failed');
+                        update({
+                          joinedOrgId: res.data?.orgId ?? null,
+                          orgWorking: false,
+                          stepIndex: nextIndex,
+                        });
+                      } else {
+                        const res = await ipc?.invoke('org:create', s.orgName.trim());
+                        if (!res?.success) throw new Error(res?.error || 'create_failed');
+                        update({
+                          joinedOrgId: res.data?.org?.id ?? null,
+                          orgWorking: false,
+                          stepIndex: nextIndex,
+                        });
+                      }
+                    } catch {
+                      update({
+                        orgWorking: false,
+                        orgError: t(
+                          'onboarding.org.error',
+                          'Impossible de traiter la demande. Vérifiez le code ou le nom, puis réessayez.'
+                        ),
+                      });
+                    }
+                  }}
+                  className="px-4 py-2 text-sm rounded-lg font-medium"
+                  style={{
+                    backgroundColor:
+                      !s.orgWorking &&
+                      ((s.orgAction === 'join' && s.orgInviteToken.trim()) ||
+                        (s.orgAction === 'create' && s.orgName.trim()))
+                        ? 'var(--color-primary-600)'
+                        : 'var(--color-background-secondary)',
+                    color:
+                      !s.orgWorking &&
+                      ((s.orgAction === 'join' && s.orgInviteToken.trim()) ||
+                        (s.orgAction === 'create' && s.orgName.trim()))
+                        ? '#fff'
+                        : 'var(--color-text-tertiary)',
+                    border: 'none',
+                    cursor: s.orgWorking ? 'wait' : 'pointer',
+                  }}
+                >
+                  {s.orgWorking
+                    ? t('onboarding.org.working', 'Traitement...')
+                    : t('onboarding.org.continue', 'Continuer')}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ======== Step: Welcome (local flow) ======== */}
           {currentStep === 'welcome' && (
             <div className="text-center">
               <div className="mx-auto mb-6">
@@ -714,10 +2061,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 {t('onboarding.profileTitle', 'Configurez votre profil')}
               </h2>
               <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
-                {t(
-                  'onboarding.profileSubtitle',
-                  'Choisissez un nom et une couleur pour votre avatar.'
-                )}
+                {isEnterpriseSpace
+                  ? t('onboarding.profileSubtitleOrg')
+                  : t(
+                      'onboarding.profileSubtitle',
+                      'Choisissez un nom et une couleur pour votre avatar.'
+                    )}
               </p>
 
               {/* Name */}
@@ -887,6 +2236,29 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
               <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
                 {t('onboarding.appearanceSubtitle', "Choisissez un theme et une couleur d'accent.")}
               </p>
+
+              {/*
+                DEUX CRAINTES OPPOSÉES, ET IL FAUT RÉPONDRE AUX DEUX.
+                Celui qui arrive par la porte entreprise se demande d'abord si
+                son employeur voit ce qu'il range ici — non — puis s'étonnera,
+                si l'organisation impose un thème, de voir son choix ignoré. La
+                politique de poste de travail peut effectivement verrouiller le
+                thème : autant l'annoncer pendant qu'on choisit plutôt que de
+                laisser constater l'écrasement au premier démarrage.
+              */}
+              {isEnterpriseSpace && (
+                <div
+                  className="p-3 rounded-lg mb-5 text-xs"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-info-500) 9%, transparent)',
+                    border: '1px solid color-mix(in srgb, var(--color-info-500) 26%, transparent)',
+                    color: 'var(--color-text-secondary)',
+                    lineHeight: 'var(--line-height-relaxed)',
+                  }}
+                >
+                  {t('onboarding.appearanceOrgNote')}
+                </div>
+              )}
 
               {/* Theme */}
               <div className="grid grid-cols-3 gap-2 mb-5">
@@ -1174,6 +2546,25 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
           {/* ======== Step: Security ======== */}
           {currentStep === 'security' && (
             <div>
+              {/* Cloud mode: extra vault warning */}
+              {s.mode === 'cloud' && (
+                <div
+                  className="flex items-start gap-2 p-3 rounded-lg mb-4 text-sm"
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fca5a5',
+                    color: '#991b1b',
+                  }}
+                >
+                  <span className="flex-shrink-0 text-base">&#9888;&#65039;</span>
+                  <span>
+                    {t(
+                      'onboarding.cloud.vault.warning',
+                      "Ce mot de passe chiffre vos fichiers localement. Il est différent de votre mot de passe de compte. S'il est perdu, vos fichiers sont définitivement inaccessibles — même nous ne pouvons pas les déchiffrer."
+                    )}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-3 mb-4">
                 <svg
                   width="22"
@@ -1295,8 +2686,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                   )}
               </div>
 
-              {/* Recovery phrase */}
-              {s.recoveryPhrase && (
+              {/* Recovery phrase — local mode only (cloud uses BIP-39 codes from registration) */}
+              {s.mode !== 'cloud' && s.recoveryPhrase && (
                 <div
                   className="rounded-xl p-4 mb-4"
                   style={{
@@ -1562,84 +2953,193 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </svg>
               </div>
               <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                {t('onboarding.readyTitle', 'Tout est pret !')}
+                {s.spaceType === 'enterprise' && s.orgName
+                  ? t('onboarding.entReady.title', '{{org}} est prêt', { org: s.orgName })
+                  : t('onboarding.readyTitle', 'Tout est pret !')}
               </h2>
               <p className="text-sm mb-5" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('onboarding.readyRecap', 'Voici un resume de vos choix :')}
+                {s.spaceType === 'enterprise'
+                  ? t('onboarding.entReady.subtitle', 'Voici ce qui reste à faire, dans cet ordre.')
+                  : s.isSecondaryDevice
+                    ? t(
+                        'onboarding.readyRecapLogin',
+                        'Votre compte est reconnu. Vos profils vont etre restaures.'
+                      )
+                    : t('onboarding.readyRecap', 'Voici un resume de vos choix :')}
               </p>
 
-              {/* Recap */}
-              <div className="text-left space-y-2 mb-4">
-                <div
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
-                  style={{ backgroundColor: 'var(--color-background-secondary)' }}
-                >
-                  <span style={{ color: 'var(--color-text-tertiary)' }}>
-                    {t('onboarding.recapProfile', 'Profil')}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                      style={{ background: avatarGradient(s.avatarColor) }}
-                    >
-                      {(s.name.trim() || 'U').charAt(0).toUpperCase()}
+              {/*
+                LA FIN DU PARCOURS ENTREPRISE N'EST PAS UNE FÉLICITATION.
+                C'est un ordre de marche, le même que celui du Guide de la
+                console, avec la seule conséquence irréversible du produit posée
+                à sa place : la clé d'organisation ne rattrape pas les coffres
+                déjà scellés. Un « bienvenue » laisserait l'administrateur le
+                découvrir trop tard, quand un membre aura perdu son mot de passe.
+              */}
+              {s.spaceType === 'enterprise' && (
+                <div className="text-left mb-5 space-y-3">
+                  {[
+                    {
+                      n: '1',
+                      t: t('onboarding.entReady.s1', 'Souscrire l’abonnement'),
+                      d: t(
+                        'onboarding.entReady.s1d',
+                        'Sans lui, ni invitations ni coffres d’équipe. Minimum trois sièges, les lecteurs sont gratuits.'
+                      ),
+                    },
+                    {
+                      n: '2',
+                      t: t('onboarding.entReady.s2', 'Créer la clé de l’organisation'),
+                      d: t(
+                        'onboarding.entReady.s2d',
+                        'Avant d’inviter : elle ne rattrape pas les coffres déjà scellés.'
+                      ),
+                    },
+                    {
+                      n: '3',
+                      t: t('onboarding.entReady.s3', 'Inviter votre équipe'),
+                      d: t(
+                        'onboarding.entReady.s3d',
+                        'Chaque invitation porte un rôle. Les lecteurs ne consomment pas de siège.'
+                      ),
+                    },
+                  ].map((step) => (
+                    <div key={step.n} className="flex gap-3 items-start">
+                      <span
+                        className="flex-shrink-0 w-7 h-7 rounded-full inline-flex items-center justify-center text-xs font-semibold"
+                        style={{
+                          border: '2px solid var(--color-border)',
+                          color: 'var(--color-text-tertiary)',
+                        }}
+                      >
+                        {step.n}
+                      </span>
+                      <div className="min-w-0">
+                        <div
+                          className="text-sm font-semibold"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
+                          {step.t}
+                        </div>
+                        <p
+                          className="text-xs mt-0.5"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          {step.d}
+                        </p>
+                      </div>
                     </div>
-                    <span style={{ color: 'var(--color-text-primary)' }}>
-                      {s.name.trim() || 'User'}
-                    </span>
-                  </div>
+                  ))}
                 </div>
-                <div
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
-                  style={{ backgroundColor: 'var(--color-background-secondary)' }}
-                >
-                  <span style={{ color: 'var(--color-text-tertiary)' }}>
-                    {t('onboarding.recapTheme', 'Theme')}
-                  </span>
-                  <span style={{ color: 'var(--color-text-primary)' }}>
-                    {s.themeChoice === 'light'
-                      ? t('onboarding.lightTheme')
-                      : s.themeChoice === 'dark'
-                        ? t('onboarding.darkTheme')
-                        : t('onboarding.systemTheme')}
-                  </span>
-                </div>
-                <div
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
-                  style={{ backgroundColor: 'var(--color-background-secondary)' }}
-                >
-                  <span style={{ color: 'var(--color-text-tertiary)' }}>
-                    {t('onboarding.recapAccent', "Couleur d'accent")}
-                  </span>
-                  <div
-                    className="w-5 h-5 rounded-full"
-                    style={{ backgroundColor: s.accentColor }}
-                  />
-                </div>
-                {s.useCase && (
-                  <div
-                    className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
-                    style={{ backgroundColor: 'var(--color-background-secondary)' }}
-                  >
-                    <span style={{ color: 'var(--color-text-tertiary)' }}>
-                      {t('onboarding.recapUseCase', 'Usage')}
-                    </span>
-                    <span style={{ color: 'var(--color-text-primary)' }}>
-                      {USE_CASE_OPTIONS.find((o) => o.id === s.useCase)?.icon}{' '}
-                      {t(USE_CASE_OPTIONS.find((o) => o.id === s.useCase)?.titleKey || '')}
-                    </span>
-                  </div>
-                )}
-                {s.pinEnabled && (
-                  <div
-                    className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
-                    style={{ backgroundColor: 'var(--color-background-secondary)' }}
-                  >
-                    <span style={{ color: 'var(--color-text-tertiary)' }}>
-                      {t('onboarding.recapPin', 'PIN active')}
-                    </span>
-                    <span style={{ color: '#10b981' }}>✓</span>
-                  </div>
+              )}
+
+              {/**
+               * UNE CONNEXION N'A RIEN À RÉCAPITULER.
+               *
+               * Le parcours d'un compte déjà inscrit (`CLOUD_PAIRING_STEPS`) saute
+               * délibérément « profil » et « apparence » : ces choix appartiennent au
+               * compte, et `handleFinish` les rapatrie du nuage (`restoreCloudProfiles`
+               * puis `landingForAccount`). Ce bloc les affichait quand même, en lisant
+               * l'état initial que personne n'avait rempli : un profil « User » à
+               * pastille bleue, un thème « Clair » et un accent que cette branche
+               * n'applique même pas — elle rend la main avant, par son propre `return`.
+               *
+               * Trois lignes annoncées, trois promesses qu'on ne tient pas, dont un nom
+               * de profil qui n'est pas celui qui va s'ouvrir. On montre donc le compte,
+               * la seule chose que cette étape connaisse vraiment.
+               */}
+              <div className="text-left space-y-2 mb-4">
+                {s.isSecondaryDevice ? (
+                  s.cloudEmail ? (
+                    <div
+                      className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                      style={{ backgroundColor: 'var(--color-background-secondary)' }}
+                    >
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>
+                        {t('onboarding.recapAccount', 'Compte')}
+                      </span>
+                      <span
+                        className="truncate ml-3"
+                        style={{ color: 'var(--color-text-primary)' }}
+                      >
+                        {s.cloudEmail}
+                      </span>
+                    </div>
+                  ) : null
+                ) : (
+                  <>
+                    <div
+                      className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                      style={{ backgroundColor: 'var(--color-background-secondary)' }}
+                    >
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>
+                        {t('onboarding.recapProfile', 'Profil')}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ background: avatarGradient(s.avatarColor) }}
+                        >
+                          {(s.name.trim() || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ color: 'var(--color-text-primary)' }}>
+                          {s.name.trim() || 'User'}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                      style={{ backgroundColor: 'var(--color-background-secondary)' }}
+                    >
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>
+                        {t('onboarding.recapTheme', 'Theme')}
+                      </span>
+                      <span style={{ color: 'var(--color-text-primary)' }}>
+                        {s.themeChoice === 'light'
+                          ? t('onboarding.lightTheme')
+                          : s.themeChoice === 'dark'
+                            ? t('onboarding.darkTheme')
+                            : t('onboarding.systemTheme')}
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                      style={{ backgroundColor: 'var(--color-background-secondary)' }}
+                    >
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>
+                        {t('onboarding.recapAccent', "Couleur d'accent")}
+                      </span>
+                      <div
+                        className="w-5 h-5 rounded-full"
+                        style={{ backgroundColor: s.accentColor }}
+                      />
+                    </div>
+                    {s.useCase && (
+                      <div
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                        style={{ backgroundColor: 'var(--color-background-secondary)' }}
+                      >
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>
+                          {t('onboarding.recapUseCase', 'Usage')}
+                        </span>
+                        <span style={{ color: 'var(--color-text-primary)' }}>
+                          {USE_CASE_OPTIONS.find((o) => o.id === s.useCase)?.icon}{' '}
+                          {t(USE_CASE_OPTIONS.find((o) => o.id === s.useCase)?.titleKey || '')}
+                        </span>
+                      </div>
+                    )}
+                    {s.pinEnabled && (
+                      <div
+                        className="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+                        style={{ backgroundColor: 'var(--color-background-secondary)' }}
+                      >
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>
+                          {t('onboarding.recapPin', 'PIN active')}
+                        </span>
+                        <span style={{ color: '#10b981' }}>✓</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1651,72 +3151,92 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             </div>
           )}
 
-          {/* ======== Navigation ======== */}
-          <div className="flex justify-between" style={{ marginTop: '1.5rem' }}>
-            {s.stepIndex > 0 ? (
-              <button
-                onClick={handleBack}
-                disabled={s.isFinishing}
-                className="px-5 py-2.5 text-sm font-medium transition-colors rounded-lg"
-                style={{ color: 'var(--color-text-secondary)' }}
-              >
-                {t('common.back', 'Retour')}
-              </button>
-            ) : (
-              <div />
-            )}
+          {/* ======== Navigation (hidden on the first 'space' step, the pairing
+               step, and the 'org' step — each drives its own advancement; every
+               other step, incl. 'choice', shows the footer so Back works). ==== */}
+          {currentStep !== 'space' && currentStep !== 'cloud-pairing' && currentStep !== 'org' && (
+            <div className="flex justify-between" style={{ marginTop: '1.5rem' }}>
+              {s.stepIndex > ENTRY_INDEX ? (
+                <button
+                  onClick={handleBack}
+                  disabled={s.isFinishing}
+                  className="px-5 py-2.5 text-sm font-medium transition-colors rounded-lg"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  {t('common.back', 'Retour')}
+                </button>
+              ) : (
+                <div />
+              )}
 
-            {currentStep === 'ready' ? (
+              {currentStep === 'ready' ? (
+                <button
+                  onClick={handleFinish}
+                  disabled={s.isFinishing}
+                  className="px-6 py-2.5 text-sm font-medium rounded-lg text-white transition-colors flex items-center gap-2"
+                  style={{
+                    backgroundColor: s.isFinishing
+                      ? 'var(--color-neutral-400)'
+                      : 'var(--color-primary-600)',
+                  }}
+                >
+                  {s.isFinishing ? (
+                    <>
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          opacity="0.25"
+                        />
+                        <path
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          opacity="0.75"
+                        />
+                      </svg>
+                      {t('onboarding.finishing', 'Création en cours...')}
+                    </>
+                  ) : (
+                    t('onboarding.getStarted', "C'est parti !")
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={handleNext}
+                  disabled={!canNext()}
+                  className="px-6 py-2.5 text-sm font-medium rounded-lg text-white transition-colors"
+                  style={{
+                    backgroundColor: canNext()
+                      ? 'var(--color-primary-600)'
+                      : 'var(--color-neutral-400)',
+                    cursor: canNext() ? 'pointer' : 'not-allowed',
+                    opacity: canNext() ? 1 : 0.5,
+                  }}
+                >
+                  {t('common.next', 'Suivant')}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Sortie du mode « ajouter un compte ». Toujours visible, y compris
+              sur les étapes qui masquent la navigation (appairage, org) : c'est
+              précisément là qu'on peut vouloir renoncer. La session en attente
+              est révoquée par l'appelant. */}
+          {isAddAccount && onCancel && !s.isFinishing && (
+            <div className="flex justify-center" style={{ marginTop: '1rem' }}>
               <button
-                onClick={handleFinish}
-                disabled={s.isFinishing}
-                className="px-6 py-2.5 text-sm font-medium rounded-lg text-white transition-colors flex items-center gap-2"
-                style={{
-                  backgroundColor: s.isFinishing
-                    ? 'var(--color-neutral-400)'
-                    : 'var(--color-primary-600)',
-                }}
+                onClick={onCancel}
+                className="text-sm transition-colors"
+                style={{ color: 'var(--color-text-tertiary)' }}
               >
-                {s.isFinishing ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        opacity="0.25"
-                      />
-                      <path
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        opacity="0.75"
-                      />
-                    </svg>
-                    {t('onboarding.finishing', 'Création en cours...')}
-                  </>
-                ) : (
-                  t('onboarding.getStarted', "C'est parti !")
-                )}
+                {t('profiles.backToProfiles', 'Retour aux profils')}
               </button>
-            ) : (
-              <button
-                onClick={handleNext}
-                disabled={!canNext()}
-                className="px-6 py-2.5 text-sm font-medium rounded-lg text-white transition-colors"
-                style={{
-                  backgroundColor: canNext()
-                    ? 'var(--color-primary-600)'
-                    : 'var(--color-neutral-400)',
-                  cursor: canNext() ? 'pointer' : 'not-allowed',
-                  opacity: canNext() ? 1 : 0.5,
-                }}
-              >
-                {t('common.next', 'Suivant')}
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

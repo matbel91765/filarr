@@ -4,12 +4,28 @@
  * SVG-based mind map visualization of a note's heading structure.
  * Parses TipTap JSON content, builds a tree from H1->H2->H3 hierarchy,
  * and renders a zoomable/pannable mind map with curved bezier connections.
+ *
+ * LES TITRES NE SONT PLUS EXTRAITS ICI. Cette vue portait sa propre boucle,
+ * NON récursive, sur `doc.content` : un titre posé dans un encadré, une
+ * colonne ou un volet repliable était visible dans le sommaire latéral et
+ * proposé par `![[Note#`, mais restait absent de la carte mentale. Elle
+ * consomme désormais `extractHeadings`, comme toutes les autres surfaces.
+ *
+ * CONSÉQUENCE SUR `pos` : ce champ n'est plus un index dans `doc.content`,
+ * c'est le RANG DU TITRE dans le document (titres vides compris). NoteEditor
+ * résout `pendingScrollToHeading` avec la même convention — les deux doivent
+ * changer ensemble.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '../../../store';
+import { requestScrollToHeading } from '../../../store/slices/notesSlice';
+import { extractHeadingsFromJson } from '../../../services/notes/transclusionHelpers';
 import './MindMapView.css';
 
+import * as profileStorage from '../../../services/core/profileStorage';
 // ==================== Types ====================
 
 interface MindMapNode {
@@ -25,8 +41,51 @@ interface MindMapNode {
 }
 
 interface MindMapViewProps {
-  note: { title: string; content: string } | null;
+  note: { id: string; title: string; content: string } | null;
   onHeadingClick?: (pos: number) => void;
+  /**
+   * Click a node → switch back to list mode + focus the editor on
+   * this note. Same pattern as Masonry / Sticky / Kanban / Database /
+   * Calendar so the user can drill from overview to editor in one
+   * click. Called with the active note's id (the mind map only ever
+   * shows one note at a time).
+   */
+  onOpenNote?: (id: string) => void;
+}
+
+const COLLAPSE_STORAGE_KEY = 'filarr.mindmap.collapsed.v1';
+
+function loadCollapsed(noteId: string | null): Set<string> {
+  if (!noteId) return new Set();
+  try {
+    const raw = profileStorage.getItemWithLegacyFallback(COLLAPSE_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as Record<string, string[]>;
+    const arr = parsed?.[noteId];
+    if (!Array.isArray(arr)) return new Set();
+    // Strip the legacy `'root'` entry. Earlier versions of "Collapse all"
+    // included root in the collapsible list, which now traps users in the
+    // empty state until they manually expand. Self-healing on every load.
+    return new Set(arr.filter((id) => id !== 'root'));
+  } catch {
+    return new Set();
+  }
+}
+
+function persistCollapsed(noteId: string | null, collapsed: Set<string>): void {
+  if (!noteId) return;
+  try {
+    const raw = profileStorage.getItemWithLegacyFallback(COLLAPSE_STORAGE_KEY);
+    const parsed: Record<string, string[]> = raw ? JSON.parse(raw) : {};
+    if (collapsed.size === 0) {
+      delete parsed[noteId];
+    } else {
+      parsed[noteId] = [...collapsed];
+    }
+    profileStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(parsed));
+  } catch {
+    /* quota / disabled — silent */
+  }
 }
 
 // ==================== Constants ====================
@@ -51,21 +110,23 @@ const MAX_NODE_WIDTH = 220;
 
 // ==================== Text Helpers ====================
 
-function extractText(node: any): string {
-  if (typeof node === 'string') return node;
-  if (node.text) return node.text;
-  if (node.content) return node.content.map(extractText).join('');
-  return '';
-}
-
 function measureText(text: string, fontSize: number): number {
   const avgCharWidth = fontSize * 0.58;
-  return Math.min(MAX_NODE_WIDTH, Math.max(MIN_NODE_WIDTH, text.length * avgCharWidth + NODE_PADDING_X * 2));
+  return Math.min(
+    MAX_NODE_WIDTH,
+    Math.max(MIN_NODE_WIDTH, text.length * avgCharWidth + NODE_PADDING_X * 2)
+  );
 }
 
 // ==================== Tree Building ====================
 
-function buildTree(content: string, title: string): MindMapNode {
+/**
+ * Exporté pour être testé sans DOM (`__tests__/mindMapTree.vitest.ts`) : la
+ * pile de construction est le seul endroit où un titre imbriqué sans parent
+ * de niveau supérieur pourrait se perdre — et un nœud absent de la carte est
+ * un titre qu'on ne peut plus rejoindre d'un clic.
+ */
+export function buildMindMapTree(content: string, title: string): MindMapNode {
   const root: MindMapNode = {
     id: 'root',
     text: title || 'Untitled',
@@ -78,25 +139,12 @@ function buildTree(content: string, title: string): MindMapNode {
     height: 36,
   };
 
-  const headings: { text: string; level: number; pos: number }[] = [];
-
-  try {
-    const doc = JSON.parse(content);
-    if (doc?.content) {
-      let pos = 0;
-      for (const node of doc.content) {
-        if (node.type === 'heading' && node.attrs?.level) {
-          const text = extractText(node).trim();
-          if (text) {
-            headings.push({ text, level: node.attrs.level, pos });
-          }
-        }
-        pos += 1;
-      }
-    }
-  } catch {
-    // content might not be valid JSON
-  }
+  // `entry.index` est le rang du titre dans le document, titres vides
+  // compris — on ne le recalcule pas après filtrage, sous peine de faire
+  // atterrir le clic sur un autre titre que celui affiché.
+  const headings = extractHeadingsFromJson(content)
+    .filter((entry) => entry.text.trim().length > 0)
+    .map((entry) => ({ text: entry.text.trim(), level: entry.level, pos: entry.index }));
 
   if (headings.length === 0) return root;
 
@@ -135,10 +183,12 @@ function layoutTree(
   x: number,
   yStart: number,
   _depth: number,
+  collapsed: Set<string>
 ): number {
   node.x = x;
+  const isCollapsed = collapsed.has(node.id);
 
-  if (node.children.length === 0) {
+  if (node.children.length === 0 || isCollapsed) {
     node.y = yStart + node.height / 2;
     return node.height + NODE_V_GAP;
   }
@@ -147,7 +197,7 @@ function layoutTree(
   let currentY = yStart;
 
   for (const child of node.children) {
-    const consumed = layoutTree(child, childX, currentY, _depth + 1);
+    const consumed = layoutTree(child, childX, currentY, _depth + 1, collapsed);
     currentY += consumed;
   }
 
@@ -160,10 +210,15 @@ function layoutTree(
   return totalHeight + NODE_V_GAP;
 }
 
-function collectNodes(node: MindMapNode, list: MindMapNode[] = []): MindMapNode[] {
+function collectNodes(
+  node: MindMapNode,
+  collapsed: Set<string>,
+  list: MindMapNode[] = []
+): MindMapNode[] {
   list.push(node);
+  if (collapsed.has(node.id)) return list;
   for (const child of node.children) {
-    collectNodes(child, list);
+    collectNodes(child, collapsed, list);
   }
   return list;
 }
@@ -173,10 +228,25 @@ interface Edge {
   to: MindMapNode;
 }
 
-function collectEdges(node: MindMapNode, list: Edge[] = []): Edge[] {
+function collectEdges(node: MindMapNode, collapsed: Set<string>, list: Edge[] = []): Edge[] {
+  if (collapsed.has(node.id)) return list;
   for (const child of node.children) {
     list.push({ from: node, to: child });
-    collectEdges(child, list);
+    collectEdges(child, collapsed, list);
+  }
+  return list;
+}
+
+/** All non-root node ids that have at least one child — usable as
+ *  targets for "collapse all" without trapping the user. The root
+ *  itself is intentionally never collapsible: collapsing it would hide
+ *  every node in the tree, including the root's own collapse chevron's
+ *  parent (the children that would render it), leaving the user with
+ *  just a tiny title and no visible affordance to recover. */
+function collectCollapsibleIds(node: MindMapNode, list: string[] = []): string[] {
+  for (const child of node.children) {
+    if (child.children.length > 0) list.push(child.id);
+    collectCollapsibleIds(child, list);
   }
   return list;
 }
@@ -193,8 +263,9 @@ function truncateText(text: string, maxWidth: number): string {
 
 // ==================== Component ====================
 
-const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
+const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick, onOpenNote }) => {
   const { t } = useTranslation();
+  const dispatch = useDispatch<AppDispatch>();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -204,19 +275,44 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
   const panStart = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
+  // Per-note collapsed branches. Hydrated from localStorage when the
+  // active note changes — different notes can have different sections
+  // collapsed. Persisted on every change.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => loadCollapsed(note?.id ?? null));
+  useEffect(() => {
+    setCollapsed(loadCollapsed(note?.id ?? null));
+  }, [note?.id]);
+  useEffect(() => {
+    persistCollapsed(note?.id ?? null, collapsed);
+  }, [note?.id, collapsed]);
+
   // Build and layout tree
-  const { nodes, edges, bounds } = useMemo(() => {
+  const { nodes, edges, bounds, allCollapsibleIds, hasHeadings } = useMemo(() => {
     if (!note) {
-      return { nodes: [], edges: [], bounds: { minX: 0, minY: 0, maxX: 800, maxY: 600 } };
+      return {
+        nodes: [],
+        edges: [],
+        bounds: { minX: 0, minY: 0, maxX: 800, maxY: 600 },
+        allCollapsibleIds: [] as string[],
+        hasHeadings: false,
+      };
     }
 
-    const root = buildTree(note.content, note.title);
-    layoutTree(root, 0, 0, 0);
+    const root = buildMindMapTree(note.content, note.title);
+    layoutTree(root, 0, 0, 0, collapsed);
 
-    const allNodes = collectNodes(root);
-    const allEdges = collectEdges(root);
+    const allNodes = collectNodes(root, collapsed);
+    const allEdges = collectEdges(root, collapsed);
+    const collapsibleIds = collectCollapsibleIds(root);
+    // Source-of-truth empty check: do we have any heading in the parsed
+    // tree at all? Independent of the collapse state, so a fully-collapsed
+    // tree still renders the root + chevron instead of the empty state.
+    const headingsExist = root.children.length > 0;
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
     for (const n of allNodes) {
       minX = Math.min(minX, n.x);
       minY = Math.min(minY, n.y - n.height / 2);
@@ -233,8 +329,27 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
         maxX: maxX + 40,
         maxY: maxY + 40,
       },
+      allCollapsibleIds: collapsibleIds,
+      hasHeadings: headingsExist,
     };
-  }, [note]);
+  }, [note, collapsed]);
+
+  const toggleCollapsed = useCallback((nodeId: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) next.delete(nodeId);
+      else next.add(nodeId);
+      return next;
+    });
+  }, []);
+
+  const collapseAll = useCallback(() => {
+    setCollapsed(new Set(allCollapsibleIds));
+  }, [allCollapsibleIds]);
+
+  const expandAll = useCallback(() => {
+    setCollapsed(new Set());
+  }, []);
 
   // Fit view on mount or when note changes
   useEffect(() => {
@@ -249,49 +364,58 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
   }, [nodes, bounds]);
 
   // Zoom with mouse wheel
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const factor = e.deltaY > 0 ? 1.1 : 0.9;
-    const svg = svgRef.current;
-    if (!svg) return;
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY > 0 ? 1.1 : 0.9;
+      const svg = svgRef.current;
+      if (!svg) return;
 
-    const rect = svg.getBoundingClientRect();
-    const mouseX = ((e.clientX - rect.left) / rect.width) * viewBox.w + viewBox.x;
-    const mouseY = ((e.clientY - rect.top) / rect.height) * viewBox.h + viewBox.y;
+      const rect = svg.getBoundingClientRect();
+      const mouseX = ((e.clientX - rect.left) / rect.width) * viewBox.w + viewBox.x;
+      const mouseY = ((e.clientY - rect.top) / rect.height) * viewBox.h + viewBox.y;
 
-    const newW = viewBox.w * factor;
-    const newH = viewBox.h * factor;
-    const newX = mouseX - (mouseX - viewBox.x) * factor;
-    const newY = mouseY - (mouseY - viewBox.y) * factor;
+      const newW = viewBox.w * factor;
+      const newH = viewBox.h * factor;
+      const newX = mouseX - (mouseX - viewBox.x) * factor;
+      const newY = mouseY - (mouseY - viewBox.y) * factor;
 
-    setViewBox({ x: newX, y: newY, w: newW, h: newH });
-  }, [viewBox]);
+      setViewBox({ x: newX, y: newY, w: newW, h: newH });
+    },
+    [viewBox]
+  );
 
   // Pan with mouse drag
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    const target = e.target as SVGElement;
-    if (target.closest('.mindmap-node')) return;
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = e.target as SVGElement;
+      if (target.closest('.mindmap-node')) return;
 
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, vx: viewBox.x, vy: viewBox.y };
-  }, [viewBox]);
+      setIsPanning(true);
+      panStart.current = { x: e.clientX, y: e.clientY, vx: viewBox.x, vy: viewBox.y };
+    },
+    [viewBox]
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    const scaleX = viewBox.w / rect.width;
-    const scaleY = viewBox.h / rect.height;
-    const dx = (e.clientX - panStart.current.x) * scaleX;
-    const dy = (e.clientY - panStart.current.y) * scaleY;
-    setViewBox(prev => ({
-      ...prev,
-      x: panStart.current.vx - dx,
-      y: panStart.current.vy - dy,
-    }));
-  }, [isPanning, viewBox.w, viewBox.h]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isPanning) return;
+      const svg = svgRef.current;
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      const scaleX = viewBox.w / rect.width;
+      const scaleY = viewBox.h / rect.height;
+      const dx = (e.clientX - panStart.current.x) * scaleX;
+      const dy = (e.clientY - panStart.current.y) * scaleY;
+      setViewBox((prev) => ({
+        ...prev,
+        x: panStart.current.vx - dx,
+        y: panStart.current.vy - dy,
+      }));
+    },
+    [isPanning, viewBox.w, viewBox.h]
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsPanning(false);
@@ -309,11 +433,25 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
     });
   }, [nodes, bounds]);
 
-  const handleNodeClick = useCallback((node: MindMapNode) => {
-    if (node.pos >= 0 && onHeadingClick) {
-      onHeadingClick(node.pos);
-    }
-  }, [onHeadingClick]);
+  const handleNodeClick = useCallback(
+    (node: MindMapNode) => {
+      // Click any node — root or a heading — to drill back into the
+      // editor. The mind map only ever represents one note at a time
+      // so we always open `note.id` (the prop's note).
+      //
+      // For a heading node (pos >= 0) we ALSO ask the editor to scroll
+      // to that heading via Redux: a transient `pendingScrollToHeading`
+      // flag the editor reads + clears after acting on it. Bridges the
+      // two views without coupling MindMap to the editor instance.
+      if (!note) return;
+      if (node.pos >= 0) {
+        dispatch(requestScrollToHeading({ noteId: note.id, index: node.pos }));
+      }
+      if (onOpenNote) onOpenNote(note.id);
+      if (node.pos >= 0 && onHeadingClick) onHeadingClick(node.pos);
+    },
+    [note, onHeadingClick, onOpenNote, dispatch]
+  );
 
   if (!note) {
     return (
@@ -325,11 +463,17 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
     );
   }
 
-  if (nodes.length <= 1) {
+  // Empty state only when the source has zero headings — collapsing
+  // every branch must NOT trigger this, otherwise the user gets stuck
+  // with no way to expand back from a screen that says "no headings".
+  if (!hasHeadings) {
     return (
       <div className="mindmap-view mindmap-view--empty">
         <div className="mindmap-view__empty-msg">
-          {t('notes.mindmap.noHeadings', 'No headings found. Add headings (H1, H2, H3...) to build a mind map.')}
+          {t(
+            'notes.mindmap.noHeadings',
+            'No headings found. Add headings (H1, H2, H3...) to build a mind map.'
+          )}
         </div>
       </div>
     );
@@ -341,14 +485,14 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
       <div className="mindmap-view__toolbar">
         <button
           className="mindmap-view__btn"
-          onClick={() => setViewBox(prev => ({ ...prev, w: prev.w * 0.8, h: prev.h * 0.8 }))}
+          onClick={() => setViewBox((prev) => ({ ...prev, w: prev.w * 0.8, h: prev.h * 0.8 }))}
           title={t('notes.mindmap.zoomIn', 'Zoom in')}
         >
           +
         </button>
         <button
           className="mindmap-view__btn"
-          onClick={() => setViewBox(prev => ({ ...prev, w: prev.w * 1.2, h: prev.h * 1.2 }))}
+          onClick={() => setViewBox((prev) => ({ ...prev, w: prev.w * 1.2, h: prev.h * 1.2 }))}
           title={t('notes.mindmap.zoomOut', 'Zoom out')}
         >
           &minus;
@@ -406,12 +550,14 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
 
         {/* Nodes */}
         <g className="mindmap-view__nodes">
-          {nodes.map(node => {
+          {nodes.map((node) => {
             const color = getNodeColor(node.level);
             const isRoot = node.level === 0;
             const isHovered = hoveredNode === node.id;
             const fontSize = isRoot ? ROOT_FONT_SIZE : NODE_FONT_SIZE;
             const displayText = truncateText(node.text, node.width);
+            const hasChildren = node.children.length > 0;
+            const isCollapsed = collapsed.has(node.id);
 
             return (
               <g
@@ -421,7 +567,7 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
                 onMouseEnter={() => setHoveredNode(node.id)}
                 onMouseLeave={() => setHoveredNode(null)}
                 onClick={() => handleNodeClick(node)}
-                style={{ cursor: node.pos >= 0 ? 'pointer' : 'default' }}
+                style={{ cursor: 'pointer' }}
               >
                 <rect
                   className="mindmap-node__bg"
@@ -447,20 +593,55 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
                 >
                   {displayText}
                 </text>
+                {hasChildren && (
+                  // Collapse / expand chevron, attached to the right edge
+                  // of the node. Click stops propagation so we don't also
+                  // jump to the heading position in the editor.
+                  <g
+                    className="mindmap-node__toggle"
+                    transform={`translate(${node.width + 4}, ${node.height / 2 - 8})`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapsed(node.id);
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <circle
+                      cx={8}
+                      cy={8}
+                      r={8}
+                      fill={isCollapsed ? color.fill : 'var(--color-surface, #fff)'}
+                      stroke={color.stroke}
+                      strokeWidth={1.5}
+                    />
+                    <text
+                      x={8}
+                      y={9}
+                      dominantBaseline="central"
+                      textAnchor="middle"
+                      fontSize={10}
+                      fontWeight={700}
+                      fill={isCollapsed ? color.text : color.stroke}
+                      style={{ userSelect: 'none', pointerEvents: 'none' }}
+                    >
+                      {isCollapsed ? '+' : '−'}
+                    </text>
+                  </g>
+                )}
               </g>
             );
           })}
         </g>
       </svg>
 
-      {/* Legend */}
+      {/* Legend + collapse controls */}
       <div className="mindmap-view__legend">
         {[
           { label: 'H1', level: 1 },
           { label: 'H2', level: 2 },
           { label: 'H3', level: 3 },
           { label: 'H4', level: 4 },
-        ].map(item => (
+        ].map((item) => (
           <span key={item.label} className="mindmap-view__legend-item">
             <span
               className="mindmap-view__legend-dot"
@@ -469,6 +650,27 @@ const MindMapView: React.FC<MindMapViewProps> = ({ note, onHeadingClick }) => {
             {item.label}
           </span>
         ))}
+        {allCollapsibleIds.length > 0 && (
+          <span className="mindmap-view__legend-actions">
+            <button
+              type="button"
+              className="mindmap-view__legend-btn"
+              onClick={collapseAll}
+              title={t('notes.mindmapCollapseAll', 'Collapse all branches')}
+            >
+              {t('notes.mindmapCollapseAllShort', 'Collapse')}
+            </button>
+            <button
+              type="button"
+              className="mindmap-view__legend-btn"
+              onClick={expandAll}
+              disabled={collapsed.size === 0}
+              title={t('notes.mindmapExpandAll', 'Expand all branches')}
+            >
+              {t('notes.mindmapExpandAllShort', 'Expand')}
+            </button>
+          </span>
+        )}
       </div>
     </div>
   );
